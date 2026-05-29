@@ -1,134 +1,102 @@
 # Tessera
 
-**An open-source, MCP-native benchmark for whether AI agents reason reliably over fragmented enterprise knowledge.**
+**An open methodology and generator for building your own reliability eval for AI agents, over your own fragmented knowledge, reached via MCP.**
 
 > *tessera* (n.): a single tile of a mosaic. No tile is the picture. The picture is how they fit.
 
-[![status](https://img.shields.io/badge/status-pre--v0-orange)](#roadmap)
+[![status](https://img.shields.io/badge/status-pre--v0-orange)](#status-and-roadmap)
 [![license](https://img.shields.io/badge/code-Apache--2.0-blue)](#license)
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](#license)
 
-> ⚠️ **Building in public.** This is a manifesto and a spec in progress, not a finished benchmark. v0.1 is targeted for **mid-2026**. Follow along, open issues, tell me where I'm wrong.
+> ⚠️ **Building in public.** Methodology and generator in progress. v0 targeted **mid-2026**. No models measured yet, and I will not pretend otherwise until they are. Open issues, tell me where I am wrong.
 
 ---
 
 ## The problem
 
-The bottleneck for enterprise AI agents is no longer generating code or prose. It's reasoning reliably over the knowledge a company actually has. That knowledge is scattered across wikis, CRMs, tickets, chat threads, and half-stale PDFs. It contradicts itself. It has gaps.
+Models can already do almost anything. The open problem is doing it reliably. The bottleneck for enterprise AI agents is not generating code or prose, it is reasoning over the knowledge a company actually has: scattered across wikis, CRMs, tickets, chat threads, and half-stale PDFs, contradictory, and full of gaps.
 
 In that setting an agent has to do three hard things at once:
 
 1. **Get the answer right** when the answer exists.
 2. **Cite where it came from.** Provenance, not vibes.
-3. **Refuse** when the data isn't there, instead of confidently making something up.
+3. **Refuse** when the data is missing or the sources conflict, instead of confidently making something up.
 
-Today's agent benchmarks mostly measure tool-use mechanics or single-source QA. Almost nothing measures reliability over fragmented, contradictory enterprise knowledge. "Looks right in the demo, fails silently in production" is exactly the gap that keeps agents out of serious work.
+Public agent benchmarks mostly measure tool-use mechanics or single-source QA. They are a model's SAT score: a wide number, not the signal you need. The signal you need is your own interview, on your own data.
 
-Tessera is a way to measure that gap.
+## What Tessera is, and is not
 
-## What Tessera measures
+Tessera is **not another public leaderboard.** It is a **methodology and a reproducible generator** (the `tessera-scenario-factory`). Point it at a company's fragmented, contradictory, siloed knowledge, reached only over MCP the way a real agent would, and it builds **that company's own reliability eval**.
 
-Every task is scored on three axes, not one:
+The public dataset and leaderboard are a **showcase, not the product.** The eval you build on your own data is the point. A public benchmark is the SAT score. Your own eval is the interview.
 
-| Axis | Question | Why it matters |
-|---|---|---|
-| **Accuracy** | Did the agent reach the correct answer? | Table stakes, but not enough on its own. |
-| **Provenance** | Did it cite the right source(s) for that answer? | A right answer from the wrong or guessed source is a lucky guess, not reliability. |
-| **Correct refusal** | When the knowledge is absent or contradictory, did it say "I don't know" or surface the conflict, instead of hallucinating? | The most under-measured agent behavior, and the one enterprises care about most. |
+## What it measures
 
-A model that scores high on accuracy but low on refusal is dangerous, not good. Tessera is designed to make that visible.
+Every task is scored on more than accuracy, and repeated because models are stochastic:
 
-## Why MCP-native
-
-Tessera exposes the synthetic "company" to the agent through the [Model Context Protocol](https://modelcontextprotocol.io), the same way a real enterprise agent reaches a CRM, a docs store, or a ticketing system. That means:
-
-- The benchmark tests the agent the way it would actually be deployed, over MCP tools, not through a bespoke harness.
-- Any MCP-compatible agent or model can be evaluated with no Tessera-specific glue.
-- The retrieval surface (search, fetch, list) is realistic: noisy, paginated, partial.
-
-## What Tessera is *not*
-
-- ❌ Not a coding benchmark, and not a general agent-capability leaderboard.
-- ❌ Not a RAG accuracy test on a clean single corpus.
-- ❌ Not built on real company data. The public dataset is synthetic by design (see [Integrity](#integrity--limitations)).
-- ❌ Not a vibes eval. Every metric is defined, scriptable, and reproducible.
+- **Cross-source retrieval over MCP**, because one source is never the whole picture.
+- **Multi-turn memory and consistency**, because agents forget mid-conversation.
+- **Accuracy with provenance**, because an answer you cannot trace is an answer you cannot trust.
+- **Correct refusal**, because the strongest signal is a clean "I do not know" when the sources conflict or the data is missing.
+- **pass^k**, because a stochastic model has to be tested more than once.
 
 ## How it works (v0 design)
 
 ```
-┌─────────────────────┐     MCP      ┌──────────────────┐
-│  Synthetic org       │  <───────>  │  Agent under test │
-│  (fragmented, noisy, │   tools:    │  (any MCP client) │
-│   contradictory)     │  search /   └──────────────────┘
-│                      │  fetch /            │
-│  • docs / wiki        │  list              ▼
-│  • CRM-like records   │            ┌──────────────────┐
-│  • chat threads       │            │  Scorer           │
-│  • tickets / emails   │            │  accuracy +       │
-└─────────────────────┘            │  provenance +     │
-            ▲                        │  correct-refusal  │
-            │ generator              └──────────────────┘
-   seeds + controllable
-   fragmentation / conflict
+generator ──> synthetic fragmented org ──MCP──> agent under test ──> scorer
+(controllable    docs / CRM / tickets / PDFs,                         accuracy +
+ fragmentation   siloed, contradictory                               provenance +
+ and conflict)                                                       correct refusal,
+                                                                     repeated pass^k
 ```
 
-1. **Dataset generator.** Produces a synthetic organization with controllable fragmentation: facts split across sources, deliberate contradictions, and deliberate gaps. Difficulty is a knob, not an accident.
-2. **MCP harness.** Serves that org over MCP tools to the agent under test.
-3. **Task suites.** Questions whose ground truth includes the answer, the supporting source(s), and whether a faithful agent should refuse.
-4. **Scorer.** Computes the three metrics and emits a per-task trace you can audit.
+1. **Generator** produces a synthetic organization with controllable fragmentation: facts split across sources, deliberate contradictions, deliberate gaps. Difficulty is a knob, not an accident. Synthetic by design, so no real company data is ever exposed.
+2. **MCP harness** serves that org to the agent under test over MCP tools, the same surface it would use in production.
+3. **Task suites** require cross-source reasoning, memory, and the judgment to refuse.
+4. **Scorer** computes accuracy, provenance, and correct refusal, repeated with pass^k, and emits a per-task trace you can audit.
 
-## Quickstart
+## The pairing
 
-> Coming with v0.1. The intended shape:
+A factory is a deterministic algorithm that orchestrates stochastic agents to build the same on-spec system every time. Build factories, not features.
 
-```bash
-# (placeholder, not yet released)
-pip install tessera-bench
-tessera run --agent my-mcp-agent --suite core-v0
-tessera report
-```
+**A factory is how you build the system. Tessera is how you verify it is reliable.**
 
-Watch [Releases](../../releases) or star the repo to know when it's real.
+## Why this is white space
 
-## Roadmap
+No open benchmark sits at the intersection of OSS, enterprise fragmentation, MCP-native access, provenance, correct refusal, and a generator you point at your own data:
 
-- [ ] **v0.1 (mid-2026).** Dataset generator, MCP harness, one core task suite, the three metrics, a README you can actually run.
-- [ ] Public leaderboard with frontier models.
-- [ ] Companion write-up (arXiv) on measuring enterprise-agent reliability.
-- [ ] Additional suites: cross-source synthesis, temporal staleness, conflicting-policy resolution.
-- [ ] Community-contributed task suites.
+- **τ-bench / τ²-bench** measure tool-use and policy on a single, clean database, not multi-source fragmentation.
+- **ReliabilityBench** measures generic consistency and fault tolerance, not fragmented enterprise knowledge.
+- **GBA-Bench** has enterprise context and memory but is proprietary and closed.
 
-## Integrity & limitations
+Related work is consolidated in the companion thesis.
 
-Honesty is what makes a benchmark citable, so this section matters as much as the rest.
+## Status and roadmap
 
-- **Synthetic, public, reproducible.** No real client data ever enters the public dataset. Real-world data is used only as private validation that the synthetic distribution is realistic.
-- **Documented bias.** The generator encodes assumptions about how organizations fragment knowledge. Those assumptions will be wrong in places, and they'll be written down so results can be read in context.
-- **Gameable if leaked.** Like any benchmark, a memorized test set is meaningless. Held-out suites and rotating seeds are part of the design.
-- **A measure, not the territory.** A high Tessera score is evidence of reliability under these conditions. It is not a guarantee in yours.
+- [ ] **v0 (mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
+- [ ] Showcase: a public synthetic dataset and a leaderboard of frontier models run against it.
+- [ ] Companion write-up on measuring enterprise-agent reliability.
+- [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval.
 
-## Related work
+No models have been measured yet. When they are, the numbers go here.
 
-Tessera builds on and differs from agent and tool benchmarks such as the **τ-bench** family and other tool-use and reliability evaluations. The difference: Tessera's unit of difficulty is fragmentation and contradiction across enterprise knowledge, and it treats provenance and correct refusal as first-class scored axes, not afterthoughts. The full related-work section lives in the companion paper.
+## Integrity and limitations
+
+Honesty is what makes an eval citable.
+
+- **Synthetic, public, reproducible.** No real client data ever enters the public dataset. Real data stays a private validation testbed.
+- **Documented bias.** The generator encodes assumptions about how organizations fragment knowledge. Those assumptions will be wrong in places, and they will be written down.
+- **A measure, not the territory.** A score is evidence under these conditions, not a guarantee in yours.
 
 ## Contributing
 
-Early, opinionated, and open. The most useful contributions right now:
-
-- Failure cases: an enterprise reasoning task where good agents should refuse but don't.
-- Critiques of the metric definitions, especially provenance scoring.
-- Realistic fragmentation patterns the generator should model.
-
-Open an issue before a large PR. See `CONTRIBUTING.md` (coming with v0.1).
+Early and open. The most useful contributions now: a real enterprise reasoning task where good agents should refuse but do not, critiques of the metric definitions (especially provenance and refusal scoring), and realistic fragmentation patterns the generator should model. Open an issue before a large PR.
 
 ## About
 
-Built by **Rinaldo Festa**. I build and measure the reliability layer for enterprise AI agents (MCP, memory, provenance), in the open.
-Research log and context: **[rinaldofesta.com](https://rinaldofesta.com)**.
+Built by **Rinaldo Festa**. I build AI agents for enterprises, then I build the evals that prove they can be trusted. Context and the build log: **[rinaldofesta.com](https://rinaldofesta.com)**.
 
 ## License
 
 - **Code:** Apache-2.0
 - **Synthetic dataset:** CC-BY-4.0
-
-*(To confirm before the first release. These are the recommended defaults for an open, citable benchmark.)*
