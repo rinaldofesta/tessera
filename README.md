@@ -96,6 +96,24 @@ Early and open. The most useful contributions now: a real enterprise reasoning t
 
 Built by **Rinaldo Festa**. I build AI agents for enterprises, then I build the evals that prove they can be trusted. Context and the build log: **[rinaldofesta.com](https://rinaldofesta.com)**.
 
+## Run the toy eval (v0 preview)
+
+> Requires a model API key (e.g. `ANTHROPIC_API_KEY`).
+
+```bash
+uv pip install -e .
+.venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 --display plain
+.venv/bin/inspect view   # open the log: per-sample tool calls, provenance, refusal
+```
+
+The toy organization has two MCP silos (a structured CRM and an unstructured Docs
+store) and three probes — a cross-source lookup, a resolvable contradiction, and a
+question with no answer in the data. Each is scored on accuracy, **provenance**
+(which sources the agent actually consulted, read from its real tool calls), and
+**correct refusal**, repeated under `pass_k` epochs. Accuracy and refusal are
+deterministic in v0; model-graded scoring (and an independent grader bound via
+`--model-role grader=<other-model>`) is a planned upgrade.
+
 ## License
 
 - **Code:** Apache-2.0
