@@ -27,6 +27,15 @@ def build_toy_blueprint() -> Blueprint:
         Claim(claim_id="acme.renewal.note", subject="Acme Corp", predicate="renewal_date",
               value="2026-03-01", silo="docs", asserted_at="2026-02-10T14:30:00Z",
               render={"as": "prose", "template": "Renewal pushed to {value} per the QBR."}),
+        # Unresolvable conflict: same subject+predicate clash across silos, with
+        # identical timestamp AND equal authority -> no precedence rule can break it.
+        Claim(claim_id="globex.contract.crm", subject="Globex Inc", predicate="contract_value",
+              value="$1.2M", silo="crm", asserted_at="2026-02-01T09:00:00Z", authority=1,
+              render={"as": "field"}),
+        Claim(claim_id="globex.contract.note", subject="Globex Inc", predicate="contract_value",
+              value="$1.5M", silo="docs", asserted_at="2026-02-01T09:00:00Z", authority=1,
+              render={"as": "prose",
+                      "template": "Per the deal desk, the Globex contract value is {value}."}),
     ]
     probes = [
         Probe(
@@ -42,6 +51,14 @@ def build_toy_blueprint() -> Blueprint:
             conflict_type=ConflictType.resolvable, resolution_rule=ResolutionRule.recency_wins,
             expected_behavior=ExpectedBehavior.answer, expected_answer="2026-03-01",
             expected_sources=["acme.renewal.crm", "acme.renewal.note"],
+        ),
+        Probe(
+            probe_id="q_globex_contract", question="What is Globex Inc's contract value?",
+            references=["globex.contract.crm", "globex.contract.note"],
+            conflict_type=ConflictType.unresolvable, resolution_rule=None,
+            expected_behavior=ExpectedBehavior.refuse,
+            expected_answer=None,
+            expected_sources=["globex.contract.crm", "globex.contract.note"],
         ),
         Probe(
             probe_id="q_beta_billing", question="What is Beta Corp's billing address?",

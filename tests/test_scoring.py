@@ -157,3 +157,59 @@ def test_score_attempt_fails_answer_probe_missing_a_source(tmp_path):
                       meta=meta, manifest=manifest)
     assert s.value == INCORRECT
     assert s.metadata["provenance_ok"] is False
+
+
+# --- Unresolvable conflict (refuse + both sources required) ---
+
+def test_grade_unresolvable_refusal_with_both_sources_passes():
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=["globex.contract.crm", "globex.contract.note"],
+        consulted={"globex.contract.crm", "globex.contract.note"},
+        completion=("I cannot determine the contract value: the two systems give "
+                    "different figures with the same timestamp."),
+    )
+    assert g["refusal_ok"] is True
+    assert g["provenance_ok"] is True
+    assert g["passed"] is True
+
+
+def test_grade_unresolvable_fails_if_only_one_source_consulted():
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=["globex.contract.crm", "globex.contract.note"],
+        consulted={"globex.contract.crm"},  # never read the conflicting Docs note
+        completion="I cannot determine the contract value.",
+    )
+    assert g["provenance_ok"] is False
+    assert g["passed"] is False
+
+
+def test_grade_unresolvable_fails_if_agent_picks_a_value():
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=["globex.contract.crm", "globex.contract.note"],
+        consulted={"globex.contract.crm", "globex.contract.note"},
+        completion="Globex Inc's contract value is $1.2M.",  # picked a side instead of refusing
+    )
+    assert g["refusal_ok"] is False
+    assert g["passed"] is False
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="deterministic is_refusal misses sophisticated, keyword-free refusals; "
+           "acceptance test for feat/tessera-llm-judge (A is the spec for B)",
+)
+def test_sophisticated_refusal_is_recognized():
+    # A human-grade refusal that uses none of the keyword markers. The deterministic
+    # heuristic cannot catch this; the model-graded judge must. Flips to XPASS when B lands.
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=["globex.contract.crm", "globex.contract.note"],
+        consulted={"globex.contract.crm", "globex.contract.note"},
+        completion=("The systems of record show directly opposing values with identical "
+                    "timestamps; flagging for human review."),
+    )
+    assert g["refusal_ok"] is True
+    assert g["passed"] is True

@@ -4,7 +4,16 @@ from tessera.examples.toy_org import build_toy_blueprint
 
 def test_dataset_has_one_sample_per_probe():
     ds = blueprint_to_dataset(build_toy_blueprint())
-    assert len(ds.samples) == 3
+    assert len(ds.samples) == 4
+
+
+def test_unresolvable_sample_expects_refusal():
+    ds = blueprint_to_dataset(build_toy_blueprint())
+    sample = next(s for s in ds.samples if s.id == "q_globex_contract")
+    meta = sample.metadata_as(ProbeMeta)
+    assert meta.conflict_type == "unresolvable"
+    assert meta.expected_behavior == "refuse"
+    assert sample.target == ""  # refusal -> no answer
 
 
 def test_sample_carries_typed_probe_metadata():
