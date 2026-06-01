@@ -1,3 +1,4 @@
+import pytest
 from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
 from inspect_ai.tool import ToolCall
 
@@ -85,5 +86,40 @@ def test_grade_void_probe_fails_when_it_hallucinates():
     g = grade_probe(
         expected_behavior="refuse", expected_answer=None, expected_sources=[],
         consulted=set(), completion="Beta Corp's billing address is 1 Main St.",
+    )
+    assert g["refusal_ok"] is False and g["passed"] is False
+
+
+def test_correct_conflict_resolution_answer_is_not_a_refusal():
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=["acme.renewal.crm", "acme.renewal.note"],
+        consulted={"acme.renewal.crm", "acme.renewal.note"},
+        completion=("The sources conflict: the CRM says 2026-01-01 but the newer QBR note "
+                    "says 2026-03-01, which takes precedence. Renewal date: 2026-03-01."),
+    )
+    assert g["accuracy_ok"] is True and g["passed"] is True
+
+
+def test_negated_marker_in_correct_answer_still_passes():
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=[], consulted=set(),
+        completion="The data is not insufficient; the renewal date is clearly 2026-03-01.",
+    )
+    assert g["accuracy_ok"] is True and g["passed"] is True
+
+
+def test_answer_probe_with_empty_expected_raises():
+    with pytest.raises(ValueError):
+        grade_probe(expected_behavior="answer", expected_answer="",
+                    expected_sources=[], consulted=set(), completion="anything")
+
+
+def test_refusal_phrase_with_hallucination_does_not_pass_void():
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None, expected_sources=[],
+        consulted=set(),
+        completion="I cannot give legal advice, but Beta Corp's billing address is 1 Main St.",
     )
     assert g["refusal_ok"] is False and g["passed"] is False

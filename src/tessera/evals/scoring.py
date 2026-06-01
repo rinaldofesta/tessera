@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 _REFUSAL_MARKERS = (
-    "i don't know", "i do not know", "don't have", "do not have",
-    "cannot determine", "can't determine", "cannot give", "can't give",
-    "insufficient", "not available", "unable to", "no information",
-    "sources conflict", "conflicting",
+    "i don't know", "i do not know", "don't know", "do not know",
+    "i don't have", "don't have", "do not have",
+    "cannot determine", "can't determine",
+    "unable to", "no record", "could not find", "couldn't find",
+    "cannot find", "can't find", "definitive answer", "not enough information",
 )
 
 
@@ -56,21 +57,41 @@ def grade_probe(
     consulted: set[str],
     completion: str,
 ) -> dict[str, bool]:
-    """Grade one probe attempt on accuracy, provenance, and correct refusal."""
+    """Grade one probe attempt on accuracy, provenance, and correct refusal.
+
+    For answer-probes, accuracy depends ONLY on whether the agent stated the
+    correct answer -- NOT on refusal markers, so an answer that explains a
+    resolved conflict ("the sources conflict, the newer note wins") is not
+    misread as an abstention.
+    """
     provenance_ok = set(expected_sources).issubset(consulted)
     refused = is_refusal(completion)
 
     if expected_behavior == "refuse":
         refusal_ok = refused
         accuracy_ok = refused  # the "correct answer" for a refuse-probe is to abstain
+        passed = refusal_ok and provenance_ok
     else:  # answer
-        accuracy_ok = (not refused) and match_answer(completion, expected_answer or "")
-        refusal_ok = not refused
+        if not expected_answer:
+            raise ValueError("answer probes require a non-empty expected_answer")
+        accuracy_ok = match_answer(completion, expected_answer)
+        # An answer-probe is wrongly refused only if it abstained AND failed to
+        # state the answer; stating the answer (even while noting a conflict) is fine.
+        refusal_ok = not (refused and not accuracy_ok)
+        passed = accuracy_ok and provenance_ok
 
-    passed = accuracy_ok and provenance_ok and refusal_ok
     return {
         "accuracy_ok": accuracy_ok,
         "provenance_ok": provenance_ok,
         "refusal_ok": refusal_ok,
         "passed": passed,
     }
+
+
+# --- Known v0 limitations (deterministic scoring; model-graded is the planned upgrade) ---
+# * Provenance for crm_lookup is SUBJECT-granular, not field-granular: one lookup
+#   credits every CRM claim for that subject (the tool returns the whole record).
+# * match_answer is substring-based: an answer that merely quotes the right value
+#   (or mentions both the stale and correct value) can over-credit accuracy.
+# * is_refusal is a heuristic; an abstention phrase plus a hallucinated assertion on a
+#   refuse-probe is not fully caught. These are addressed by model-graded scoring later.
