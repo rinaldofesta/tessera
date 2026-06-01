@@ -106,6 +106,17 @@ uv pip install -e .
 .venv/bin/inspect view   # open the log: per-sample tool calls, provenance, refusal
 ```
 
+By default scoring is deterministic (keyword/substring, no grader). For model-graded
+accuracy + refusal, select the LLM engine and bind an independent grader:
+
+```bash
+.venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm \
+    --model anthropic/claude-sonnet-4-6 \
+    --model-role grader=openai/gpt-4o
+```
+
+The grader MUST differ from the model under test, or the eval aborts (self-grading guard).
+
 The toy organization has two MCP silos (a structured CRM and an unstructured Docs
 store) and three probes — a cross-source lookup, a resolvable contradiction, and a
 question with no answer in the data. Each is scored on accuracy, **provenance**

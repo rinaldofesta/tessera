@@ -13,7 +13,7 @@ from inspect_ai.tool import mcp_server_stdio
 
 from tessera.compiler import compile_blueprint
 from tessera.evals.dataset import blueprint_to_dataset
-from tessera.evals.scoring import reliability_scorer
+from tessera.evals.scoring import deterministic_reliability_scorer, llm_reliability_scorer
 from tessera.examples.toy_org import build_toy_blueprint
 
 _PROMPT = (
@@ -26,7 +26,7 @@ _PROMPT = (
 
 
 @task
-def tessera_probes():
+def tessera_probes(judge: str = "deterministic"):
     blueprint = build_toy_blueprint()
     out = Path(os.environ.get("TESSERA_OUT", "/tmp/tessera/run")).resolve()
     manifest = compile_blueprint(blueprint, out)
@@ -37,9 +37,12 @@ def tessera_probes():
     docs = mcp_server_stdio(name="docs", command=sys.executable,
                             args=["-m", "tessera.mcp.docs_server"], env=env)
 
+    scorer = (llm_reliability_scorer(manifest) if judge == "llm"
+              else deterministic_reliability_scorer(manifest))
+
     return Task(
         dataset=blueprint_to_dataset(blueprint),
         solver=react(prompt=_PROMPT, tools=[crm, docs]),
-        scorer=reliability_scorer(manifest),
+        scorer=scorer,
         epochs=Epochs(3, [pass_k(3), "mean"]),
     )
