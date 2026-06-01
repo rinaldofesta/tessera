@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Compiler output / synthetic orgs
+/tmp/tessera/
+*.local
+
+# Inspect logs
+logs/
+*.eval
