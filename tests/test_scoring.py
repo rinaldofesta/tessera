@@ -246,3 +246,15 @@ def test_grade_from_signals_refuse_fails_if_not_refused():
     g = grade_from_signals(expected_behavior="refuse", answered_correctly=False,
                            refused=False, provenance_ok=True)
     assert g["refusal_ok"] is False and g["passed"] is False
+
+
+from tessera.evals.scoring import assert_independent_grader
+
+
+def test_guard_raises_when_grader_equals_model_under_test():
+    with pytest.raises(ValueError):
+        assert_independent_grader("openai/gpt-4o", "openai/gpt-4o")
+
+
+def test_guard_allows_distinct_models():
+    assert_independent_grader("anthropic/claude-sonnet-4-6", "openai/gpt-4o")  # no raise

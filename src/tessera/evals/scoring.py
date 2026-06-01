@@ -69,6 +69,20 @@ def grade_from_signals(*, expected_behavior: str, answered_correctly: bool,
             "provenance_ok": provenance_ok, "passed": passed}
 
 
+def assert_independent_grader(grader, model_under_test) -> None:
+    """Fail loud if the grader is the same model as the model-under-test.
+
+    Compares the canonical str(Model) form ("provider/model"); accepts any objects
+    with a str() (real Models, or plain strings in tests).
+    """
+    if str(grader) == str(model_under_test):
+        raise ValueError(
+            f"Grader model ({grader}) must differ from the model-under-test "
+            f"({model_under_test}); bind a distinct grader via "
+            f"--model-role grader=<provider/model>."
+        )
+
+
 def grade_probe(
     *,
     expected_behavior: str,
