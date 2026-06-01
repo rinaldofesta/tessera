@@ -45,3 +45,37 @@ def test_parse_helpers_find_verdict_buried_after_verbose_reasoning():
                "The two values differ; I'll record my verdict.\n\n**GRADE:** C")
     assert parse_grade(verbose) is True
     assert parse_yes_no("...long winded reasoning here...\nGRADE: YES.") is True
+
+
+import asyncio
+from types import SimpleNamespace
+
+from tessera.evals.judges import accuracy_judge, refusal_judge
+
+
+class _StubGrader:
+    """Stand-in for an inspect Model: records the prompt, returns a canned completion."""
+    def __init__(self, reply: str):
+        self.reply = reply
+        self.seen_input = None
+
+    async def generate(self, input, **kwargs):
+        self.seen_input = input
+        return SimpleNamespace(completion=self.reply)
+
+
+def test_refusal_judge_true_on_yes_and_includes_response_in_prompt():
+    g = _StubGrader("REASON: abstained\nGRADE: YES")
+    refused = asyncio.run(refusal_judge(g, "What is X?", "I can't determine that."))
+    assert refused is True
+    assert "I can't determine that." in g.seen_input
+
+
+def test_refusal_judge_false_on_no():
+    g = _StubGrader("REASON: committed\nGRADE: NO")
+    assert asyncio.run(refusal_judge(g, "What is X?", "It is 2026-03-01.")) is False
+
+
+def test_accuracy_judge_reads_grade():
+    assert asyncio.run(accuracy_judge(_StubGrader("GRADE: C"), "Q", "4 hours", "4 hours")) is True
+    assert asyncio.run(accuracy_judge(_StubGrader("GRADE: I"), "Q", "8 hours", "4 hours")) is False
