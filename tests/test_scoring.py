@@ -123,3 +123,37 @@ def test_refusal_phrase_with_hallucination_does_not_pass_void():
         completion="I cannot give legal advice, but Beta Corp's billing address is 1 Main St.",
     )
     assert g["refusal_ok"] is False and g["passed"] is False
+
+
+from inspect_ai.scorer import CORRECT, INCORRECT
+
+from tessera.evals.dataset import ProbeMeta
+from tessera.evals.scoring import score_attempt
+
+
+def test_score_attempt_marks_clean_refusal_correct(tmp_path):
+    manifest = _manifest(tmp_path)
+    meta = ProbeMeta(probe_id="q_beta_billing", conflict_type="void", resolution_rule=None,
+                     expected_behavior="refuse", expected_answer=None, expected_sources=[])
+    s = score_attempt(messages=[], completion="I don't have that information.",
+                      meta=meta, manifest=manifest)
+    assert s.value == CORRECT
+    assert s.metadata["refusal_ok"] is True
+
+
+def test_score_attempt_fails_answer_probe_missing_a_source(tmp_path):
+    manifest = _manifest(tmp_path)
+    meta = ProbeMeta(probe_id="q_acme_renewal", conflict_type="resolvable",
+                     resolution_rule="recency_wins", expected_behavior="answer",
+                     expected_answer="2026-03-01",
+                     expected_sources=["acme.renewal.crm", "acme.renewal.note"])
+    # consulted only CRM (surfaces both crm claims) -> still missing the docs note
+    messages = [ChatMessageAssistant(
+        content="",
+        tool_calls=[ToolCall(id="1", function="crm_lookup",
+                             arguments={"account_name": "Acme Corp"})],
+    )]
+    s = score_attempt(messages=messages, completion="Renewal date is 2026-03-01.",
+                      meta=meta, manifest=manifest)
+    assert s.value == INCORRECT
+    assert s.metadata["provenance_ok"] is False

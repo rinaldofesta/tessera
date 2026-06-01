@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, accuracy, scorer, stderr
+from inspect_ai.solver import TaskState
+
+from tessera.evals.dataset import ProbeMeta
+
 _REFUSAL_MARKERS = (
     "i don't know", "i do not know", "don't know", "do not know",
     "i don't have", "don't have", "do not have",
@@ -86,6 +91,44 @@ def grade_probe(
         "refusal_ok": refusal_ok,
         "passed": passed,
     }
+
+
+def score_attempt(*, messages: list, completion: str, meta: ProbeMeta,
+                  manifest: dict[str, dict]) -> Score:
+    """Pure: build a Score from one attempt's messages + final completion."""
+    calls = extract_tool_calls(messages)
+    consulted = consulted_claims(calls, manifest)
+    result = grade_probe(
+        expected_behavior=meta.expected_behavior,
+        expected_answer=meta.expected_answer,
+        expected_sources=meta.expected_sources,
+        consulted=consulted,
+        completion=completion,
+    )
+    return Score(
+        value=CORRECT if result["passed"] else INCORRECT,
+        answer=completion,
+        explanation=(
+            f"axes={result} consulted={sorted(consulted)} "
+            f"expected_sources={meta.expected_sources} tools={[c[0] for c in calls]}"
+        ),
+        metadata={**result, "consulted": sorted(consulted)},
+    )
+
+
+@scorer(metrics=[accuracy(), stderr()])
+def reliability_scorer(manifest: dict[str, dict]):
+    """A probe passes only if accuracy AND full provenance AND correct refusal hold."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        return score_attempt(
+            messages=state.messages,
+            completion=state.output.completion if state.output else "",
+            meta=state.metadata_as(ProbeMeta),
+            manifest=manifest,
+        )
+
+    return score
 
 
 # --- Known v0 limitations (deterministic scoring; model-graded is the planned upgrade) ---
