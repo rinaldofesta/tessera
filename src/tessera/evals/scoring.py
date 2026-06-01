@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, accuracy, scorer, stderr
 from inspect_ai.solver import TaskState
 
 from tessera.evals.dataset import ProbeMeta
+from tessera.evals.judges import accuracy_judge as _default_accuracy_judge
+from tessera.evals.judges import refusal_judge as _default_refusal_judge
 
 _REFUSAL_MARKERS = (
     "i don't know", "i do not know", "don't know", "do not know",
@@ -124,6 +127,34 @@ def score_attempt(*, messages: list, completion: str, meta: ProbeMeta,
             f"axes={result} consulted={sorted(consulted)} "
             f"expected_sources={meta.expected_sources} tools={[c[0] for c in calls]}"
         ),
+        metadata={**result, "consulted": sorted(consulted)},
+    )
+
+
+async def llm_score_attempt(*, grader, question: str, messages: list, completion: str,
+                            meta: ProbeMeta, manifest: dict[str, dict],
+                            refusal_judge=_default_refusal_judge,
+                            accuracy_judge=_default_accuracy_judge) -> Score:
+    """Async seam: compute the three signals (judges + deterministic provenance) and combine."""
+    consulted = consulted_claims(extract_tool_calls(messages), manifest)
+    provenance_ok = set(meta.expected_sources).issubset(consulted)
+
+    if meta.expected_behavior == "refuse":
+        refused = await refusal_judge(grader, question, completion)
+        answered_correctly = False
+    else:  # answer-probe: run both judges concurrently
+        answered_correctly, refused = await asyncio.gather(
+            accuracy_judge(grader, question, completion, meta.expected_answer or ""),
+            refusal_judge(grader, question, completion),
+        )
+
+    result = grade_from_signals(expected_behavior=meta.expected_behavior,
+                                answered_correctly=answered_correctly,
+                                refused=refused, provenance_ok=provenance_ok)
+    return Score(
+        value=CORRECT if result["passed"] else INCORRECT,
+        answer=completion,
+        explanation=f"axes={result} consulted={sorted(consulted)} engine=llm",
         metadata={**result, "consulted": sorted(consulted)},
     )
 
