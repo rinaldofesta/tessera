@@ -69,6 +69,8 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
             ] = claim.value
             manifest[claim.claim_id] = {
                 "silo": claim.silo,
+                "subject": claim.subject,
+                "predicate": claim.predicate,
                 "artifact": f"{claim.silo}/db.json",
                 "locator": f"{claim.subject}.{claim.predicate}",
             }
@@ -78,6 +80,8 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
             docs.append((out / rel, _doc_content(claim.asserted_at, claim.claim_id, body)))
             manifest[claim.claim_id] = {
                 "silo": claim.silo,
+                "subject": claim.subject,
+                "predicate": claim.predicate,
                 "artifact": rel,
                 "locator": rel,
             }

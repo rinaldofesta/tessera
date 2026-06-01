@@ -77,13 +77,24 @@ def test_prose_claim_lands_in_its_own_silo_folder(tmp_path):
     assert manifest["sla.gold.docs"]["artifact"].endswith(".md")
 
 
-def test_manifest_maps_field_claim_to_db_locator(tmp_path):
+def test_manifest_maps_field_claim_with_subject_and_predicate(tmp_path):
     manifest = compile_blueprint(_toy_blueprint(), tmp_path)
     assert manifest["acme.renewal.crm"] == {
         "silo": "crm",
+        "subject": "Acme Corp",
+        "predicate": "renewal_date",
         "artifact": "crm/db.json",
         "locator": "Acme Corp.renewal_date",
     }
+
+
+def test_manifest_carries_subject_for_prose_claims(tmp_path):
+    manifest = compile_blueprint(_toy_blueprint(), tmp_path)
+    entry = manifest["acme.renewal.note"]
+    assert entry["subject"] == "Acme Corp"
+    assert entry["predicate"] == "renewal_date"
+    assert entry["silo"] == "docs"
+    assert entry["artifact"].startswith("docs/") and entry["artifact"].endswith(".md")
 
 
 def test_manifest_persisted_with_every_claim(tmp_path):
