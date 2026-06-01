@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from inspect_ai.model import get_model
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, accuracy, scorer, stderr
 from inspect_ai.solver import TaskState
 
@@ -160,17 +161,35 @@ async def llm_score_attempt(*, grader, question: str, messages: list, completion
 
 
 @scorer(metrics=[accuracy(), stderr()])
-def reliability_scorer(manifest: dict[str, dict]):
-    """A probe passes only if accuracy AND full provenance AND correct refusal hold."""
-
+def deterministic_reliability_scorer(manifest: dict[str, dict]):
+    """Key-free deterministic engine (keyword refusal + substring accuracy)."""
     async def score(state: TaskState, target: Target) -> Score:
         return score_attempt(
             messages=state.messages,
             completion=state.output.completion if state.output else "",
-            meta=state.metadata_as(ProbeMeta),
-            manifest=manifest,
-        )
+            meta=state.metadata_as(ProbeMeta), manifest=manifest)
+    return score
 
+
+# Backward-compat alias (existing task.py / tests import this name).
+reliability_scorer = deterministic_reliability_scorer
+
+
+@scorer(metrics=[accuracy(), stderr()])
+def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
+                           refusal_judge=_default_refusal_judge,
+                           accuracy_judge=_default_accuracy_judge):
+    """Model-graded engine. Resolves an INDEPENDENT grader and fails loud if it is the
+    model-under-test. grader_model/judges are optional injection points (real defaults)."""
+    async def score(state: TaskState, target: Target) -> Score:
+        grader = (get_model(grader_model) if grader_model is not None
+                  else get_model(role="grader", required=True))
+        assert_independent_grader(grader, state.model)
+        return await llm_score_attempt(
+            grader=grader, question=state.input_text, messages=state.messages,
+            completion=state.output.completion if state.output else "",
+            meta=state.metadata_as(ProbeMeta), manifest=manifest,
+            refusal_judge=refusal_judge, accuracy_judge=accuracy_judge)
     return score
 
 

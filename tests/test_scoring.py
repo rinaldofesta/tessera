@@ -334,3 +334,11 @@ def test_guard_raises_when_grader_equals_model_under_test():
 
 def test_guard_allows_distinct_models():
     assert_independent_grader("anthropic/claude-sonnet-4-6", "openai/gpt-4o")  # no raise
+
+
+def test_scorer_factories_exist_and_reliability_scorer_is_the_deterministic_alias():
+    from tessera.evals import scoring
+    assert scoring.reliability_scorer is scoring.deterministic_reliability_scorer
+    # factories build a scorer without resolving any model (resolution happens in score())
+    assert callable(scoring.deterministic_reliability_scorer({}))
+    assert callable(scoring.llm_reliability_scorer({}))
