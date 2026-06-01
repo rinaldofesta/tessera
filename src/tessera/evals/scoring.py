@@ -77,35 +77,18 @@ def grade_probe(
     consulted: set[str],
     completion: str,
 ) -> dict[str, bool]:
-    """Grade one probe attempt on accuracy, provenance, and correct refusal.
-
-    For answer-probes, accuracy depends ONLY on whether the agent stated the
-    correct answer -- NOT on refusal markers, so an answer that explains a
-    resolved conflict ("the sources conflict, the newer note wins") is not
-    misread as an abstention.
-    """
+    """Deterministic-signal convenience wrapper over grade_from_signals."""
     provenance_ok = set(expected_sources).issubset(consulted)
     refused = is_refusal(completion)
-
-    if expected_behavior == "refuse":
-        refusal_ok = refused
-        accuracy_ok = refused  # the "correct answer" for a refuse-probe is to abstain
-        passed = refusal_ok and provenance_ok
-    else:  # answer
+    if expected_behavior == "answer":
         if not expected_answer:
             raise ValueError("answer probes require a non-empty expected_answer")
-        accuracy_ok = match_answer(completion, expected_answer)
-        # An answer-probe is wrongly refused only if it abstained AND failed to
-        # state the answer; stating the answer (even while noting a conflict) is fine.
-        refusal_ok = not (refused and not accuracy_ok)
-        passed = accuracy_ok and provenance_ok
-
-    return {
-        "accuracy_ok": accuracy_ok,
-        "provenance_ok": provenance_ok,
-        "refusal_ok": refusal_ok,
-        "passed": passed,
-    }
+        answered_correctly = match_answer(completion, expected_answer)
+    else:
+        answered_correctly = False  # ignored by the combiner for refuse-probes
+    return grade_from_signals(expected_behavior=expected_behavior,
+                              answered_correctly=answered_correctly,
+                              refused=refused, provenance_ok=provenance_ok)
 
 
 def score_attempt(*, messages: list, completion: str, meta: ProbeMeta,
