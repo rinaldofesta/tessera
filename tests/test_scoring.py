@@ -213,3 +213,36 @@ def test_sophisticated_refusal_is_recognized():
     )
     assert g["refusal_ok"] is True
     assert g["passed"] is True
+
+
+from tessera.evals.scoring import grade_from_signals
+
+
+def test_grade_from_signals_answer_passes_when_correct_and_committed_and_sourced():
+    assert grade_from_signals(expected_behavior="answer", answered_correctly=True,
+                              refused=False, provenance_ok=True) == {
+        "accuracy_ok": True, "refusal_ok": True, "provenance_ok": True, "passed": True}
+
+
+def test_grade_from_signals_answer_fails_if_refused():
+    g = grade_from_signals(expected_behavior="answer", answered_correctly=True,
+                           refused=True, provenance_ok=True)
+    assert g["refusal_ok"] is False and g["passed"] is False
+
+
+def test_grade_from_signals_answer_fails_without_provenance():
+    g = grade_from_signals(expected_behavior="answer", answered_correctly=True,
+                           refused=False, provenance_ok=False)
+    assert g["passed"] is False
+
+
+def test_grade_from_signals_refuse_passes_when_refused_and_sourced():
+    assert grade_from_signals(expected_behavior="refuse", answered_correctly=False,
+                              refused=True, provenance_ok=True) == {
+        "accuracy_ok": True, "refusal_ok": True, "provenance_ok": True, "passed": True}
+
+
+def test_grade_from_signals_refuse_fails_if_not_refused():
+    g = grade_from_signals(expected_behavior="refuse", answered_correctly=False,
+                           refused=False, provenance_ok=True)
+    assert g["refusal_ok"] is False and g["passed"] is False

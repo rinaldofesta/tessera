@@ -54,6 +54,21 @@ def match_answer(completion: str, expected: str) -> bool:
     return expected.strip().lower() in completion.lower()
 
 
+def grade_from_signals(*, expected_behavior: str, answered_correctly: bool,
+                       refused: bool, provenance_ok: bool) -> dict[str, bool]:
+    """Pure boolean combiner shared by the deterministic and LLM engines."""
+    if expected_behavior == "refuse":
+        accuracy_ok = refused      # abstaining IS the correct behavior on a refuse-probe
+        refusal_ok = refused
+        passed = refused and provenance_ok
+    else:  # answer
+        accuracy_ok = answered_correctly
+        refusal_ok = not refused   # "did it wrongly abstain?"
+        passed = answered_correctly and provenance_ok and not refused
+    return {"accuracy_ok": accuracy_ok, "refusal_ok": refusal_ok,
+            "provenance_ok": provenance_ok, "passed": passed}
+
+
 def grade_probe(
     *,
     expected_behavior: str,
