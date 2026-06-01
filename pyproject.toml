@@ -9,6 +9,7 @@ authors = [{ name = "Rinaldo Festa" }]
 dependencies = [
     "inspect-ai>=0.3.232,<0.4",
     "pydantic>=2.7",
+    "mcp>=1.27,<2",
 ]
 
 [project.optional-dependencies]
