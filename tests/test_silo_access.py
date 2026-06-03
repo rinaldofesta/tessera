@@ -37,3 +37,26 @@ def test_docs_get_file_returns_body_text(out):
 def test_docs_get_file_rejects_path_outside_docs(out):
     with pytest.raises(ValueError):
         docs_get_file(out, "../crm/db.json")
+
+
+def test_docs_search_finds_note_with_natural_language_query(out):
+    # The First Contact bug: an agent searches with a full phrase, not one keyword.
+    # The old whole-phrase substring match returned [] because the note BODY never
+    # contains "acme corp renewal date" (the entity/topic live in the filename). A
+    # realistic search tokenizes the query and indexes the filename alongside the body.
+    hits = docs_search(out, "Acme Corp renewal date")
+    paths = [h["path"] for h in hits]
+    assert any("acme" in p and "renewal" in p for p in paths)
+
+
+def test_docs_search_ranks_by_term_overlap(out):
+    # "contract value renewal": the globex note matches two terms, the acme note one,
+    # so globex ranks first; the acme note still surfaces lower.
+    hits = docs_search(out, "contract value renewal")
+    paths = [h["path"] for h in hits]
+    assert "globex" in paths[0]
+    assert any("renewal" in p for p in paths)
+
+
+def test_docs_search_no_matching_terms_returns_empty(out):
+    assert docs_search(out, "quarterly earnings forecast") == []

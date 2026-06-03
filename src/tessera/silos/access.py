@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
 def crm_lookup_record(out_dir: str | Path, account_name: str) -> dict[str, Any] | None:
@@ -17,18 +20,29 @@ def crm_lookup_record(out_dir: str | Path, account_name: str) -> dict[str, Any] 
 
 
 def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
-    """Case-insensitive substring search over Docs files. Returns [{path, excerpt}]."""
+    """Keyword search over Docs files. Returns [{path, excerpt}], best match first.
+
+    Tokenizes the query and matches terms (>= 3 chars, case-insensitive) against each
+    file's NAME and body, ranking by how many distinct terms hit. Real search engines
+    index titles/paths alongside body text and match on terms -- not on the whole query
+    as one literal substring (which essentially never matches a natural-language query).
+    """
     docs_dir = Path(out_dir) / "docs"
     if not docs_dir.exists():
         return []
-    needle = query.lower()
-    hits: list[dict[str, str]] = []
+    terms = {t for t in _TOKEN_RE.findall(query.lower()) if len(t) >= 3}
+    if not terms:
+        return []
+    ranked: list[tuple[int, str, dict[str, str]]] = []
     for md in sorted(docs_dir.glob("*.md")):
-        text = md.read_text()
-        if needle in text.lower():
-            rel = f"docs/{md.name}"
-            hits.append({"path": rel, "excerpt": text.strip().splitlines()[-1][:200]})
-    return hits
+        body = md.read_text()
+        haystack = f"{md.name}\n{body}".lower()
+        score = sum(1 for t in terms if t in haystack)
+        if score:
+            excerpt = (body.strip().splitlines() or [""])[-1][:200]
+            ranked.append((score, md.name, {"path": f"docs/{md.name}", "excerpt": excerpt}))
+    ranked.sort(key=lambda r: (-r[0], r[1]))  # most terms first; filename breaks ties
+    return [hit for _, _, hit in ranked]
 
 
 def docs_get_file(out_dir: str | Path, path: str) -> str:
