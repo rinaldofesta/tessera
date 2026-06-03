@@ -19,3 +19,6 @@ dist/
 # Inspect logs
 logs/
 *.eval
+
+# Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
+docs/superpowers/
