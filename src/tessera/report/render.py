@@ -56,3 +56,33 @@ def render_axes(axes: AxesSummary) -> str:
         f"| Provenance {cell(axes.provenance_rate, axes.n_total_epochs, 'all probe-epochs')}",
         f"| Refusal    {cell(axes.refusal_rate, axes.n_refuse_epochs, 'refuse probe-epochs')}",
     ])
+
+
+def render_appendix(probes: list[ProbeReliability], header: RunHeader) -> str:
+    failed = [p for p in probes if not p.pass_k]
+    lines = [f"## Diagnostic appendix — failed pass^{header.k}"]
+    if not failed:
+        lines.append(f"All {len(probes)} probes passed pass^{header.k} — no diagnostics.")
+        return "\n".join(lines)
+
+    order = {ct: i for i, ct in enumerate(_CANONICAL_ORDER)}
+    for p in sorted(failed, key=lambda p: (order.get(p.conflict_type, 99), p.probe_id)):
+        lines.append("")
+        lines.append(
+            f"### ✗ {p.probe_id} · {p.conflict_type} · "
+            f"pass^{header.k} 0% ({p.epochs_passed}/{p.epochs_total} epochs)"
+        )
+        if p.failures:
+            lines.append(f"**Q:** {p.failures[0].question}")
+        for e in p.failures:
+            marks = (f"accuracy{'✓' if e.accuracy_ok else '✗'} "
+                     f"provenance{'✓' if e.provenance_ok else '✗'} "
+                     f"refusal{'✓' if e.refusal_ok else '✗'}")
+            lines.append(f"- epoch {e.epoch} FAIL — {marks}")
+            lines.append(f'  - answer: "{e.answer}"')
+            missing = sorted(set(e.expected_sources) - set(e.consulted))
+            consulted = ", ".join(e.consulted) if e.consulted else "(none)"
+            miss = f" · **missing: {', '.join(missing)}**" if missing else ""
+            lines.append(f"  - consulted: {consulted}{miss}")
+            lines.append(f"  - locate: sample `{p.probe_id}`, epoch {e.epoch}")
+    return "\n".join(lines)

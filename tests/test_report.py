@@ -148,3 +148,27 @@ def test_render_axes_table_with_na_for_missing_axis():
     assert "Accuracy" in out and "75%" in out and "answer probe-epochs (6)" in out
     assert "Provenance" in out and "92%" in out and "all probe-epochs (12)" in out
     assert "Refusal" in out and "n/a" in out and "refuse probe-epochs (0)" in out
+
+
+from tessera.report.render import render_appendix
+
+
+def test_render_appendix_lists_only_failures_with_missing_and_locator():
+    fe = _ep("q_acme_renewal", 2, False, ct="resolvable", accuracy_ok=True,
+             provenance_ok=False, consulted=("crm",),
+             expected_sources=("crm", "acme.renewal.note"),
+             question="When is Acme's renewal?", answer="2026-03-01 (per CRM)")
+    failed = ProbeReliability("q_acme_renewal", "resolvable", "answer", 3, 2, False, 2 / 3, (fe,))
+    clean = ProbeReliability("q_ok", "none", "answer", 3, 3, True, 1.0, ())
+    out = render_appendix([failed, clean], _hdr(k=3))
+    assert "q_acme_renewal" in out and "q_ok" not in out           # failures only
+    assert "**Q:** When is Acme's renewal?" in out
+    assert "missing: acme.renewal.note" in out
+    assert "locate: sample `q_acme_renewal`, epoch 2" in out
+    assert "(2/3 epochs)" in out
+
+
+def test_render_appendix_clean_run_confirmation_line():
+    clean = ProbeReliability("q_ok", "none", "answer", 3, 3, True, 1.0, ())
+    out = render_appendix([clean], _hdr(k=3))
+    assert "All 1 probes passed pass^3 — no diagnostics." in out
