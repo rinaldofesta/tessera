@@ -109,3 +109,30 @@ def test_bar_full_empty_and_rounded_partial():
     assert bar(0.0) == "░░░░░░░░░░"
     assert bar(1.0) == "██████████"
     assert bar(0.67) == "███████░░░"   # round(6.7) == 7 filled
+
+
+from tessera.report.render import render_scorecard
+
+
+def _hdr(k=3, engine="llm"):
+    return RunHeader(model="anthropic/claude-sonnet-4-6", engine=engine, k=k,
+                     created="2026-06-03", location="./logs/x.eval",
+                     grader=("openai/gpt-4o" if engine == "llm" else None))
+
+
+def test_render_scorecard_overall_canonical_order_and_flaky():
+    cats = [
+        CategoryReliability("void", 1, 1.0, 1.0),
+        CategoryReliability("none", 1, 1.0, 1.0),
+        CategoryReliability("resolvable", 1, 0.0, 2 / 3),   # capable but inconsistent
+    ]
+    out = render_scorecard(_hdr(k=3), 0.5, 0.75, cats)
+    assert "OVERALL  pass^3  50%   (mean 75%)" in out
+    assert out.index("none") < out.index("resolvable") < out.index("void")  # canonical, not input order
+    assert "⚠ flaky" in out                       # mean 67% > pass^k 0%
+    assert "unresolvable" not in out              # categories absent from the run are skipped
+
+
+def test_render_scorecard_no_flaky_when_consistent():
+    out = render_scorecard(_hdr(k=3), 1.0, 1.0, [CategoryReliability("none", 1, 1.0, 1.0)])
+    assert "⚠ flaky" not in out
