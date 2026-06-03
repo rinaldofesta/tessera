@@ -284,3 +284,36 @@ def test_inspect_only_imported_by_adapter_and_cli():
                     (node.module or "").split(".")[0] == "inspect_ai"):
                 offenders.append(f.name)
     assert offenders == [], f"inspect_ai imported by pure modules: {sorted(set(offenders))}"
+
+
+def test_cli_main_prints_report_to_stdout(tmp_path, capsys):
+    from inspect_ai.log import write_eval_log
+    from tessera.report.cli import main
+    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
+                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
+                     expected_sources=["crm"], answer="4 hours")
+    p = tmp_path / "run.eval"
+    write_eval_log(_eval_log([s]), str(p))
+    rc = main([str(p)])
+    out = capsys.readouterr().out
+    assert rc == 0 and "Tessera Reliability Report" in out
+
+
+def test_cli_main_writes_to_out_file(tmp_path):
+    from inspect_ai.log import write_eval_log
+    from tessera.report.cli import main
+    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
+                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
+                     expected_sources=["crm"], answer="4 hours")
+    p = tmp_path / "run.eval"
+    write_eval_log(_eval_log([s]), str(p))
+    out_md = tmp_path / "report.md"
+    rc = main([str(p), "-o", str(out_md)])
+    assert rc == 0 and out_md.read_text().startswith("# Tessera Reliability Report")
+
+
+def test_cli_main_missing_file_exits_2(capsys):
+    from tessera.report.cli import main
+    rc = main(["/nonexistent/path.eval"])
+    err = capsys.readouterr().err
+    assert rc == 2 and "cannot read log" in err

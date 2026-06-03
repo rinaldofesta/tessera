@@ -17,6 +17,9 @@ dev = [
     "pytest>=8",
 ]
 
+[project.scripts]
+tessera-report = "tessera.report.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
