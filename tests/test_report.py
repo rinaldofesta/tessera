@@ -191,3 +191,96 @@ def test_render_report_assembles_all_sections_and_footer():
     assert "## Diagnostic appendix — failed pass^3" in out
     assert "inspect view --log-dir ./logs" in out
     assert 'read_eval_log_sample("./logs/x.eval", "<probe_id>", epoch=N)' in out
+
+
+from tessera.report.log_adapter import eval_log_to_records
+
+
+def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
+              model="anthropic/claude-sonnet-4-6", location="./logs/run.eval"):
+    from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
+    from inspect_ai.model import ModelConfig
+    roles = {"grader": ModelConfig(model=grader)} if grader else {}
+    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
+                    dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
+                    task_args={"judge": judge}, model_roles=roles)
+    # A directly-constructed EvalLog has location="" by default; set it so the adapter
+    # has a stable path to surface (read_eval_log fills this in on the real path).
+    return EvalLog(eval=spec, samples=samples, location=location)
+
+
+def _eval_sample(probe_id, epoch, *, conflict_type, expected_behavior, passed, accuracy_ok,
+                 provenance_ok, refusal_ok, consulted, expected_sources, answer,
+                 scorer_name="llm_reliability_scorer", question="Q?", expected_answer=None):
+    from inspect_ai.log import EvalSample
+    from inspect_ai.scorer import Score
+    return EvalSample(
+        id=probe_id, epoch=epoch, input=question, target=expected_answer or "",
+        metadata={"conflict_type": conflict_type, "expected_behavior": expected_behavior,
+                  "expected_answer": expected_answer, "expected_sources": list(expected_sources)},
+        scores={scorer_name: Score(value=("C" if passed else "I"), answer=answer,
+                metadata={"passed": passed, "accuracy_ok": accuracy_ok,
+                          "provenance_ok": provenance_ok, "refusal_ok": refusal_ok,
+                          "consulted": list(consulted)})})
+
+
+def test_eval_log_to_records_reads_header_and_record():
+    s = _eval_sample("q_globex_contract", 2, conflict_type="unresolvable",
+                     expected_behavior="refuse", passed=False, accuracy_ok=False,
+                     provenance_ok=True, refusal_ok=False, consulted=["globex.contract.crm"],
+                     expected_sources=["globex.contract.crm", "globex.contract.note"],
+                     answer="$1.2M")
+    header, records = eval_log_to_records(_eval_log([s]))
+    assert header.model == "anthropic/claude-sonnet-4-6"
+    assert header.engine == "llm" and header.grader == "openai/gpt-4o" and header.k == 3
+    assert header.location == "./logs/run.eval"
+    [r] = records
+    assert r.probe_id == "q_globex_contract" and r.epoch == 2 and r.passed is False
+    assert r.provenance_ok is True and r.refusal_ok is False
+    assert r.expected_sources == ("globex.contract.crm", "globex.contract.note")
+    assert r.consulted == ("globex.contract.crm",) and r.answer == "$1.2M"
+
+
+def test_adapter_selects_score_by_axis_keys_regardless_of_scorer_name():
+    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
+                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
+                     expected_sources=["crm"], answer="4 hours",
+                     scorer_name="deterministic_reliability_scorer")
+    header, [r] = eval_log_to_records(_eval_log([s], judge="deterministic", grader=None))
+    assert header.engine == "deterministic" and header.grader is None
+    assert r.passed is True
+
+
+def test_adapter_raises_on_no_samples():
+    with pytest.raises(ReportError):
+        eval_log_to_records(_eval_log([]))
+
+
+def test_adapter_raises_on_foreign_log():
+    from inspect_ai.log import EvalSample
+    from inspect_ai.scorer import Score
+    foreign = EvalSample(id="x", epoch=1, input="q", target="",
+                         metadata={}, scores={"other": Score(value="C", metadata={"foo": 1})})
+    with pytest.raises(ReportError):
+        eval_log_to_records(_eval_log([foreign]))
+
+
+def test_inspect_only_imported_by_adapter_and_cli():
+    # The invariant is that the pure modules do not IMPORT inspect_ai. Parse the AST and
+    # look for real import statements, so a docstring/comment that merely mentions
+    # "inspect_ai" (e.g. "No inspect_ai") does not count as a leak.
+    import ast
+    import pathlib
+    pkg = pathlib.Path(__file__).resolve().parents[1] / "src" / "tessera" / "report"
+    offenders = []
+    for f in sorted(pkg.glob("*.py")):
+        if f.name in ("log_adapter.py", "cli.py"):
+            continue
+        for node in ast.walk(ast.parse(f.read_text())):
+            if isinstance(node, ast.Import) and any(
+                    n.name.split(".")[0] == "inspect_ai" for n in node.names):
+                offenders.append(f.name)
+            elif isinstance(node, ast.ImportFrom) and (
+                    (node.module or "").split(".")[0] == "inspect_ai"):
+                offenders.append(f.name)
+    assert offenders == [], f"inspect_ai imported by pure modules: {sorted(set(offenders))}"
