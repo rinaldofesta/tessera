@@ -100,3 +100,12 @@ def test_summarize_axes_none_when_an_axis_has_no_epochs():
     ax = summarize_axes([_ep("a1", 1, True, beh="answer")])
     assert ax.refusal_rate is None      # no refuse-probe-epochs -> n/a, never a fake 0%
     assert ax.accuracy_rate == 1.0
+
+
+from tessera.report.render import bar
+
+
+def test_bar_full_empty_and_rounded_partial():
+    assert bar(0.0) == "░░░░░░░░░░"
+    assert bar(1.0) == "██████████"
+    assert bar(0.67) == "███████░░░"   # round(6.7) == 7 filled
