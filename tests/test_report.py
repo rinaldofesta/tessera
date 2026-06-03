@@ -78,3 +78,25 @@ def test_overall_rates_strict_and_mean():
     assert overall_pass_k_rate(probes) == 0.5
     assert abs(overall_mean_rate(probes) - (1.0 + 2 / 3) / 2) < 1e-9
     assert overall_pass_k_rate([]) == 0.0 and overall_mean_rate([]) == 0.0
+
+
+from tessera.report.aggregate import summarize_axes
+
+
+def test_summarize_axes_uses_axis_specific_denominators():
+    recs = [
+        _ep("a1", 1, True, ct="none", beh="answer"),     # answer: accuracy_ok True
+        _ep("a1", 2, False, ct="none", beh="answer"),    # answer: accuracy_ok False
+        _ep("r1", 1, True, ct="void", beh="refuse"),     # refuse: refusal_ok True
+    ]
+    ax = summarize_axes(recs)
+    assert ax.n_answer_epochs == 2 and ax.n_refuse_epochs == 1 and ax.n_total_epochs == 3
+    assert ax.accuracy_rate == 0.5      # 1 of 2 answer-epochs
+    assert ax.refusal_rate == 1.0       # 1 of 1 refuse-epoch
+    assert ax.provenance_rate == 1.0    # 3 of 3 (default provenance_ok=True)
+
+
+def test_summarize_axes_none_when_an_axis_has_no_epochs():
+    ax = summarize_axes([_ep("a1", 1, True, beh="answer")])
+    assert ax.refusal_rate is None      # no refuse-probe-epochs -> n/a, never a fake 0%
+    assert ax.accuracy_rate == 1.0

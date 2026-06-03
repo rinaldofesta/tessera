@@ -68,3 +68,29 @@ def overall_mean_rate(probes: list[ProbeReliability]) -> float:
     if not probes:
         return 0.0
     return sum(p.mean_pass for p in probes) / len(probes)
+
+
+def summarize_axes(records: list[ProbeEpoch]) -> AxesSummary:
+    """Per-axis rates with axis-specific denominators.
+
+    Accuracy is only meaningful where the agent committed (answer-probe-epochs); refusal
+    only where it should abstain (refuse-probe-epochs); provenance applies to all. An
+    empty denominator yields None (rendered n/a), never a misleading 0%.
+    """
+    answer = [r for r in records if r.expected_behavior == "answer"]
+    refuse = [r for r in records if r.expected_behavior == "refuse"]
+    total = len(records)
+
+    def rate(items: list[ProbeEpoch], attr: str) -> float | None:
+        if not items:
+            return None
+        return sum(1 for r in items if getattr(r, attr)) / len(items)
+
+    return AxesSummary(
+        accuracy_rate=rate(answer, "accuracy_ok"),
+        provenance_rate=(sum(1 for r in records if r.provenance_ok) / total) if total else 0.0,
+        refusal_rate=rate(refuse, "refusal_ok"),
+        n_answer_epochs=len(answer),
+        n_refuse_epochs=len(refuse),
+        n_total_epochs=total,
+    )
