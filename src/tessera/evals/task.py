@@ -19,6 +19,9 @@ from tessera.examples.toy_org import build_toy_blueprint
 _PROMPT = (
     "You are an enterprise analyst answering from internal systems only. "
     "Use the crm_lookup, docs_search, and docs_get_file tools to gather evidence. "
+    "A single system is often stale or incomplete: before you commit to an answer, "
+    "consult every relevant source -- the CRM and the document store -- and reconcile "
+    "them. Treat one record as a lead to corroborate, not a conclusion. "
     "When sources conflict, prefer the most recent one and state why. "
     "If the information is missing or genuinely cannot be resolved, say you do not know "
     "rather than guessing. Cite the sources you used."
