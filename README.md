@@ -71,6 +71,98 @@ No open benchmark sits at the intersection of OSS, enterprise fragmentation, MCP
 
 Related work is consolidated in the companion thesis.
 
+---
+
+## Quickstart
+
+> A live `inspect eval` needs a model API key (e.g. `ANTHROPIC_API_KEY`). The test suite needs none.
+
+```bash
+uv pip install -e .
+.venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 --display plain
+.venv/bin/inspect view   # browse the log: per-sample tool calls, provenance, refusal
+```
+
+By default, scoring is deterministic (keyword/substring, no grader). For model-graded accuracy and refusal, select the LLM engine and bind an **independent** grader:
+
+```bash
+.venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm \
+    --model anthropic/claude-sonnet-4-6 \
+    --model-role grader=openai/gpt-4o
+```
+
+## Project structure
+
+```
+src/tessera/
+  models.py             declarative blueprint: Claims + Probes (the eval's source of truth)
+  compiler.py           blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
+  examples/toy_org.py   the toy organization: four probes spanning the full conflict taxonomy
+  silos/                pure data-access functions over the compiled org
+  mcp/                  FastMCP stdio servers that serve the org to the agent (crm, docs)
+  evals/
+    dataset.py          blueprint -> Inspect dataset (one Sample per probe)
+    scoring.py          the dual-engine scorer + the pure grade_from_signals combiner
+    judges.py           model-graded accuracy + refusal judges (the LLM engine)
+    task.py             the runnable Inspect task (a react agent over MCP, pass^k epochs)
+  report/               tessera-report: a pure scorecard over an .eval log (no model)
+tests/                  the whole suite — key-free, runs offline
+```
+
+## How scoring works
+
+Each probe is scored on three axes, not just accuracy, and repeated under `pass^k` because models are stochastic. The toy organization ships **four probes spanning the complete conflict taxonomy** — the four ways enterprise knowledge actually behaves:
+
+| Probe | Conflict type | Correct behavior |
+|---|---|---|
+| cross-source lookup | `none` | **answer**, stitched from two silos |
+| stale vs. fresh | `resolvable` | **answer**, newer source wins — and cite both |
+| contradictory, equal authority | `unresolvable` | **refuse**, flag the impasse |
+| absent from the data | `void` | **refuse**, do not hallucinate |
+
+Scoring runs through **two engines behind one pure combiner** (`grade_from_signals`):
+
+- **Deterministic** — keyword refusal + substring accuracy. Zero-cost, key-free, the default.
+- **LLM-judge** — model-graded accuracy and refusal, for paraphrase- and format-tolerant grading.
+
+> **Provenance stays deterministic — the moat.** Whether the agent consulted the right sources is read straight from its real MCP tool calls and checked against the compiled `manifest.json`. It is never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
+
+> **The self-grading guard.** The LLM engine requires an *independent* grader (`--model-role grader=<other-model>`). If the grader resolves to the model under test, or none is bound, the eval aborts loudly rather than letting a model grade itself.
+
+## Viewing results: the reliability scorecard
+
+`inspect view` shows per-sample transcripts. **`tessera-report`** turns an `.eval` log into the cut that matters: strict `pass^k` sliced by conflict type, the operational axes with honest denominators, and a trail to every failed trace.
+
+```bash
+.venv/bin/python -m tessera.report ./logs/<run>.eval          # to stdout
+.venv/bin/python -m tessera.report ./logs/<run>.eval -o report.md
+```
+
+```text
+# Tessera Reliability Report
+**Model:** anthropic/claude-sonnet-4-6 · **Engine:** llm (grader: openai/gpt-4o)
+**Run:** 2026-06-03 · **Probes:** 4 × 3 epochs
+
+## Reliability — pass^3 (strict)
+OVERALL  pass^3  75%   (mean 92%)
+
+by conflict type        pass^3            mean
+  none          ██████████ 100%           100%
+  resolvable    ░░░░░░░░░░   0%            67%  ⚠ flaky
+  unresolvable  ██████████ 100%           100%
+  void          ██████████ 100%           100%
+```
+
+The gap between strict `pass^k` and the mean is the whole point: a category at `0% / 67%` is *capable but inconsistent* — a reliability bug a single accuracy number would hide. The report is pure arithmetic over the log; it never calls a model.
+
+## Development
+
+```bash
+.venv/bin/python -m pytest        # the whole suite
+```
+
+> **Key-free by design.** The entire test suite runs offline with no API key. Model-graded paths are exercised with injected stub judges, and Inspect logs are fabricated in-memory with `write_eval_log`. A live `inspect eval` is the only thing that needs a key.
+
 ## Status and roadmap
 
 - [ ] **v0 (mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
@@ -92,38 +184,22 @@ Honesty is what makes an eval citable.
 
 Early and open. The most useful contributions now: a real enterprise reasoning task where good agents should refuse but do not, critiques of the metric definitions (especially provenance and refusal scoring), and realistic fragmentation patterns the generator should model. Open an issue before a large PR.
 
+## Citation
+
+If you use Tessera, please cite it. A companion write-up is in progress; until then:
+
+```bibtex
+@software{festa_tessera_2026,
+  author = {Festa, Rinaldo},
+  title  = {Tessera: an open methodology and generator for enterprise AI-agent reliability evals},
+  year   = {2026},
+  url    = {https://github.com/rinaldofesta/tessera}
+}
+```
+
 ## About
 
 Built by **Rinaldo Festa**. I build AI agents for enterprises, then I build the evals that prove they can be trusted. Context and the build log: **[rinaldofesta.com](https://rinaldofesta.com)**.
-
-## Run the toy eval (v0 preview)
-
-> Requires a model API key (e.g. `ANTHROPIC_API_KEY`).
-
-```bash
-uv pip install -e .
-.venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 --display plain
-.venv/bin/inspect view   # open the log: per-sample tool calls, provenance, refusal
-```
-
-By default scoring is deterministic (keyword/substring, no grader). For model-graded
-accuracy + refusal, select the LLM engine and bind an independent grader:
-
-```bash
-.venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm \
-    --model anthropic/claude-sonnet-4-6 \
-    --model-role grader=openai/gpt-4o
-```
-
-The grader MUST differ from the model under test, or the eval aborts (self-grading guard).
-
-The toy organization has two MCP silos (a structured CRM and an unstructured Docs
-store) and three probes — a cross-source lookup, a resolvable contradiction, and a
-question with no answer in the data. Each is scored on accuracy, **provenance**
-(which sources the agent actually consulted, read from its real tool calls), and
-**correct refusal**, repeated under `pass_k` epochs. Accuracy and refusal are
-deterministic in v0; model-graded scoring (and an independent grader bound via
-`--model-role grader=<other-model>`) is a planned upgrade.
 
 ## License
 
