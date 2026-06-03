@@ -22,3 +22,7 @@ logs/
 
 # Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
 docs/superpowers/
+
+# Secrets — API keys live here, never committed
+.env
+.env.*
