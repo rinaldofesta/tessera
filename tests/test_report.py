@@ -172,3 +172,22 @@ def test_render_appendix_clean_run_confirmation_line():
     clean = ProbeReliability("q_ok", "none", "answer", 3, 3, True, 1.0, ())
     out = render_appendix([clean], _hdr(k=3))
     assert "All 1 probes passed pass^3 — no diagnostics." in out
+
+
+from tessera.report import render_report  # re-exported from the package root
+
+
+def test_render_report_assembles_all_sections_and_footer():
+    hdr = _hdr(k=3, engine="llm")
+    probe = ProbeReliability("q_ok", "none", "answer", 3, 3, True, 1.0, ())
+    cats = [CategoryReliability("none", 1, 1.0, 1.0)]
+    axes = AxesSummary(1.0, 1.0, None, 3, 0, 3)
+    out = render_report(hdr, 1.0, 1.0, cats, axes, [probe])
+    assert out.startswith("# Tessera Reliability Report")
+    assert "**Model:** anthropic/claude-sonnet-4-6 · **Engine:** llm (grader: openai/gpt-4o)" in out
+    assert "**Run:** 2026-06-03 · **Probes:** 1 × 3 epochs" in out
+    assert "## Reliability — pass^3 (strict)" in out
+    assert "## Operational axes (across probe-epochs)" in out
+    assert "## Diagnostic appendix — failed pass^3" in out
+    assert "inspect view --log-dir ./logs" in out
+    assert 'read_eval_log_sample("./logs/x.eval", "<probe_id>", epoch=N)' in out

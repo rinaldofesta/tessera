@@ -86,3 +86,33 @@ def render_appendix(probes: list[ProbeReliability], header: RunHeader) -> str:
             lines.append(f"  - consulted: {consulted}{miss}")
             lines.append(f"  - locate: sample `{p.probe_id}`, epoch {e.epoch}")
     return "\n".join(lines)
+
+
+def _log_dir(location: str) -> str:
+    return os.path.dirname(location) or "."
+
+
+def render_report(header: RunHeader, overall_pass_k: float, overall_mean: float,
+                  categories: list[CategoryReliability], axes: AxesSummary,
+                  probes: list[ProbeReliability]) -> str:
+    grader = f" (grader: {header.grader})" if header.grader else ""
+    title = [
+        "# Tessera Reliability Report",
+        f"**Model:** {header.model} · **Engine:** {header.engine}{grader}",
+        f"**Run:** {header.created} · **Probes:** {len(probes)} × {header.k} epochs",
+    ]
+    footer = [
+        "---",
+        f"Logs: {header.location}",
+        f"Open in the viewer:  inspect view --log-dir {_log_dir(header.location)}",
+        f'Pull one failure (key-free):  read_eval_log_sample("{header.location}", '
+        f'"<probe_id>", epoch=N)',
+    ]
+    sections = [
+        "\n".join(title),
+        render_scorecard(header, overall_pass_k, overall_mean, categories),
+        render_axes(axes),
+        render_appendix(probes, header),
+        "\n".join(footer),
+    ]
+    return "\n\n".join(sections) + "\n"
