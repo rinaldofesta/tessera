@@ -31,3 +31,40 @@ def reduce_by_probe(records: list[ProbeEpoch]) -> list[ProbeReliability]:
             failures=tuple(e for e in eps_sorted if not e.passed),
         ))
     return out
+
+
+def aggregate_by(probes: list[ProbeReliability],
+                 key=lambda p: p.conflict_type) -> list[CategoryReliability]:
+    """Two-level average: group probes by key(), average the binary cliffs and the means.
+
+    `key` is the slicing seam: default conflict_type today; a future field (domain,
+    authority_tier, ...) is a one-line lambda swap with zero change to this function.
+    """
+    buckets: dict[object, list[ProbeReliability]] = defaultdict(list)
+    for p in probes:
+        buckets[key(p)].append(p)
+
+    out: list[CategoryReliability] = []
+    for k, ps in buckets.items():
+        n = len(ps)
+        out.append(CategoryReliability(
+            key=k,
+            n_probes=n,
+            pass_k_rate=sum(1.0 if p.pass_k else 0.0 for p in ps) / n,
+            mean_rate=sum(p.mean_pass for p in ps) / n,
+        ))
+    return out
+
+
+def overall_pass_k_rate(probes: list[ProbeReliability]) -> float:
+    """Mean over ALL probes of (1.0 if pass_k else 0.0) — the strict headline."""
+    if not probes:
+        return 0.0
+    return sum(1.0 if p.pass_k else 0.0 for p in probes) / len(probes)
+
+
+def overall_mean_rate(probes: list[ProbeReliability]) -> float:
+    """Mean over ALL probes of mean_pass — the consistency annotation beside the headline."""
+    if not probes:
+        return 0.0
+    return sum(p.mean_pass for p in probes) / len(probes)
