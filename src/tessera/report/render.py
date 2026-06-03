@@ -41,3 +41,18 @@ def render_scorecard(header: RunHeader, overall_pass_k: float, overall_mean: flo
         )
     lines.append("```")
     return "\n".join(lines)
+
+
+def render_axes(axes: AxesSummary) -> str:
+    def cell(rate: float | None, n: int, denom: str) -> str:
+        shown = "n/a" if rate is None else _pct(rate)
+        return f"| {shown} | {denom} ({n}) |"
+
+    return "\n".join([
+        "## Operational axes (across probe-epochs)",
+        "| Axis | Rate | Denominator |",
+        "|------|-----:|-------------|",
+        f"| Accuracy   {cell(axes.accuracy_rate, axes.n_answer_epochs, 'answer probe-epochs')}",
+        f"| Provenance {cell(axes.provenance_rate, axes.n_total_epochs, 'all probe-epochs')}",
+        f"| Refusal    {cell(axes.refusal_rate, axes.n_refuse_epochs, 'refuse probe-epochs')}",
+    ])

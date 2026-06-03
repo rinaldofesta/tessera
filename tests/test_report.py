@@ -136,3 +136,15 @@ def test_render_scorecard_overall_canonical_order_and_flaky():
 def test_render_scorecard_no_flaky_when_consistent():
     out = render_scorecard(_hdr(k=3), 1.0, 1.0, [CategoryReliability("none", 1, 1.0, 1.0)])
     assert "⚠ flaky" not in out
+
+
+from tessera.report.render import render_axes
+
+
+def test_render_axes_table_with_na_for_missing_axis():
+    ax = AxesSummary(accuracy_rate=0.75, provenance_rate=0.92, refusal_rate=None,
+                     n_answer_epochs=6, n_refuse_epochs=0, n_total_epochs=12)
+    out = render_axes(ax)
+    assert "Accuracy" in out and "75%" in out and "answer probe-epochs (6)" in out
+    assert "Provenance" in out and "92%" in out and "all probe-epochs (12)" in out
+    assert "Refusal" in out and "n/a" in out and "refuse probe-epochs (0)" in out
