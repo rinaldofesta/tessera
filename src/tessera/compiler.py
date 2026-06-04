@@ -64,9 +64,12 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
 
     for claim in blueprint.claims:
         if claim.render.as_ is RenderAs.field:
+            # Store value WITH its (nullable) asserted_at, so the silo can expose record
+            # freshness. Without it, a dated note always looks newer than an undated CRM
+            # row, and a genuine same-timestamp tie is invisible to the agent.
             structured.setdefault(claim.silo, {}).setdefault(claim.subject, {})[
                 claim.predicate
-            ] = claim.value
+            ] = {"value": claim.value, "asserted_at": claim.asserted_at}
             manifest[claim.claim_id] = {
                 "silo": claim.silo,
                 "subject": claim.subject,

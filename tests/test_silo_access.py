@@ -13,7 +13,18 @@ def out(tmp_path):
 
 def test_crm_lookup_returns_record(out):
     rec = crm_lookup_record(out, "Acme Corp")
-    assert rec == {"tier": "Gold", "renewal_date": "2026-01-01"}
+    assert rec == {
+        "tier": {"value": "Gold", "asserted_at": None},
+        "renewal_date": {"value": "2026-01-01", "asserted_at": "2025-11-15T10:00:00Z"},
+    }
+
+
+def test_crm_lookup_exposes_asserted_at_so_the_tie_is_visible(out):
+    # The unresolvable probe is only valid if the agent can SEE that the CRM value and
+    # the conflicting note share a timestamp. crm_lookup must expose asserted_at, or the
+    # agent reasonably (but wrongly) resolves the standoff by recency.
+    rec = crm_lookup_record(out, "Globex Inc")
+    assert rec["contract_value"] == {"value": "$1.2M", "asserted_at": "2026-02-01T09:00:00Z"}
 
 
 def test_crm_lookup_missing_account_returns_none(out):

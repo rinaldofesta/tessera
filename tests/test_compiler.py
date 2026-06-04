@@ -56,10 +56,17 @@ def _toy_blueprint() -> Blueprint:
     )
 
 
-def test_structured_silo_groups_by_subject_and_flattens(tmp_path):
+def test_structured_silo_groups_by_subject_with_per_field_timestamps(tmp_path):
     compile_blueprint(_toy_blueprint(), tmp_path)
     db = json.loads((tmp_path / "crm" / "db.json").read_text())
-    assert db == {"Acme Corp": {"tier": "Gold", "renewal_date": "2026-01-01"}}
+    # Each field carries its own (nullable) asserted_at, so the agent can reason about
+    # recency and recognize a genuine tie. tier has no timestamp -> null.
+    assert db == {
+        "Acme Corp": {
+            "tier": {"value": "Gold", "asserted_at": None},
+            "renewal_date": {"value": "2026-01-01", "asserted_at": "2025-11-15T10:00:00Z"},
+        }
+    }
 
 
 def test_prose_claim_written_with_frontmatter_and_rendered_body(tmp_path):
