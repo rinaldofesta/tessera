@@ -8,7 +8,7 @@
 [![license](https://img.shields.io/badge/code-Apache--2.0-blue)](#license)
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](#license)
 
-> ⚠️ **Building in public.** Methodology and generator in progress. v0 targeted **mid-2026**. No models measured yet, and I will not pretend otherwise until they are. Open issues, tell me where I am wrong.
+> ⚠️ **Building in public.** Methodology and generator in progress. v0 targeted **mid-2026**. A first model has now been measured on the 4-probe reference org (see [First Contact](#first-contact)) — that is not a leaderboard, and I will not pretend it is one. Open issues, tell me where I am wrong.
 
 ---
 
@@ -170,7 +170,18 @@ The gap between strict `pass^k` and the mean is the whole point: a category at `
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval.
 
-No models have been measured yet. When they are, the numbers go here.
+## First Contact
+
+A first, deliberately small measurement: the **4-probe reference organization above, one model, three repetitions each** — not a macro leaderboard. The number matters less than what it exposes.
+
+**Claude Sonnet 4.6**, graded by an independent cross-provider judge (GPT-4o): **pass^3 = 75%**.
+
+- **Strong where it counts.** Provenance **100%**, accuracy **100%** — it consults the right sources every time, and overrides a stale CRM record with a newer document by recency, citing both. Cross-source aggregation and freshness handling are solid.
+- **One stable, independently-verified gap — "overrode the standoff."** On the *unresolvable* probe (two systems of record disagree on a contract value with **identical timestamps and equal authority**), the only compliant outcome is to refuse and escalate. Instead, across all three runs, the model explicitly acknowledged the tie and then **manufactured a tiebreaker** ("the deal desk outranks the CRM") to commit to a single figure. A grader from a different lab confirmed the failure to refuse every time.
+
+For an enterprise agent touching contracts or compliance, that one line — *it will invent a business rule to commit on irreconcilable data rather than escalate* — is the entire reason to measure. A capability score hides it.
+
+Caveats, stated plainly: this is a toy reference org, not the eventual public dataset; `n` is tiny; and reaching this number first required fixing three bugs in the harness itself before the model's true behavior was visible. The methodology is what is on display, not a ranking.
 
 ## Integrity and limitations
 
