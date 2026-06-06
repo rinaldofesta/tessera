@@ -16,6 +16,8 @@
 
 Models can already do almost anything. The open problem is doing it reliably. The bottleneck for enterprise AI agents is not generating code or prose, it is reasoning over the knowledge a company actually has: scattered across wikis, CRMs, tickets, chat threads, and half-stale PDFs, contradictory, and full of gaps.
 
+And the bottleneck is moving. As agents take over more of the *doing*, the scarce step becomes review — and no human reads every output of a fleet of agents. A reliability eval is how one person's judgment scales across the outputs they will never personally check. Tessera is that layer: not a smarter model, but the standard that says *this agent can be trusted to run unwatched on this kind of question.*
+
 In that setting an agent has to do three hard things at once:
 
 1. **Get the answer right** when the answer exists.
@@ -32,12 +34,12 @@ The public dataset and leaderboard are a **showcase, not the product.** The eval
 
 ## What it measures
 
-Every task is scored on more than accuracy, and repeated because models are stochastic:
+Every task is scored on more than accuracy, and repeated because models are stochastic. The axis that matters most when an agent runs unwatched comes first:
 
+- **Correct refusal and escalation**, because an agent left alone has to *know when it cannot know* — to stop and escalate on missing or irreconcilable data instead of inventing a rule to commit. This is the safety-critical axis, and the one a capability score hides (see [First Contact](#first-contact)).
+- **Accuracy with provenance**, because an answer you cannot trace is an answer you cannot trust.
 - **Cross-source retrieval over MCP**, because one source is never the whole picture.
 - **Multi-turn memory and consistency**, because agents forget mid-conversation.
-- **Accuracy with provenance**, because an answer you cannot trace is an answer you cannot trust.
-- **Correct refusal**, because the strongest signal is a clean "I do not know" when the sources conflict or the data is missing.
 - **pass^k**, because a stochastic model has to be tested more than once.
 
 ## How it works (v0 design)
@@ -54,6 +56,15 @@ generator ──> synthetic fragmented org ──MCP──> agent under test ─
 2. **MCP harness** serves that org to the agent under test over MCP tools, the same surface it would use in production.
 3. **Task suites** require cross-source reasoning, memory, and the judgment to refuse.
 4. **Scorer** computes accuracy, provenance, and correct refusal, repeated with pass^k, and emits a per-task trace you can audit.
+
+## Two tiers: the standard, and the org
+
+Tessera is two layers, and only one of them is the contribution.
+
+- **The standard — human-owned, durable.** The conflict taxonomy (`none` / `resolvable` / `unresolvable` / `void`), the `Claims + Probes` blueprint, and the adversarial ground truth. This encodes a judgment call — *what counts as reliable enough, and how enterprise knowledge actually fails* — that does not commoditize when generating cases becomes cheap.
+- **The org — generated, renewable.** The synthetic company on disk (CRM, docs, `manifest.json`), compiled from the blueprint. This is the layer the `scenario-factory` will mass-produce, and the layer a model can already help write.
+
+The bet is explicit: case *production* is automatable; the *standard* is not. Tessera's value lives in the tier that survives its own automation — the standard, the adversarial design, and the calibration of how much reliability a given risk actually demands.
 
 ## The pairing
 
@@ -95,9 +106,9 @@ By default, scoring is deterministic (keyword/substring, no grader). For model-g
 
 ```
 src/tessera/
-  models.py             declarative blueprint: Claims + Probes (the eval's source of truth)
-  compiler.py           blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
-  examples/toy_org.py   the toy organization: four probes spanning the full conflict taxonomy
+  models.py             [STANDARD] declarative blueprint: Claims + Probes (the eval's source of truth)
+  examples/toy_org.py   [STANDARD] four probes spanning the full conflict taxonomy
+  compiler.py           [RENEWABLE] blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
   silos/                pure data-access functions over the compiled org
   mcp/                  FastMCP stdio servers that serve the org to the agent (crm, docs)
   evals/
@@ -125,7 +136,7 @@ Scoring runs through **two engines behind one pure combiner** (`grade_from_signa
 - **Deterministic** — keyword refusal + substring accuracy. Zero-cost, key-free, the default.
 - **LLM-judge** — model-graded accuracy and refusal, for paraphrase- and format-tolerant grading.
 
-> **Provenance stays deterministic — the moat.** Whether the agent consulted the right sources is read straight from its real MCP tool calls and checked against the compiled `manifest.json`. It is never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
+> **The moat is the standard; provenance keeps it honest.** The durable contribution is the *standard* — the conflict taxonomy and the adversarial ground truth that define what "reliable enough" means. Provenance is how that standard stays verifiable: whether the agent consulted the right sources is read straight from its real MCP tool calls and checked against the compiled `manifest.json`, never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
 
 > **The self-grading guard.** The LLM engine requires an *independent* grader (`--model-role grader=<other-model>`). If the grader resolves to the model under test, or none is bound, the eval aborts loudly rather than letting a model grade itself.
 
@@ -168,7 +179,8 @@ The gap between strict `pass^k` and the mean is the whole point: a category at `
 - [ ] **v0 (mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
 - [ ] Showcase: a public synthetic dataset and a leaderboard of frontier models run against it.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
-- [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval.
+- [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
+- [ ] **Reliability under delegation:** agent-consuming-agent suites — when one agent's output is another's input, does an unresolved tie *propagate* down the chain, or get caught? The reliability question for the pyramid-of-agents org.
 
 ## First Contact
 
