@@ -49,6 +49,85 @@ def _pick(logs: list[dict], label: str, key: str, prefer: str = "") -> str:
     return by_label[chosen]
 
 
+def page_home() -> None:
+    st.title("🧪 Tessera — Reliability Explorer")
+    st.subheader("Does an AI agent answer your company's questions *reliably* — with sources, "
+                 "and the sense to refuse when it can't know?")
+    st.markdown(
+        "Models can already answer almost anything. The open problem is doing it **reliably** over "
+        "the knowledge a company actually has: scattered across CRMs, docs and tickets, "
+        "**contradictory**, and full of **gaps**. Tessera measures whether an agent can be trusted "
+        "in that setting.")
+
+    st.divider()
+    st.markdown("#### How it works")
+    k1, k2, k3, k4 = st.columns(4)
+    for col, emoji, title, body in [
+        (k1, "📚", "Knowledge", "A synthetic company — facts split across a **CRM** and a **docs** "
+         "store, with deliberate contradictions and gaps."),
+        (k2, "🔌", "MCP access", "The agent reaches that knowledge **only through MCP tools** "
+         "(`crm_lookup`, `docs_search`, `docs_get_file`) — exactly like production."),
+        (k3, "🤖", "Agent under test", "Any model runs a ReAct loop: search, read, reason, then "
+         "**answer or refuse**."),
+        (k4, "📊", "Reliability score", "Accuracy · provenance · refusal, **repeated k×** → "
+         "`pass^k`."),
+    ]:
+        with col:
+            with st.container(border=True):
+                st.markdown(f"### {emoji}")
+                st.markdown(f"**{title}**")
+                st.caption(body)
+
+    st.divider()
+    left, right = st.columns(2)
+    with left:
+        st.markdown("#### Where the knowledge & evals come from")
+        st.markdown(
+            "Everything starts from a human-authored **blueprint** — the part that does *not* "
+            "get automated:\n\n"
+            "- **Claims** — the facts. Each has a subject, value, which silo it lives in, when it "
+            "was asserted, and its authority.\n"
+            "- **Probes** — the questions. Each declares the *correct behavior* and the sources "
+            "that must be consulted.\n\n"
+            "A **compiler** turns the blueprint into the on-disk org (CRM `db.json`, docs "
+            "markdown, a `manifest.json` of ground truth). To evaluate **your own** data, you "
+            "describe it as claims + probes — the standard stays the same.")
+    with right:
+        st.markdown("#### What it's evaluating — the 4 ways knowledge behaves")
+        st.markdown(
+            "| Situation | Correct behavior |\n"
+            "|---|---|\n"
+            "| **none** — sources agree | **answer**, stitched together |\n"
+            "| **resolvable** — they clash, a rule decides | **answer** (newer / more authoritative wins), cite both |\n"
+            "| **unresolvable** — they clash, no tiebreaker | **refuse** and escalate |\n"
+            "| **void** — the fact isn't there | **refuse**, don't invent |")
+
+    st.divider()
+    a, b = st.columns(2)
+    with a:
+        st.markdown("#### The three axes")
+        st.markdown(
+            "- **Accuracy** — is the answer right?\n"
+            "- **Provenance** — did it consult the right sources? *Read from the agent's real "
+            "tool calls — never judged by a model.*\n"
+            "- **Refusal** — did it correctly abstain when it should?")
+    with b:
+        st.markdown("#### What “reliable” means — `pass^k`")
+        st.markdown(
+            "Each question is asked **k times**; a probe passes only if the agent is right "
+            "**every** time. A high *average* with a low *pass^k* means **flaky** — right "
+            "sometimes, wrong others. That gap is the whole point: it's the reliability bug a "
+            "single score hides.")
+
+    st.divider()
+    st.markdown("#### Try it")
+    st.markdown(
+        "- **🔍 Explorer** — open one run and read its scorecard, down to the failed transcripts.\n"
+        "- **⚖️ Compare** — two runs side-by-side (e.g. the same finding under two different judges).\n"
+        "- **▶️ Run** — launch a live eval against a model and watch the scorecard appear.")
+    st.info("New here? Start with **🔍 Explorer** and open the ⭐ *First Contact* run.")
+
+
 def page_explorer() -> None:
     st.title("Explorer")
     st.caption("Pick one run. Each question is asked several times — the scorecard shows whether "
@@ -139,7 +218,8 @@ def page_run() -> None:
             components.render_full(status["report"])
 
 
-_PAGES = {"🔍 Explorer": page_explorer, "⚖️ Compare": page_compare, "▶️ Run": page_run}
+_PAGES = {"🏠 Home": page_home, "🔍 Explorer": page_explorer,
+          "⚖️ Compare": page_compare, "▶️ Run": page_run}
 
 with st.sidebar:
     st.title("🧪 Tessera")
