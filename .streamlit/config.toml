@@ -1,0 +1,9 @@
+# Tessera showcase — Streamlit config.
+# Disables the first-run telemetry email prompt (which blocks on stdin) so a live
+# demo on a fresh machine never hangs, and runs headless by default.
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
