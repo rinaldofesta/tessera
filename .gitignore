@@ -19,6 +19,8 @@ dist/
 # Inspect logs
 logs/
 *.eval
+# ...but keep the pinned demo logs the showcase depends on
+!examples/*.eval
 
 # Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
 docs/superpowers/
