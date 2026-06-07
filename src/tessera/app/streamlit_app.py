@@ -88,6 +88,19 @@ def page_run() -> None:
     st.title("Run a live eval")
     st.caption("Compiles the synthetic org, runs the agent over MCP tools, and scores pass^k. "
                "Needs model API keys in `.env`. Takes ~30–60s. One run at a time.")
+    with st.expander("Which scoring engine? — deterministic vs llm"):
+        st.markdown(
+            "Both engines run the **same agent** over the **same** synthetic org. They differ only "
+            "in how the agent's answer is **graded**:\n\n"
+            "| | **Deterministic** | **LLM judge** |\n"
+            "|---|---|---|\n"
+            "| How it grades | keyword / substring match + refusal keywords | an *independent* model reads the answer and judges it |\n"
+            "| Needs a grader | no | yes — a model **different** from the one under test |\n"
+            "| Cost & speed | free, fastest | one extra model call per probe |\n"
+            "| Paraphrase / format tolerant | no — may miss a correct answer worded differently | yes |\n"
+            "| Best for | a quick, free smoke test | trustworthy results to report |\n\n"
+            "**Provenance is always deterministic** in both — whether the agent consulted the right "
+            "sources is read from its real tool calls, never judged by a model.")
     with st.form("run"):
         model = st.selectbox("Model under test", _MODELS, index=0)
         judge = st.radio("Scoring engine", ["llm", "deterministic"], horizontal=True,
