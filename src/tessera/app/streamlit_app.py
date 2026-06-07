@@ -13,7 +13,7 @@ import streamlit as st
 from tessera.app import components
 from tessera.app.api_client import DEFAULT_URL, TesseraAPI
 
-st.set_page_config(page_title="Tessera Reliability Explorer", layout="wide")
+st.set_page_config(page_title="Tessera Reliability Explorer", page_icon="🧪", layout="wide")
 
 _MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"]
 
@@ -27,65 +27,79 @@ def _logs() -> list[dict]:
     try:
         return _api().list_logs()
     except Exception as exc:  # noqa: BLE001
-        st.error(f"Cannot reach the Tessera API at {DEFAULT_URL}. Is it running?\n\n{exc}")
+        st.error(f"Can't reach the Tessera API at {DEFAULT_URL}. Is it running? "
+                 f"Start everything with `bash scripts/dev.sh`.\n\n{exc}")
         return []
 
 
-def _default_index(keys: list[str], needle: str, fallback: int) -> int:
-    for i, k in enumerate(keys):
-        if needle in k:
-            return i
-    return min(fallback, len(keys) - 1) if keys else 0
+def _label(meta: dict) -> str:
+    """A human-readable run label, e.g. '⭐ claude-sonnet-4-6 — judged by gpt-4o · llm · 2026-06-04'."""
+    model = meta["model"].split("/")[-1]
+    judged = f" — judged by {meta['grader'].split('/')[-1]}" if meta.get("grader") else ""
+    star = "⭐ " if meta["source"] == "examples" else ""
+    return f"{star}{model}{judged}  ·  {meta['engine']}  ·  {meta['created'][:10]}"
+
+
+def _pick(logs: list[dict], label: str, key: str, prefer: str = "") -> str:
+    """A selectbox over runs with friendly labels; returns the chosen log id."""
+    by_label = {_label(m): m["id"] for m in logs}
+    labels = list(by_label)
+    index = next((i for i, m in enumerate(logs) if prefer in m["id"]), 0) if prefer else 0
+    chosen = st.selectbox(label, labels, index=index, key=key)
+    return by_label[chosen]
 
 
 def page_explorer() -> None:
     st.title("Explorer")
+    st.caption("Pick one run. Each question is asked several times — the scorecard shows whether "
+               "the agent was *reliably* right, and exactly where it wasn't.")
+    components.render_glossary()
     logs = _logs()
     if not logs:
         return
-    labels = {f"{l['id']}  —  {l['model']} (engine: {l['engine']})": l["id"] for l in logs}
-    choice = st.selectbox("Pick a run", list(labels))
-    if choice:
-        components.render_full(_api().get_report(labels[choice]))
+    log_id = _pick(logs, "Run", "explorer_pick", prefer="examples:first-contact")
+    st.divider()
+    components.render_full(_api().get_report(log_id))
 
 
 def page_compare() -> None:
     st.title("Compare")
+    st.caption("Two runs side-by-side. The story: a high **mean** with a low **pass^k** is "
+               "*capable but unreliable* — and swapping which model is tested vs. judge "
+               "(cross-grading) shows a finding isn't an artifact of one judge.")
+    components.render_glossary()
     logs = _logs()
     if not logs:
         return
-    labels = {f"{l['id']}  —  {l['model']}": l["id"] for l in logs}
-    keys = list(labels)
     c1, c2 = st.columns(2)
     with c1:
-        a = st.selectbox("Left", keys, index=_default_index(keys, "examples:first-contact", 0),
-                         key="cmp_a")
+        a = _pick(logs, "Left run", "cmp_a", prefer="examples:first-contact")
     with c2:
-        b = st.selectbox("Right", keys, index=_default_index(keys, "examples:gpt-4o", 1),
-                         key="cmp_b")
-    st.info("Strict **pass^k** vs **mean** is the story: a high mean with a low pass^k is "
-            "*capable but unreliable*. Swapping which model is under test vs. grader "
-            "(cross-grading) shows a finding isn't an artifact of one judge.")
-    col1, col2 = st.columns(2)
+        b = _pick(logs, "Right run", "cmp_b", prefer="examples:gpt-4o")
+    st.divider()
+    col1, col2 = st.columns(2, gap="large")
     with col1:
-        components.render_full(_api().get_report(labels[a]))
+        components.render_full(_api().get_report(a))
     with col2:
-        components.render_full(_api().get_report(labels[b]))
+        components.render_full(_api().get_report(b))
 
 
 def page_run() -> None:
     st.title("Run a live eval")
-    st.caption("Compiles the synthetic org, runs the agent over MCP, scores pass^k. "
-               "Needs model API keys in .env. ~30–60s. One run at a time.")
+    st.caption("Compiles the synthetic org, runs the agent over MCP tools, and scores pass^k. "
+               "Needs model API keys in `.env`. Takes ~30–60s. One run at a time.")
     with st.form("run"):
         model = st.selectbox("Model under test", _MODELS, index=0)
-        judge = st.radio("Engine", ["llm", "deterministic"], horizontal=True)
-        grader = st.selectbox("Independent grader (llm engine only)", _MODELS, index=1)
-        submitted = st.form_submit_button("Run")
+        judge = st.radio("Scoring engine", ["llm", "deterministic"], horizontal=True,
+                         help="'llm' grades answers with an independent model (needs a grader). "
+                              "'deterministic' uses keyword/substring matching — free, no grader.")
+        grader = st.selectbox("Independent grader (llm engine only)", _MODELS, index=1,
+                              help="Must differ from the model under test — a model can't grade itself.")
+        submitted = st.form_submit_button("▶ Run eval", type="primary")
 
     if submitted:
         if judge == "llm" and grader == model:
-            st.error("Grader must differ from the model under test (self-grading guard).")
+            st.error("Grader must differ from the model under test (a model can't grade itself).")
             return
         payload = {"model": model, "judge": judge}
         if judge == "llm":
@@ -101,19 +115,25 @@ def page_run() -> None:
     if job_id:
         status = _api().poll(job_id)
         if status["status"] == "running":
-            st.info("Running eval… (auto-refreshing)")
+            st.info("⏳ Running the eval… (this page refreshes itself)")
             time.sleep(2)
             st.rerun()
         elif status["status"] == "error":
-            st.error(status["error"])
+            st.error(f"Run failed: {status['error']}")
         else:
-            st.success("Done.")
+            st.success("✅ Done.")
+            st.divider()
             components.render_full(status["report"])
 
 
-_PAGES = {"Explorer": page_explorer, "Compare": page_compare, "Run": page_run}
+_PAGES = {"🔍 Explorer": page_explorer, "⚖️ Compare": page_compare, "▶️ Run": page_run}
 
-st.sidebar.title("Tessera")
-st.sidebar.caption("Reliability Explorer")
-_choice = st.sidebar.radio("Page", list(_PAGES))
-_PAGES[_choice]()
+with st.sidebar:
+    st.title("🧪 Tessera")
+    st.caption("Reliability Explorer — does an AI agent answer enterprise questions "
+               "*reliably*, with sources, and refuse when it should?")
+    choice = st.radio("Page", list(_PAGES), label_visibility="collapsed")
+    st.divider()
+    st.caption("⭐ = bundled reference run")
+
+_PAGES[choice]()
