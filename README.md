@@ -166,10 +166,37 @@ by conflict type        pass^3            mean
 
 The gap between strict `pass^k` and the mean is the whole point: a category at `0% / 67%` is *capable but inconsistent* — a reliability bug a single accuracy number would hide. The report is pure arithmetic over the log; it never calls a model.
 
+## Showcase: the Reliability Explorer (API + UI)
+
+A local, pure-Python showcase that *shows* the methodology instead of describing it:
+a **FastAPI** service over the same key-free report pipeline, and a **Streamlit** UI.
+
+```bash
+uv pip install -e ".[app]"
+bash scripts/dev.sh        # API on :8000, UI on :8501
+```
+
+- **Explorer** — pick a run, see the pass^k scorecard, the operational axes, and
+  drill into each failed probe's transcript (the manufactured-tiebreaker, in full).
+- **Compare** — two runs side-by-side: the strict `pass^k`-vs-mean gap, and the
+  cross-graded reference results (Sonnet-under-test vs GPT-4o-under-test).
+- **Run** — optionally trigger a live eval and watch the scorecard appear.
+
+The report endpoints are deterministic and key-free (they never call a model); only
+the optional live run needs API keys. The API is thin by design — it serializes the
+same aggregation the Markdown scorecard renders, so the two never diverge.
+
+```text
+GET  /api/logs                 list pinned + run logs
+GET  /api/logs/{id}/report     full scorecard as JSON
+POST /api/reports              upload an .eval -> JSON
+POST /api/runs                 start a gated live run   (GET /api/runs/{id} to poll)
+```
+
 ## Development
 
 ```bash
-.venv/bin/python -m pytest        # the whole suite
+.venv/bin/python -m pytest        # the whole suite (key-free, offline)
 ```
 
 > **Key-free by design.** The entire test suite runs offline with no API key. Model-graded paths are exercised with injected stub judges, and Inspect logs are fabricated in-memory with `write_eval_log`. A live `inspect eval` is the only thing that needs a key.
