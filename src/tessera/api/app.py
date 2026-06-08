@@ -18,15 +18,36 @@ import os
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from inspect_ai.log import read_eval_log
 
+from tessera.api import blueprint_store
 from tessera.api.runner import JobRegistry, default_eval_runner, run_eval_job
 from tessera.api.schemas import RunRequest
 from tessera.report.models import ReportError
 from tessera.report.serialize import report_to_dict
 
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
+_DEFAULT_BLUEPRINT_DIR = Path("blueprints")
+
+
+def _validate_blueprint(data: dict):
+    """(blueprint, errors). errors is a structured [{location, message}] from pydantic
+    validation AND a dry compile (cross-silo collision) — reusing 100% of existing rules."""
+    from pydantic import ValidationError
+
+    from tessera.compiler import build_artifacts
+    from tessera.models import Blueprint
+    try:
+        bp = Blueprint.model_validate(data)
+    except ValidationError as exc:
+        return None, [{"location": ".".join(str(p) for p in e["loc"]), "message": e["msg"]}
+                      for e in exc.errors()]
+    try:
+        build_artifacts(bp)
+    except ValueError as exc:
+        return None, [{"location": "compile", "message": str(exc)}]
+    return bp, []
 
 
 async def _background_schedule(coro) -> None:
@@ -72,12 +93,14 @@ def _header_meta(source: str, path: Path) -> dict | None:
 
 
 def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = None,
-               log_dirs: dict[str, Path] | None = None, schedule=_background_schedule) -> FastAPI:
+               log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
+               blueprint_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="Tessera Reliability Explorer")
     app.state.registry = registry or JobRegistry()
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
+    app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
 
     @app.get("/api/orgs")
     def list_orgs():
@@ -86,6 +109,77 @@ def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = N
         broken your_org.py silently disappear from the picker."""
         from tessera.examples import org_names
         return org_names()
+
+    # ----- Datasets (blueprints): CRUD + validate + pure compile-preview -----
+    # The authoring/validate/preview loop is KEY-FREE (no model calls), so air-gapped
+    # users can build and inspect datasets with zero credentials.
+
+    @app.get("/api/blueprints")
+    def list_blueprints():
+        return blueprint_store.list_blueprints(app.state.blueprint_dir)
+
+    @app.get("/api/blueprints/{blueprint_id}")
+    def get_blueprint(blueprint_id: str):
+        blueprint_store.seed_from_orgs(app.state.blueprint_dir)  # built-ins fetchable by id
+        try:
+            bp = blueprint_store.get_blueprint(app.state.blueprint_dir, blueprint_id)
+        except blueprint_store.BlueprintStoreError as exc:
+            raise HTTPException(400, str(exc))
+        if bp is None:
+            raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
+        return bp.model_dump(by_alias=True)
+
+    @app.post("/api/blueprints/validate")
+    def validate_blueprint(blueprint: dict = Body(...)):
+        _, errors = _validate_blueprint(blueprint)
+        return {"ok": not errors, "errors": errors}
+
+    @app.post("/api/blueprints/preview")
+    def preview_blueprint(blueprint: dict = Body(...)):
+        """Compile in memory and return the resulting org (CRM db.json, docs, manifest) —
+        no disk write, no eval. Powers the editor's live preview."""
+        from tessera.compiler import build_artifacts
+        bp, errors = _validate_blueprint(blueprint)
+        if errors:
+            raise HTTPException(400, detail=errors)
+        return build_artifacts(bp)
+
+    @app.post("/api/blueprints", status_code=201)
+    def create_blueprint(payload: dict = Body(...)):
+        blueprint_id = payload.get("id")
+        bp, errors = _validate_blueprint(payload.get("blueprint", {}))
+        if not blueprint_id:
+            raise HTTPException(400, "missing 'id'")
+        if errors:
+            raise HTTPException(400, detail=errors)
+        try:
+            if blueprint_store.exists(app.state.blueprint_dir, blueprint_id):
+                raise HTTPException(409, f"blueprint '{blueprint_id}' already exists")
+            blueprint_store.save_blueprint(app.state.blueprint_dir, blueprint_id, bp)
+        except blueprint_store.BlueprintStoreError as exc:
+            raise HTTPException(400, str(exc))
+        return {"id": blueprint_id}
+
+    @app.put("/api/blueprints/{blueprint_id}")
+    def upsert_blueprint(blueprint_id: str, blueprint: dict = Body(...)):
+        bp, errors = _validate_blueprint(blueprint)
+        if errors:
+            raise HTTPException(400, detail=errors)
+        try:
+            blueprint_store.save_blueprint(app.state.blueprint_dir, blueprint_id, bp)
+        except blueprint_store.BlueprintStoreError as exc:
+            raise HTTPException(400, str(exc))
+        return {"id": blueprint_id}
+
+    @app.delete("/api/blueprints/{blueprint_id}")
+    def delete_blueprint(blueprint_id: str):
+        try:
+            removed = blueprint_store.delete_blueprint(app.state.blueprint_dir, blueprint_id)
+        except blueprint_store.BlueprintStoreError as exc:
+            raise HTTPException(400, str(exc))
+        if not removed:
+            raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
+        return {"deleted": blueprint_id}
 
     @app.get("/api/logs")
     def list_logs():

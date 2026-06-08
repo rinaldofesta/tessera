@@ -50,6 +50,7 @@ def _client(tmp_path, *, eval_runner=None):
         eval_runner=eval_runner or (lambda req: _eval_log([_answer("q1", 1)])),
         log_dirs={"examples": examples, "logs": logs},
         schedule=_inline_schedule,
+        blueprint_dir=tmp_path / "blueprints",
     )
     return TestClient(app)
 
@@ -156,3 +157,49 @@ def test_run_surfaces_runner_valueerror_as_error_status(tmp_path):
 
 def test_unknown_job_404(tmp_path):
     assert _client(tmp_path).get("/api/runs/deadbeef").status_code == 404
+
+
+# ----- Datasets (blueprints) -----
+
+def test_blueprints_list_seeded_and_get(tmp_path):
+    c = _client(tmp_path)
+    rows = c.get("/api/blueprints").json()
+    assert "toy" in {r["id"] for r in rows}
+    bp = c.get("/api/blueprints/toy").json()
+    assert bp["claims"] and bp["probes"]
+    assert "as" in bp["claims"][0]["render"]        # alias round-trips
+
+
+def test_blueprint_validate_ok_and_errors(tmp_path):
+    c = _client(tmp_path)
+    bp = c.get("/api/blueprints/toy").json()
+    assert c.post("/api/blueprints/validate", json=bp).json()["ok"] is True
+    bad = {"claims": [], "probes": [{"probe_id": "p", "question": "q?",
+           "conflict_type": "resolvable", "expected_behavior": "answer"}]}  # missing rule + answer
+    res = c.post("/api/blueprints/validate", json=bad).json()
+    assert res["ok"] is False and res["errors"]
+
+
+def test_blueprint_preview_returns_artifacts(tmp_path):
+    c = _client(tmp_path)
+    bp = c.get("/api/blueprints/toy").json()
+    art = c.post("/api/blueprints/preview", json=bp).json()
+    assert set(art) == {"manifest", "silos", "docs"} and art["manifest"]
+
+
+def test_blueprint_create_conflict_update_delete(tmp_path):
+    c = _client(tmp_path)
+    bp = c.get("/api/blueprints/toy").json()
+    assert c.post("/api/blueprints", json={"id": "mine", "blueprint": bp}).status_code == 201
+    assert c.post("/api/blueprints", json={"id": "mine", "blueprint": bp}).status_code == 409
+    assert c.put("/api/blueprints/mine", json=bp).status_code == 200
+    assert c.delete("/api/blueprints/mine").status_code == 200
+    assert c.delete("/api/blueprints/mine").status_code == 404
+
+
+def test_blueprint_create_invalid_400(tmp_path):
+    c = _client(tmp_path)
+    bad = {"claims": [], "probes": [{"probe_id": "p", "question": "q?",
+           "conflict_type": "void", "expected_behavior": "answer"}]}  # void must refuse
+    r = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
+    assert r.status_code == 400

@@ -46,6 +46,21 @@ class JobRegistry:
         self._jobs[job_id] = Job(status="error", error=message)
 
 
+def _eval_kwargs(req: RunRequest) -> dict:
+    """The kwargs passed to inspect_ai.eval — pure, so the epochs/org/grader wiring is
+    unit-testable without running a model. (epochs was previously dropped on the floor.)"""
+    kwargs = {
+        "model": req.model,
+        "task_args": {"judge": req.judge, "org": req.org},
+        "epochs": req.epochs,          # FIX: was never forwarded -> the k selector was a no-op
+        "log_dir": "logs",
+        "display": "none",
+    }
+    if req.grader:
+        kwargs["model_roles"] = {"grader": req.grader}
+    return kwargs
+
+
 def default_eval_runner(req: RunRequest):
     """Run a real Tessera eval and return the EvalLog. Imported lazily so the module
     stays importable (and the API stays testable) without inspect_ai initializing."""
@@ -61,18 +76,9 @@ def default_eval_runner(req: RunRequest):
     # Per-job org dir so a future concurrent run can't clobber the compiled fixtures.
     os.environ["TESSERA_OUT"] = os.path.join("/tmp/tessera", f"run-{uuid.uuid4().hex}")
 
-    kwargs = {"model_roles": {"grader": req.grader}} if req.grader else {}
-    logs = inspect_ai.eval(
-        "src/tessera/evals/task.py",
-        model=req.model,
-        task_args={"judge": req.judge, "org": req.org},
-        log_dir="logs",
-        display="none",
-        **kwargs,
-    )
-    log = logs[0]
+    logs = inspect_ai.eval("src/tessera/evals/task.py", **_eval_kwargs(req))
     # Re-read from disk with attachments resolved so transcripts/answers are complete.
-    return read_eval_log(log.location, resolve_attachments=True)
+    return read_eval_log(logs[0].location, resolve_attachments=True)
 
 
 async def run_eval_job(job_id: str, req: RunRequest, registry: JobRegistry, eval_runner) -> None:

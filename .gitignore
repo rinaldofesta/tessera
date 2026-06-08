@@ -16,6 +16,9 @@ dist/
 /tmp/tessera/
 *.local
 
+# Blueprint store (user-authored datasets, runtime data)
+blueprints/
+
 # Inspect logs
 logs/
 *.eval

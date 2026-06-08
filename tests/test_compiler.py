@@ -128,6 +128,35 @@ def test_intra_silo_collision_is_rejected(tmp_path):
         compile_blueprint(bp, tmp_path)
 
 
+from tessera.compiler import build_artifacts, write_artifacts
+
+
+def test_build_artifacts_is_pure_writes_nothing(tmp_path):
+    art = build_artifacts(_toy_blueprint())
+    assert set(art) == {"manifest", "silos", "docs"}
+    assert art["silos"]["crm"]["Acme Corp"]["tier"] == {"value": "Gold", "asserted_at": None}
+    assert any(d["path"].startswith("docs/") and d["path"].endswith(".md") for d in art["docs"])
+    assert {"acme.tier.crm", "acme.renewal.note"} <= set(art["manifest"])
+    assert list(tmp_path.iterdir()) == []          # pure: nothing materialized
+
+
+def test_build_artifacts_rejects_intra_silo_collision():
+    bp = Blueprint(claims=[
+        Claim(claim_id="a", subject="X", predicate="t", value="1", silo="crm", render={"as": "field"}),
+        Claim(claim_id="b", subject="X", predicate="t", value="2", silo="crm", render={"as": "field"}),
+    ])
+    with pytest.raises(ValueError):
+        build_artifacts(bp)
+
+
+def test_write_artifacts_materializes_build_output(tmp_path):
+    art = build_artifacts(_toy_blueprint())
+    manifest = write_artifacts(art, tmp_path)
+    assert manifest == art["manifest"]
+    assert (tmp_path / "manifest.json").exists()
+    assert (tmp_path / "crm" / "db.json").exists()
+
+
 def test_compiler_is_deterministic(tmp_path):
     out_a = tmp_path / "a"
     out_b = tmp_path / "b"

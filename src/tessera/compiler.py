@@ -40,14 +40,14 @@ def _doc_content(asserted_at: str | None, claim_id: str, body: str) -> str:
     return f"---\n{frontmatter}\n---\n\n{body}\n"
 
 
-def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, dict]:
-    """Compile ``blueprint`` into ``out_dir`` and return the provenance manifest.
+def build_artifacts(blueprint: Blueprint) -> dict:
+    """Pure: turn ``blueprint`` into in-memory artifacts. NO disk writes, NO eval.
 
-    Raises ``ValueError`` on an intra-silo ``(subject, predicate)`` collision:
-    in v0 contradictions must be cross-silo (see the design spec).
+    Returns ``{"manifest": {...}, "silos": {silo: {subject: {predicate: {...}}}},
+    "docs": [{"path": rel, "content": str}]}``. This is what powers the compile-PREVIEW
+    endpoint (show the resulting org without materializing it). Raises ``ValueError`` on
+    an intra-silo ``(subject, predicate)`` collision: contradictions must be cross-silo.
     """
-    out = Path(out_dir)
-
     seen: set[tuple[str, str, str]] = set()
     for claim in blueprint.claims:
         key = (claim.silo, claim.subject, claim.predicate)
@@ -58,16 +58,13 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
             )
         seen.add(key)
 
-    structured: dict[str, dict[str, dict]] = {}  # silo -> subject -> {predicate: value}
-    docs: list[tuple[Path, str]] = []
+    silos: dict[str, dict[str, dict]] = {}  # silo -> subject -> {predicate: value}
+    docs: list[dict[str, str]] = []
     manifest: dict[str, dict] = {}
 
     for claim in blueprint.claims:
         if claim.render.as_ is RenderAs.field:
-            # Store value WITH its (nullable) asserted_at, so the silo can expose record
-            # freshness. Without it, a dated note always looks newer than an undated CRM
-            # row, and a genuine same-timestamp tie is invisible to the agent.
-            structured.setdefault(claim.silo, {}).setdefault(claim.subject, {})[
+            silos.setdefault(claim.silo, {}).setdefault(claim.subject, {})[
                 claim.predicate
             ] = {"value": claim.value, "asserted_at": claim.asserted_at}
             manifest[claim.claim_id] = {
@@ -80,7 +77,7 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
         else:  # prose
             rel = f"{claim.silo}/{_slug(f'{claim.subject}-{claim.predicate}-{claim.claim_id}')}.md"
             body = claim.render.template.format(value=claim.value)
-            docs.append((out / rel, _doc_content(claim.asserted_at, claim.claim_id, body)))
+            docs.append({"path": rel, "content": _doc_content(claim.asserted_at, claim.claim_id, body)})
             manifest[claim.claim_id] = {
                 "silo": claim.silo,
                 "subject": claim.subject,
@@ -89,13 +86,25 @@ def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, di
                 "locator": rel,
             }
 
-    for silo, subjects in structured.items():
+    return {"manifest": manifest, "silos": silos, "docs": docs}
+
+
+def write_artifacts(artifacts: dict, out_dir: str | Path) -> dict[str, dict]:
+    """Materialize the artifacts from ``build_artifacts`` to disk; return the manifest."""
+    out = Path(out_dir)
+    for silo, subjects in artifacts["silos"].items():
         _write_json(out / silo / "db.json", subjects)
-
-    for path, content in docs:
+    for doc in artifacts["docs"]:
+        path = out / doc["path"]
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(doc["content"])
+    _write_json(out / "manifest.json", artifacts["manifest"])
+    return artifacts["manifest"]
 
-    _write_json(out / "manifest.json", manifest)
 
-    return manifest
+def compile_blueprint(blueprint: Blueprint, out_dir: str | Path) -> dict[str, dict]:
+    """Compile ``blueprint`` into ``out_dir`` and return the provenance manifest.
+
+    Raises ``ValueError`` on an intra-silo ``(subject, predicate)`` collision.
+    """
+    return write_artifacts(build_artifacts(blueprint), out_dir)
