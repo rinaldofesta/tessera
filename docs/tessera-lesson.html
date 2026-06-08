@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Understanding Tessera — an interactive lesson</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b26; --panel2:#1b2230; --border:#2a3343;
+    --text:#e6edf3; --muted:#9aa7b8; --accent:#2ecc71; --accent-d:#27ae60;
+    --pass:#22c55e; --fail:#ef4444; --warn:#f59e0b; --blue:#60a5fa;
+    --radius:14px; --maxw:860px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 70% -10%, #16203020, transparent), var(--bg);
+    color:var(--text); font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent)}
+  .wrap{display:flex; min-height:100vh; max-width:1200px; margin:0 auto}
+  aside{
+    width:248px; flex:0 0 248px; border-right:1px solid var(--border);
+    padding:22px 14px; position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  aside h1{font-size:18px; margin:0 0 2px; display:flex; gap:8px; align-items:center}
+  aside .sub{color:var(--muted); font-size:12px; margin:0 0 18px}
+  nav ol{list-style:none; margin:0; padding:0; counter-reset:m}
+  nav li{
+    counter-increment:m; padding:9px 10px 9px 38px; border-radius:10px; cursor:pointer;
+    color:var(--muted); font-size:13.5px; position:relative; margin-bottom:2px; line-height:1.35;
+  }
+  nav li::before{
+    content:counter(m); position:absolute; left:8px; top:50%; transform:translateY(-50%);
+    width:22px; height:22px; border-radius:50%; background:var(--panel2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted);
+  }
+  nav li:hover{background:var(--panel); color:var(--text)}
+  nav li.active{background:var(--panel2); color:var(--text)}
+  nav li.active::before{background:var(--accent); border-color:var(--accent); color:#06210f; font-weight:700}
+  nav li.done::before{content:"✓"; background:var(--accent-d); border-color:var(--accent-d); color:#06210f}
+  main{flex:1; min-width:0; padding:0 0 80px}
+  .topbar{position:sticky; top:0; z-index:5; background:linear-gradient(#0e1117,#0e1117f0);
+    backdrop-filter:blur(4px); border-bottom:1px solid var(--border); padding:12px 28px;
+    display:flex; align-items:center; gap:14px}
+  .progress{flex:1; height:7px; background:var(--panel2); border-radius:6px; overflow:hidden}
+  .progress > i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent),#7bed9f); transition:width .3s}
+  .counter{font-size:12px; color:var(--muted); white-space:nowrap}
+  .content{max-width:var(--maxw); margin:0 auto; padding:30px 28px}
+  .module{display:none; animation:fade .35s ease}
+  .module.show{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+  .kicker{color:var(--accent); font-weight:700; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase}
+  h2{font-size:30px; line-height:1.2; margin:6px 0 14px}
+  h3{font-size:19px; margin:28px 0 8px}
+  p{color:#d7e0ea}
+  .lead{font-size:18px; color:#d7e0ea}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin:16px 0}
+  .grid{display:grid; gap:12px}
+  .grid.c2{grid-template-columns:1fr 1fr}
+  @media(max-width:760px){.grid.c2{grid-template-columns:1fr}}
+  .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600;
+    background:var(--panel2); border:1px solid var(--border); color:var(--muted)}
+  .pill.green{color:var(--pass); border-color:#1f5132; background:#0f2417}
+  .pill.amber{color:var(--warn); border-color:#5e451a; background:#291e0c}
+  code{background:#0b0f17; border:1px solid var(--border); border-radius:6px; padding:1px 6px; font-size:13.5px;
+    font-family:"SF Mono",Menlo,Consolas,monospace; color:#a8e6c0}
+  .callout{border-left:3px solid var(--accent); background:#0f1a14; padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0}
+  .callout b{color:#7bed9f}
+  .analogy{border-left:3px solid var(--blue); background:#0e1622; padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0}
+  .analogy b{color:#9cc7ff}
+  .quote{border-left:3px solid var(--fail); background:#1c1212; padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0; font-style:italic; color:#f0c9c9}
+  .nav-btns{display:flex; justify-content:space-between; margin-top:34px; gap:12px}
+  button.btn{background:var(--accent); color:#06210f; border:none; padding:11px 20px; border-radius:10px;
+    font-weight:700; font-size:14.5px; cursor:pointer}
+  button.btn:hover{background:#7bed9f}
+  button.btn.ghost{background:transparent; color:var(--text); border:1px solid var(--border)}
+  button.btn.ghost:hover{background:var(--panel)}
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0}
+  .tab{padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); cursor:pointer; font-size:13.5px; font-weight:600}
+  .tab.active{border-color:var(--accent); background:var(--panel2)}
+  .tab.on-answer{color:var(--pass)} .tab.on-refuse{color:var(--warn)}
+  .epochs{display:flex; gap:10px; flex-wrap:wrap; margin:10px 0}
+  .epoch{flex:1; min-width:90px; text-align:center; border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; background:var(--panel2); user-select:none}
+  .epoch .big{font-size:30px}
+  .epoch .l{font-size:12px; color:var(--muted)}
+  .epoch.pass{border-color:#1f5132; background:#0f2417}
+  .epoch.fail{border-color:#5b2020; background:#2a1414}
+  .readout{display:flex; gap:12px; flex-wrap:wrap; margin-top:6px}
+  .stat{flex:1; min-width:120px; background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; text-align:center}
+  .stat .v{font-size:26px; font-weight:800}
+  .stat .l{font-size:12px; color:var(--muted)}
+  .quiz{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin:22px 0}
+  .quiz h4{margin:0 0 4px; font-size:15px; color:var(--accent)}
+  .q{margin:16px 0}
+  .q .stem{font-weight:600; margin-bottom:8px}
+  .opt{display:block; padding:10px 12px; border:1px solid var(--border); border-radius:10px; margin:6px 0; cursor:pointer; font-size:14.5px; transition:.15s}
+  .opt:hover{background:var(--panel2)}
+  .opt.sel{border-color:var(--blue); background:#10203a}
+  .opt.correct{border-color:var(--pass); background:#0f2417}
+  .opt.wrong{border-color:var(--fail); background:#2a1414}
+  .opt input{margin-right:9px}
+  .explain{display:none; margin-top:8px; font-size:14px; color:var(--muted); border-left:2px solid var(--border); padding-left:12px}
+  .explain.show{display:block}
+  .quiz-result{margin-top:10px; font-weight:700}
+  .pipeline{display:flex; gap:8px; flex-wrap:wrap; align-items:stretch; margin:14px 0}
+  .stage{flex:1; min-width:120px; border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--panel2); cursor:pointer; text-align:center}
+  .stage:hover{border-color:var(--accent)}
+  .stage .ic{font-size:26px}
+  .stage .nm{font-weight:700; font-size:13.5px; margin-top:4px}
+  .stage.active{border-color:var(--accent); background:#0f1a14}
+  .arrow{align-self:center; color:var(--muted); font-size:20px}
+  @media(max-width:760px){.arrow{display:none}}
+  .scorebig{font-size:54px; font-weight:800; color:var(--accent)}
+  .menu-toggle{display:none}
+  @media(max-width:880px){
+    aside{position:fixed; left:0; top:0; transform:translateX(-100%); transition:.25s; z-index:20; background:var(--bg)}
+    aside.open{transform:none}
+    .menu-toggle{display:inline-block}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside id="sidebar">
+    <h1>🧪 Tessera</h1>
+    <p class="sub">An interactive lesson</p>
+    <nav><ol id="nav"></ol></nav>
+  </aside>
+  <main>
+    <div class="topbar">
+      <button class="btn ghost menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="progress"><i id="bar"></i></div>
+      <span class="counter" id="counter"></span>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+/* Quiz data lives in JS (NOT in HTML attributes) so apostrophes/quotes never break parsing. */
+const QUIZZES = {
+  m1:[
+    {stem:"What is the main unsolved problem for enterprise AI agents, according to Tessera?",
+     options:["Making models bigger","Doing the job reliably, every time","Writing faster code","Translating languages"],
+     answer:1, explain:"Models are already capable. The open problem is reliability over messy, real-world knowledge — being trustworthy on every single answer."},
+    {stem:"Why is a 99%-accurate calculator a problem for accounting?",
+     options:["It is too slow","You cannot trust any single result without re-checking","It costs too much","It rounds numbers"],
+     answer:1, explain:"Inconsistency means each answer must be verified by hand — which defeats the purpose. Reliability matters more than average accuracy."}
+  ],
+  m2:[
+    {stem:"Which of these is NOT one of the three jobs Tessera checks?",
+     options:["Answer correctly","Cite the sources","Refuse when it cannot know","Respond as fast as possible"],
+     answer:3, explain:"Speed is not measured. The three jobs are: answer correctly, cite sources (provenance), and refuse when appropriate."},
+    {stem:"Why is correct refusal so important for an unsupervised agent?",
+     options:["It saves money","Confidently inventing answers is the most dangerous failure","It is faster","Users prefer short replies"],
+     answer:1, explain:"Without a human checking every answer, an agent that fabricates a confident answer on bad data can cause real harm. Knowing when to stop is critical."}
+  ],
+  m3:[
+    {stem:"Two systems disagree on a number — same date, equal authority, no rule to break the tie. What should the agent do?",
+     options:["Pick the higher number","Pick the database over the document","Refuse and escalate","Average the two"],
+     answer:2, explain:"This is an UNRESOLVABLE conflict. With no legitimate tiebreaker, inventing one is exactly the failure Tessera hunts for. The correct move is to refuse and escalate."},
+    {stem:"The agent is asked about a customer that simply is not in any system. This is a…",
+     options:["resolvable conflict","void (missing) case → refuse","none case → answer","authority conflict"],
+     answer:1, explain:"If the fact is absent everywhere, the only correct behavior is to refuse — not to hallucinate a plausible-sounding answer."},
+    {stem:"The CRM says X (older) and a newer document says Y. The agent should…",
+     options:["Refuse","Answer Y (newer wins) and cite both","Answer X","Average them"],
+     answer:1, explain:"This is RESOLVABLE: a rule (recency) breaks the tie. The agent should answer with the newer value and cite both sources so the choice is auditable."}
+  ],
+  m4:[
+    {stem:"What is a Claim in Tessera?",
+     options:["A question to ask the agent","One atomic fact (with where it lives and when it was stated)","A score","A tool"],
+     answer:1, explain:"A Claim is a single fact. A Probe is a question. Together (claims + probes) they form a Blueprint."},
+    {stem:"Why does Tessera use a synthetic (made-up) company instead of real data?",
+     options:["It is cheaper","So it knows the exact truth in advance, and no private data leaks","Real data is illegal","It runs faster"],
+     answer:1, explain:"A synthetic world means the ground truth is known exactly (fair scoring) and no real, private company data is exposed."},
+    {stem:"In simple terms, what does MCP give the agent?",
+     options:["A bigger memory","A fixed set of tools — the only doors to the data","Faster answers","The correct answer"],
+     answer:1, explain:"MCP is the standard set of tools (look up a customer, search docs) the agent uses to reach knowledge — like it would in production."}
+  ],
+  m5:[
+    {stem:"Why does Tessera ask each question several times instead of once?",
+     options:["To waste time","Because AI is partly random — one lucky answer does not prove reliability","To increase the score","Because the tools are slow"],
+     answer:1, explain:"Models are stochastic (a bit random). Repeating reveals whether the agent is consistently right — the whole point of reliability."},
+    {stem:"During the test, what can the agent see?",
+     options:["The correct answer key","Anything on the internet","Only what its tools return from the synthetic world","The grader notes"],
+     answer:2, explain:"The agent only reaches knowledge through its tools (MCP) — exactly like production. It never sees the answer key."}
+  ],
+  m6:[
+    {stem:"An agent answers a question right 2 out of 3 times. What is its pass^3 (strict)?",
+     options:["67%","100%","0% — it was not right all three times","33%"],
+     answer:2, explain:"pass^k passes only if every repeat is correct. 2 of 3 means it fails strict pass^3 — even though the mean is 67%."},
+    {stem:"A category shows mean 90% but pass^k 0%. What does that tell you?",
+     options:["The agent is reliable","The agent is flaky — capable but inconsistent","The test is broken","The agent always refuses"],
+     answer:1, explain:"High mean + low pass^k = flaky: it gets it right often but not every time. That inconsistency is exactly the reliability bug a single score hides."},
+    {stem:"Which three axes is each answer scored on?",
+     options:["Speed, cost, length","Accuracy, provenance, refusal","Grammar, tone, accuracy","Tokens, latency, accuracy"],
+     answer:1, explain:"Every attempt is checked for accuracy (right answer), provenance (right sources), and refusal (correctly abstaining)."}
+  ],
+  m7:[
+    {stem:"How does Tessera check whether the agent consulted the right sources?",
+     options:["It asks the agent","Another AI guesses","It reads the agent's real tool calls and matches them to known truth","It checks the answer text"],
+     answer:2, explain:"Provenance is read mechanically from the actual recorded tool calls vs. the manifest of where facts live — never self-reported, never AI-judged. That is the moat."},
+    {stem:"In LLM-judge mode, why must the grader be a different model than the one tested?",
+     options:["It is faster","To avoid a model grading its own work (the self-grading guard)","It is cheaper","To translate the answer"],
+     answer:1, explain:"Letting a model grade itself is a conflict of interest. Tessera enforces an independent grader and refuses to run otherwise."},
+    {stem:"Which part is ALWAYS mechanical (never judged by an AI)?",
+     options:["Accuracy","Refusal","Provenance","All of them"],
+     answer:2, explain:"Provenance is always read from real tool calls. Accuracy and refusal can be graded deterministically or by an independent LLM judge."}
+  ],
+  m8:[
+    {stem:"On the unresolvable conflict, what did the model do wrong?",
+     options:["It refused too early","It invented a tiebreaker rule to commit to an answer","It crashed","It cited no sources"],
+     answer:1, explain:"It manufactured a rule ('deal desk outranks CRM') to justify an answer where the correct behavior was to refuse and escalate."},
+    {stem:"Why would a plain accuracy score have missed this failure?",
+     options:["Accuracy is always wrong","The model looked great on the easy questions, hiding the dangerous one","The score was deleted","Accuracy ignores refusals"],
+     answer:1, explain:"Strong overall performance masks a rare-but-dangerous behavior. Tessera surfaces it by scoring refusal and using strict pass^k."}
+  ],
+  m9:[
+    {stem:"To test your own company, what do you create?",
+     options:["A spreadsheet of answers","A Blueprint: your facts as Claims and questions as Probes","A new AI model","A website"],
+     answer:1, explain:"You describe your knowledge as Claims (facts) and Probes (questions). Tessera compiles that into a scored test world."},
+    {stem:"What is the durable, human part of Tessera (the part that does not get commoditized)?",
+     options:["Generating test cases","The standard: what reliable-enough means + the conflict/ground-truth design","The dark theme","The model under test"],
+     answer:1, explain:"Generating cases is cheap. The lasting value is the standard — defining acceptable reliability and designing the hard cases and ground truth."}
+  ]
+};
+
+const MODULES = [
+{ title:"Welcome", html:`
+  <span class="kicker">Start here</span>
+  <h2>What is Tessera, in one breath?</h2>
+  <p class="lead">Tessera is a way to <b>measure whether you can trust an AI agent</b> with your company's
+  knowledge — does it answer correctly, show its sources, and admit when it doesn't know?</p>
+  <div class="callout"><b>The core belief:</b> Modern AI can already answer almost anything.
+  The hard, unsolved problem is doing it <b>reliably</b> — every time, not just on a good day.
+  Tessera turns "can we trust it?" from a gut feeling into a number.</div>
+  <h3>What you'll learn</h3>
+  <div class="grid c2">
+    <div class="card">🧠 <b>The idea</b><br><span class="muted">Why reliability matters more than raw intelligence, and the three jobs an agent must do.</span></div>
+    <div class="card">🏗️ <b>How it's built</b><br><span class="muted">How Tessera builds a fake-but-realistic company to test an agent against.</span></div>
+    <div class="card">📊 <b>How it scores</b><br><span class="muted">The three things it checks, and the "pass^k" reliability score.</span></div>
+    <div class="card">🔎 <b>Why it's trustworthy</b><br><span class="muted">How it proves where answers came from — without taking the AI's word for it.</span></div>
+  </div>
+  <p class="muted">Each section has a short quiz so you can check your understanding. There's a final
+  score at the end. Use the buttons below or the menu on the left. Ready?</p>` },
+
+{ title:"The real problem", html:`
+  <span class="kicker">Module 1 — the problem</span>
+  <h2>Reliability, not intelligence, is the bottleneck</h2>
+  <p>Imagine an AI assistant for a company. The knowledge it needs is a mess: spread across a
+  sales database, wikis, PDFs and chat threads — often <b>out of date</b>, sometimes
+  <b>contradictory</b>, and full of <b>gaps</b>.</p>
+  <p>A capable model can usually produce a fluent answer. But "fluent" is not "trustworthy."
+  The question that blocks real adoption is: <b>can I let it act without someone double-checking
+  every answer?</b></p>
+  <div class="analogy"><b>Analogy.</b> A calculator that's right 99% of the time is useless for
+  accounting — because you can never trust any single result without redoing it by hand. For
+  enterprise work, <b>consistency beats brilliance</b>.</div>
+  <div class="callout"><b>Plain words — "agent":</b> an AI that can use <i>tools</i> (search a
+  database, open a document) to gather facts before answering — not just a chatbot guessing from memory.</div>
+  <p>Tessera exists to measure that trust directly: it puts an agent in a realistic, messy
+  knowledge environment and checks how it behaves — over and over.</p>
+  <div class="quiz" data-quiz-id="m1"></div>` },
+
+{ title:"The three jobs", html:`
+  <span class="kicker">Module 2 — what 'good' looks like</span>
+  <h2>The three jobs of a trustworthy agent</h2>
+  <p>When the knowledge is messy, a good agent has to do <b>three</b> things at once:</p>
+  <div class="grid c2">
+    <div class="card"><span class="pill green">1 · Answer</span><br><br><b>Get it right</b> when the answer exists — even if it's split across two places.</div>
+    <div class="card"><span class="pill green">2 · Cite</span><br><br><b>Show its sources.</b> An answer you can't trace is an answer you can't trust.</div>
+    <div class="card"><span class="pill amber">3 · Refuse</span><br><br><b>Say "I don't know"</b> when the data is missing or sources truly conflict — instead of confidently making something up.</div>
+  </div>
+  <div class="analogy"><b>Analogy.</b> A good doctor doesn't guess. If two tests genuinely
+  disagree, the safe move is to order another test or escalate — not to invent a reason to pick one.
+  An agent that <i>refuses well</i> is often more valuable than one that always answers.</div>
+  <div class="callout"><b>Why refusal is the star.</b> As agents run with less human supervision,
+  the most dangerous failure isn't being wrong occasionally — it's <b>confidently inventing an answer</b>
+  on data where no answer is justified. Tessera treats "knowing when to stop" as a first-class skill.</div>
+  <div class="quiz" data-quiz-id="m2"></div>` },
+
+{ title:"Four kinds of conflict", html:`
+  <span class="kicker">Module 3 — interactive</span>
+  <h2>The four ways knowledge behaves</h2>
+  <p>Tessera's key insight: company knowledge fails in exactly <b>four</b> patterns. Each one has a
+  <b>correct behavior</b>. Click each to explore.</p>
+  <div class="tabs" id="ctabs"></div>
+  <div class="card" id="cdetail" style="min-height:150px"></div>
+  <div class="callout"><b>This is the heart of Tessera.</b> Most tests only check "did it get the
+  right answer?" Tessera also checks the two hardest cases — a genuine tie and a missing fact —
+  where the right answer is <b>"I can't answer that."</b></div>
+  <div class="quiz" data-quiz-id="m3"></div>` },
+
+{ title:"Building a test world", html:`
+  <span class="kicker">Module 4 — how it's built</span>
+  <h2>How Tessera builds a company to test on</h2>
+  <p>To test fairly, Tessera builds a small, <b>synthetic</b> (made-up) company where it knows the
+  exact truth in advance. No real company data is ever used — which also means nothing private leaks.</p>
+  <h3>It starts from two simple ingredients</h3>
+  <div class="grid c2">
+    <div class="card"><b>📌 A Claim = one fact</b><br><span class="muted">e.g. "Acme Corp's tier is Gold." It records what the fact is, which system it lives in, when it was stated, and how authoritative it is.</span></div>
+    <div class="card"><b>❓ A Probe = one question</b><br><span class="muted">e.g. "What is Acme's SLA?" It also records the <i>correct behavior</i> (answer or refuse) and which sources <i>must</i> be consulted.</span></div>
+  </div>
+  <p class="muted">A collection of Claims + Probes is called a <b>Blueprint</b> — the recipe for the test world.</p>
+  <h3>Then a "compiler" turns the recipe into a real environment</h3>
+  <p>Click each stage of the pipeline:</p>
+  <div class="pipeline" id="pipe"></div>
+  <p class="card" id="pipedesc" style="min-height:60px"></p>
+  <div class="callout"><b>Plain words — "MCP":</b> a standard way to give an AI a fixed set of tools.
+  Think of it as <b>the only doors the agent is allowed to use</b> to reach the data — e.g. a
+  "look up a customer" tool and a "search documents" tool. Just like in production.</div>
+  <div class="quiz" data-quiz-id="m4"></div>` },
+
+{ title:"Running the test", html:`
+  <span class="kicker">Module 5 — the test run</span>
+  <h2>Putting the agent to work</h2>
+  <p>Now the agent under test (any AI model you choose) is dropped into this world. For each question
+  it runs a simple loop:</p>
+  <div class="card"><b>🔁 Search → Read → Reason → Answer or Refuse</b><br><br>
+    <span class="muted">It can call the tools (look up the customer, search the documents), read what
+    comes back, reason about it, and then either commit to an answer <i>with sources</i> or say it
+    can't answer. It only sees what the tools return — exactly like a real deployment.</span></div>
+  <div class="callout"><b>Repeated, on purpose.</b> AI is a bit random — ask the same question twice
+  and you can get different answers. So Tessera asks every question <b>several times</b> (k repeats).
+  You'll see why that matters in the next module.</div>
+  <div class="analogy"><b>Analogy.</b> It's like a driving test where the examiner makes you parallel
+  park <i>three times</i> — not once. Anyone can get lucky once. Trust comes from doing it right
+  every time.</div>
+  <div class="quiz" data-quiz-id="m5"></div>` },
+
+{ title:"The score: 3 checks + pass^k", html:`
+  <span class="kicker">Module 6 — interactive</span>
+  <h2>How an answer is scored</h2>
+  <p>Each attempt is checked on <b>three things</b>, not just one:</p>
+  <div class="grid c2">
+    <div class="card"><span class="pill green">Accuracy</span><br><br>Is the answer right?</div>
+    <div class="card"><span class="pill green">Provenance</span><br><br>Did it consult the <i>right sources</i>? (more on this next module)</div>
+    <div class="card"><span class="pill amber">Refusal</span><br><br>Did it correctly say "I don't know" when it should?</div>
+  </div>
+  <h3>The reliability score: <code>pass^k</code></h3>
+  <p>Here's the most important idea in Tessera. Because each question is asked <b>k</b> times
+  (say 3), there are two ways to score it:</p>
+  <ul>
+    <li><b>mean</b> — the average. Got it right 2 of 3 times = 67%.</li>
+    <li><b>pass^k (strict)</b> — it only "passes" if it's right <b>all k times</b>. 2 of 3 = <b>fail (0%)</b>.</li>
+  </ul>
+  <p>Try it — click the three attempts to flip them between ✓ and ✗:</p>
+  <div class="epochs" id="pk"></div>
+  <div class="readout">
+    <div class="stat"><div class="v" id="pkstrict">—</div><div class="l">pass^3 (strict)</div></div>
+    <div class="stat"><div class="v" id="pkmean">—</div><div class="l">mean (average)</div></div>
+    <div class="stat"><div class="v" id="pkverdict">—</div><div class="l">verdict</div></div>
+  </div>
+  <div class="callout"><b>The gap is the point.</b> When the mean is high but pass^k is low, the agent
+  is <span class="pill amber">flaky</span> — right sometimes, wrong others. A single average score
+  would <b>hide</b> that. For something running unattended, flaky = not trustworthy.</div>
+  <div class="quiz" data-quiz-id="m6"></div>` },
+
+{ title:"Provenance — the trust anchor", html:`
+  <span class="kicker">Module 7 — why you can trust the score</span>
+  <h2>Provenance: checking the receipts</h2>
+  <p>An eval is only useful if <b>you can trust the eval itself</b>. Tessera's strongest guarantee is
+  how it checks <b>provenance</b> — whether the agent actually looked at the right sources.</p>
+  <div class="callout"><b>It never takes the AI's word for it.</b> Tessera doesn't ask the agent
+  "did you check the CRM?" and it doesn't let another AI guess. It reads the agent's <b>actual tool
+  calls</b> — the recorded log of which doors it opened — and matches them against the known truth
+  (a file called the <code>manifest</code> that lists where every fact lives).</div>
+  <div class="analogy"><b>Analogy.</b> Instead of asking a student "did you read the textbook?",
+  Tessera checks the <b>library's security-camera footage</b> of which books they actually took off
+  the shelf. Facts, not claims.</div>
+  <p>This is why provenance is called <b>the moat</b>: it's a hard, mechanical fact that can't be
+  faked or argued with — unlike a judgment about whether an answer "sounds right."</p>
+  <h3>Two ways to grade the <i>answer</i> itself</h3>
+  <div class="grid c2">
+    <div class="card"><b>Deterministic</b><br><span class="muted">Checks for keywords / matching text. Free, instant, no other AI involved. Great for a quick gut-check, but can miss a correct answer worded differently.</span></div>
+    <div class="card"><b>LLM judge</b><br><span class="muted">A <i>separate</i> AI reads the answer and judges it — tolerant of paraphrasing. Costs an extra step, and the judge <b>must be a different model</b> than the one being tested.</span></div>
+  </div>
+  <div class="callout"><b>The self-grading guard.</b> A model is never allowed to grade its own work —
+  Tessera refuses to run if the judge is the same model as the one under test. (Provenance, remember,
+  is always mechanical — never judged by an AI in either mode.)</div>
+  <div class="quiz" data-quiz-id="m7"></div>` },
+
+{ title:"A real finding", html:`
+  <span class="kicker">Module 8 — it works</span>
+  <h2>What Tessera actually caught</h2>
+  <p>In a real run, a leading model (Claude Sonnet) was tested, graded by a different model (GPT-4o).
+  It scored well overall — but failed one category <b>every single time</b>: the <b>unresolvable</b>
+  conflict.</p>
+  <p>The setup: two systems disagreed on Globex Inc's contract value —
+  <span class="pill">CRM: $1.2M</span> vs <span class="pill">document: $1.5M</span> — with the
+  <b>same date and equal authority</b>. The only safe move was to refuse and escalate. Instead, the
+  model did this, on all three attempts:</p>
+  <div class="quote">"…the deal desk document is the more authoritative source for contract values,
+  and while both records share the same timestamp, the deal desk figure of <b>$1.5M takes precedence</b>
+  over the CRM entry of $1.2M."</div>
+  <p>It <b>invented a business rule</b> ("deal desk outranks CRM") that nobody gave it, to justify
+  committing to an answer where no answer was justified.</p>
+  <div class="callout"><b>Why this matters.</b> For an agent touching contracts, compliance, or safety
+  specs, "it will invent a rule to commit on irreconcilable data instead of escalating" is exactly the
+  behavior you must catch <b>before</b> deployment. A simple accuracy score would have hidden it —
+  because on the easy questions, the model looked great.</div>
+  <div class="analogy"><b>Notice the subtlety.</b> The very same model, when asked to <i>grade</i>
+  another agent, correctly says "this should have refused." It <i>knows</i> the right behavior — it
+  just doesn't <i>do</i> it under pressure. Recognizing the rule and following it are different skills.</div>
+  <div class="quiz" data-quiz-id="m8"></div>` },
+
+{ title:"Your own data + recap", html:`
+  <span class="kicker">Module 9 — wrap up</span>
+  <h2>Testing your own knowledge — and the big picture</h2>
+  <p>To test a <b>real</b> company, you describe its knowledge the same way: write your facts as
+  <b>Claims</b> and your questions as <b>Probes</b> (a Blueprint). Tessera compiles that into a test
+  world and scores any model against it — including the tricky conflict and missing-data cases.</p>
+  <div class="callout"><b>The durable idea (the "two tiers").</b> Anyone can generate test cases.
+  The valuable, human part is the <b>standard</b>: deciding what "reliable enough" means for your risk,
+  and designing the conflicts and the ground truth. Tessera's value lives in that standard — the part
+  that doesn't become worthless when generating cases gets cheap.</div>
+  <h3>The whole story in five lines</h3>
+  <div class="card">
+    1. AI is capable; the open problem is being <b>reliable</b> on messy knowledge.<br>
+    2. A good agent must <b>answer</b>, <b>cite</b>, and <b>refuse</b> when it can't know.<br>
+    3. Knowledge fails in four ways: <b>none / resolvable / unresolvable / void</b>.<br>
+    4. Tessera builds a synthetic world, asks each question <b>k times</b>, and scores
+       accuracy + provenance + refusal with strict <b>pass^k</b>.<br>
+    5. <b>Provenance</b> is read from real tool calls — the trust anchor that can't be faked.
+  </div>
+  <div class="quiz" data-quiz-id="m9"></div>
+  <div class="card" style="text-align:center; margin-top:30px">
+    <div class="muted">Your comprehension score</div>
+    <div class="scorebig" id="finalscore">0 / 0</div>
+    <div id="finalmsg" class="muted"></div>
+    <div style="margin-top:14px"><button class="btn ghost" onclick="resetAll()">↺ Reset & try again</button></div>
+  </div>` }
+];
+
+const CONFLICTS = [
+  {key:"none", behave:"answer", title:"none — sources agree",
+   body:"The fact is consistent, maybe split across two places (e.g. the CRM says the tier is Gold; a doc says Gold tier = 4-hour SLA). <b>Correct behavior: answer</b>, stitching the pieces together and citing both."},
+  {key:"resolvable", behave:"answer", title:"resolvable — a rule breaks the tie",
+   body:"Two sources clash, but something decides the winner — usually the <b>newer</b> one (recency) or the <b>more authoritative</b> one. <b>Correct behavior: answer</b> with the winning value, and cite both so the choice is auditable."},
+  {key:"unresolvable", behave:"refuse", title:"unresolvable — a genuine tie",
+   body:"Two sources clash with the <b>same date and equal authority</b> — nothing can legitimately break the tie. <b>Correct behavior: refuse and escalate.</b> Inventing a tiebreaker here is the classic dangerous failure."},
+  {key:"void", behave:"refuse", title:"void — the fact isn't there",
+   body:"The information simply doesn't exist in any source. <b>Correct behavior: refuse</b> — do not hallucinate a plausible-sounding answer."}
+];
+
+const PIPE = [
+  {ic:"📋", nm:"Blueprint", d:"<b>Blueprint</b> = your recipe: the Claims (facts) and Probes (questions). This is the human-authored part — the 'standard'."},
+  {ic:"⚙️", nm:"Compiler", d:"<b>Compiler</b> turns the recipe into real files: a CRM database, document files, and a <code>manifest</code> recording where every fact lives (the ground truth for provenance)."},
+  {ic:"🔌", nm:"MCP tools", d:"<b>MCP tools</b> serve that world to the agent — 'look up a customer', 'search documents'. The only doors to the data, just like production."},
+  {ic:"🤖", nm:"Agent", d:"<b>Agent under test</b> — any AI model. It searches, reads, reasons, then answers or refuses, using only the tools."},
+  {ic:"📊", nm:"Scorer", d:"<b>Scorer</b> checks accuracy, provenance and refusal, repeated k times, and produces the pass^k reliability scorecard."}
+];
+
+/* ===================== engine ===================== */
+let current = 0;
+const visited = new Set();
+const quizState = {};
+const content = document.getElementById('content');
+const navOl = document.getElementById('nav');
+
+function navButtons(i){
+  const prev = i>0 ? `<button class="btn ghost" onclick="go(${i-1})">← Back</button>` : `<span></span>`;
+  const next = i<MODULES.length-1 ? `<button class="btn" onclick="go(${i+1})">Next →</button>` : `<button class="btn" onclick="go(0)">↺ Start over</button>`;
+  return `<div class="nav-btns">${prev}${next}</div>`;
+}
+
+MODULES.forEach((m, i)=>{
+  const sec = document.createElement('section');
+  sec.className = 'module' + (i===0?' show':'');
+  sec.id = 'mod-'+i;
+  sec.innerHTML = m.html + navButtons(i);
+  content.appendChild(sec);
+  const li = document.createElement('li');
+  li.textContent = m.title;
+  li.onclick = ()=>go(i);
+  li.id = 'nav-'+i;
+  navOl.appendChild(li);
+});
+
+function go(i){
+  document.getElementById('mod-'+current).classList.remove('show');
+  current = i;
+  document.getElementById('mod-'+current).classList.add('show');
+  visited.add(i);
+  updateNav();
+  window.scrollTo({top:0, behavior:'smooth'});
+  document.getElementById('sidebar').classList.remove('open');
+  if(i===MODULES.length-1) refreshFinal();
+}
+
+function updateNav(){
+  MODULES.forEach((m,i)=>{
+    const li = document.getElementById('nav-'+i);
+    li.classList.toggle('active', i===current);
+    li.classList.toggle('done', visited.has(i) && i!==current);
+  });
+  const pct = Math.round(current/(MODULES.length-1)*100);
+  document.getElementById('bar').style.width = pct+'%';
+  document.getElementById('counter').textContent = `Module ${current+1} of ${MODULES.length}`;
+}
+
+/* quizzes: read data-quiz-id, look up QUIZZES, render */
+document.querySelectorAll('.quiz').forEach(q=>{
+  const id = q.getAttribute('data-quiz-id');
+  const data = QUIZZES[id];
+  if(!data) return;
+  quizState[id] = {total:data.length, correct:0, checked:false};
+  let html = `<h4>✦ Quick check</h4>`;
+  data.forEach((item, qi)=>{
+    html += `<div class="q" data-correct="${item.answer}"><div class="stem">${qi+1}. ${item.stem}</div>`;
+    item.options.forEach((opt, oi)=>{
+      html += `<label class="opt"><input type="radio" name="${id}-${qi}" value="${oi}">${opt}</label>`;
+    });
+    html += `<div class="explain">${item.explain}</div></div>`;
+  });
+  html += `<button class="btn" onclick="checkQuiz('${id}')">Check answers</button> <span class="quiz-result" id="${id}-res"></span>`;
+  q.innerHTML = html;
+  q.querySelectorAll('.opt').forEach(o=>{
+    o.addEventListener('click', ()=>{
+      const grp = o.closest('.q');
+      grp.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));
+      o.classList.add('sel');
+    });
+  });
+});
+
+function checkQuiz(id){
+  const q = document.querySelector(`.quiz[data-quiz-id="${id}"]`);
+  let correct = 0;
+  q.querySelectorAll('.q').forEach(grp=>{
+    const ans = +grp.dataset.correct;
+    const chosen = grp.querySelector('input:checked');
+    grp.querySelectorAll('.opt').forEach((o,oi)=>{
+      o.classList.remove('correct','wrong');
+      if(oi===ans) o.classList.add('correct');
+      if(chosen && +chosen.value===oi && oi!==ans) o.classList.add('wrong');
+    });
+    grp.querySelector('.explain').classList.add('show');
+    if(chosen && +chosen.value===ans) correct++;
+  });
+  quizState[id].correct = correct;
+  quizState[id].checked = true;
+  const res = document.getElementById(id+'-res');
+  res.textContent = `${correct} / ${quizState[id].total} correct`;
+  res.style.color = correct===quizState[id].total ? 'var(--pass)' : (correct===0?'var(--fail)':'var(--warn)');
+}
+
+function refreshFinal(){
+  let total=0, correct=0, anyChecked=false;
+  Object.values(quizState).forEach(s=>{ total+=s.total; if(s.checked){correct+=s.correct; anyChecked=true;} });
+  document.getElementById('finalscore').textContent = `${correct} / ${total}`;
+  const pct = total? Math.round(correct/total*100):0;
+  let msg;
+  if(!anyChecked) msg = "Take the quizzes in each module to build your score.";
+  else if(pct===100) msg = "Perfect — you deeply understand Tessera. 🟢";
+  else if(pct>=70) msg = "Strong understanding. Revisit any module you missed.";
+  else msg = "Good start — scroll back through the modules and try the quizzes again.";
+  document.getElementById('finalmsg').textContent = msg;
+}
+
+function resetAll(){
+  Object.keys(quizState).forEach(id=>{ quizState[id]={total:quizState[id].total, correct:0, checked:false}; });
+  document.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel','correct','wrong'));
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('.explain').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('.quiz-result').forEach(e=>e.textContent='');
+  go(0);
+}
+
+/* conflict explorer */
+const ctabs = document.getElementById('ctabs');
+const cdetail = document.getElementById('cdetail');
+CONFLICTS.forEach(c=>{
+  const b = document.createElement('button');
+  b.className = 'tab' + (c.behave==='answer'?' on-answer':' on-refuse');
+  b.textContent = c.key;
+  b.onclick = ()=>{
+    document.querySelectorAll('#ctabs .tab').forEach(t=>t.classList.remove('active'));
+    b.classList.add('active');
+    const pill = c.behave==='answer' ? '<span class="pill green">answer</span>' : '<span class="pill amber">refuse</span>';
+    cdetail.innerHTML = `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><b style="font-size:17px">${c.title}</b> ${pill}</div><p style="margin:0">${c.body}</p>`;
+  };
+  ctabs.appendChild(b);
+});
+ctabs.firstChild.click();
+
+/* pipeline */
+const pipe = document.getElementById('pipe');
+const pipedesc = document.getElementById('pipedesc');
+PIPE.forEach((s,i)=>{
+  const el = document.createElement('div');
+  el.className='stage';
+  el.innerHTML = `<div class="ic">${s.ic}</div><div class="nm">${s.nm}</div>`;
+  el.onclick = ()=>{
+    document.querySelectorAll('#pipe .stage').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    pipedesc.innerHTML = s.d;
+  };
+  pipe.appendChild(el);
+  if(i<PIPE.length-1){ const a=document.createElement('div'); a.className='arrow'; a.textContent='→'; pipe.appendChild(a); }
+});
+pipe.firstChild.click();
+
+/* pass^k playground */
+const pk = document.getElementById('pk');
+let epochs = [true, true, false];
+function renderPK(){
+  pk.innerHTML='';
+  epochs.forEach((v,i)=>{
+    const e = document.createElement('div');
+    e.className = 'epoch ' + (v?'pass':'fail');
+    e.innerHTML = `<div class="big">${v?'✓':'✗'}</div><div class="l">Attempt ${i+1}</div>`;
+    e.onclick = ()=>{ epochs[i]=!epochs[i]; renderPK(); };
+    pk.appendChild(e);
+  });
+  const nPass = epochs.filter(Boolean).length;
+  const strict = epochs.every(Boolean);
+  const mean = Math.round(nPass/epochs.length*100);
+  const sEl=document.getElementById('pkstrict'), mEl=document.getElementById('pkmean'), vEl=document.getElementById('pkverdict');
+  sEl.textContent = strict?'100%':'0%'; sEl.style.color = strict?'var(--pass)':'var(--fail)';
+  mEl.textContent = mean+'%';
+  if(strict){ vEl.textContent='reliable'; vEl.style.color='var(--pass)'; }
+  else if(nPass===0){ vEl.textContent='fails'; vEl.style.color='var(--fail)'; }
+  else { vEl.textContent='flaky'; vEl.style.color='var(--warn)'; }
+}
+renderPK();
+
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key==='ArrowRight' && current<MODULES.length-1) go(current+1);
+  if(e.key==='ArrowLeft' && current>0) go(current-1);
+});
+
+updateNav();
+</script>
+</body>
+</html>

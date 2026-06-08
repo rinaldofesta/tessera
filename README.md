@@ -166,6 +166,12 @@ by conflict type        pass^3            mean
 
 The gap between strict `pass^k` and the mean is the whole point: a category at `0% / 67%` is *capable but inconsistent* — a reliability bug a single accuracy number would hide. The report is pure arithmetic over the log; it never calls a model.
 
+## Learn the concepts (interactive)
+
+New to the ideas? Open **`docs/tessera-lesson.html`** in any browser — a self-contained,
+offline interactive lesson (10 modules, live widgets, comprehension quizzes) that explains
+reliability, the conflict taxonomy, `pass^k`, and provenance in plain language.
+
 ## Showcase: the Reliability Explorer (API + UI)
 
 A local, pure-Python showcase that *shows* the methodology instead of describing it:
