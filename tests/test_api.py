@@ -234,6 +234,14 @@ def test_blueprint_create_conflict_update_delete(tmp_path):
     assert c.delete("/api/blueprints/mine").status_code == 404
 
 
+def test_orgs_includes_saved_blueprint(tmp_path):
+    c = _client(tmp_path)
+    bp = c.get("/api/blueprints/toy").json()
+    c.post("/api/blueprints", json={"id": "mine", "blueprint": bp})
+    orgs = c.get("/api/orgs").json()
+    assert "mine" in orgs and "toy" in orgs          # authored dataset is now runnable
+
+
 def test_blueprint_create_invalid_400(tmp_path):
     c = _client(tmp_path)
     bad = {"claims": [], "probes": [{"probe_id": "p", "question": "q?",

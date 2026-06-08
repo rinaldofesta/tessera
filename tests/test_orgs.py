@@ -26,3 +26,12 @@ def test_your_org_template_covers_every_conflict_type():
 def test_unknown_org_raises():
     with pytest.raises(ValueError):
         get_blueprint("does-not-exist")
+
+
+def test_get_blueprint_falls_back_to_saved_json(tmp_path, monkeypatch):
+    # a dataset authored in the UI (saved to the JSON store) is runnable by name
+    from tessera.api import blueprint_store as bs
+    bs.save_blueprint(tmp_path, "custom_ds", get_blueprint("toy"))
+    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    bp = get_blueprint("custom_ds")
+    assert bp.claims and bp.probes

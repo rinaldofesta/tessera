@@ -108,11 +108,16 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
 
     @app.get("/api/orgs")
     def list_orgs():
-        """Named blueprints available to run. Raises (500) if a custom org module fails
-        to import — the frontend surfaces that as a visible warning rather than letting a
-        broken your_org.py silently disappear from the picker."""
+        """Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
+        dataset authored on the Datasets page is immediately runnable here. Raises (500)
+        if a custom org module fails to import — surfaced by the frontend as a warning."""
         from tessera.examples import org_names
-        return org_names()
+        names = set(org_names())
+        try:
+            names |= {b["id"] for b in blueprint_store.list_blueprints(app.state.blueprint_dir)}
+        except Exception:  # noqa: BLE001 — a broken store shouldn't hide the built-ins
+            pass
+        return sorted(names)
 
     # ----- Datasets (blueprints): CRUD + validate + pure compile-preview -----
     # The authoring/validate/preview loop is KEY-FREE (no model calls), so air-gapped
