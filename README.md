@@ -175,25 +175,34 @@ conflict taxonomy, `pass^k`, and provenance in plain language:
 - 🇬🇧 **`docs/tessera-lesson.html`** (English)
 - 🇮🇹 **`docs/tessera-lezione.html`** (Italiano)
 
-## Showcase: the Reliability Explorer (API + UI)
+## The Reliability Explorer (product UI)
 
-A local, pure-Python showcase that *shows* the methodology instead of describing it:
-a **FastAPI** service over the same key-free report pipeline, and a **Streamlit** UI.
+Tessera ships a product-grade web app — a **React + Vite + TypeScript** SPA served as
+static assets by the **FastAPI** backend (one process, no Node at runtime):
 
 ```bash
 uv pip install -e ".[app]"
-bash scripts/dev.sh        # API on :8000, UI on :8501
+cd web && npm install && npm run build && cd ..   # build the SPA once
+.venv/bin/uvicorn tessera.api.app:app --port 8000  # serves the app + API at :8000
 ```
 
-- **Explorer** — pick a run, see the pass^k scorecard, the operational axes, and
-  drill into each failed probe's transcript (the manufactured-tiebreaker, in full).
-- **Compare** — two runs side-by-side: the strict `pass^k`-vs-mean gap, and the
-  cross-graded reference results (Sonnet-under-test vs GPT-4o-under-test).
-- **Run** — optionally trigger a live eval and watch the scorecard appear.
+Open **http://localhost:8000**. Four views:
 
-The report endpoints are deterministic and key-free (they never call a model); only
-the optional live run needs API keys. The API is thin by design — it serializes the
-same aggregation the Markdown scorecard renders, so the two never diverge.
+- **Dashboard** — headline pass^k/mean tiles, a pass^k trend line over runs, recent-run history.
+- **Datasets** — author a dataset in the browser: an editor for **Claims** + **Probes**
+  with **live validation** and a **compiled-org preview** (CRM `db.json` + rendered docs),
+  create / save / delete. No Python editing required.
+- **Run** — configure (org / model / engine / grader / k), launch, and watch a **live**
+  monitor (SSE), with run history.
+- **Results** — the pass^k scorecard (Recharts), axes, failure drill-down, and a
+  **Compare** mode with a key-aligned diff.
+
+The report/blueprint endpoints are deterministic and **key-free** (they never call a
+model); only a live run needs API keys. A dataset authored on the **Datasets** page is
+immediately runnable — it appears in the Run picker and via `-T org=<name>`.
+
+> Frontend dev mode: `cd web && npm run dev` (Vite on :5173, proxies `/api` to :8000).
+> A legacy **Streamlit** reference UI also exists: `bash scripts/dev.sh` (API + Streamlit on :8501).
 
 **Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
 with one probe of each conflict type), describe your facts as **Claims** and your
