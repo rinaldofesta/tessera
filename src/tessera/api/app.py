@@ -291,7 +291,29 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             })
         return out
 
+    _mount_spa(app)
     return app
+
+
+def _mount_spa(app: FastAPI, dist: Path = Path("web/dist")) -> None:
+    """If the built React SPA exists, serve it: hashed assets at /assets and an
+    index.html fallback for client-side routes. Registered AFTER the /api routes (and
+    after FastAPI's /docs, /openapi.json), so they always take precedence."""
+    if not dist.exists():
+        return
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    assets = dist / "assets"
+    if assets.exists():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        # Never let the SPA fallback swallow unmatched API routes — keep their 404s honest.
+        if full_path.startswith("api/") or full_path == "api":
+            raise HTTPException(404, "not found")
+        return FileResponse(dist / "index.html")
 
 
 app = create_app()

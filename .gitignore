@@ -21,6 +21,11 @@ blueprints/
 # Run store (durable run history)
 runs.db
 
+# React SPA (web/) — Node deps and build output
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+
 # Inspect logs
 logs/
 *.eval
