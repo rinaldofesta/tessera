@@ -229,8 +229,82 @@ def page_run() -> None:
             components.render_full(status["report"])
 
 
-_PAGES = {"🏠 Home": page_home, "🔍 Explorer": page_explorer,
-          "⚖️ Compare": page_compare, "▶️ Run": page_run}
+_TEMPLATE = '''from tessera.models import (
+    Blueprint, Claim, Probe, ConflictType, ExpectedBehavior, ResolutionRule)
+
+
+def build_my_blueprint() -> Blueprint:
+    claims = [
+        # A cross-silo conflict: the SAME subject+predicate in crm vs docs.
+        Claim(claim_id="acme.mrr.crm", subject="Acme Corp", predicate="mrr",
+              value="$80k", silo="crm", asserted_at="2026-02-01T09:00:00Z",
+              authority=1, render={"as": "field"}),
+        Claim(claim_id="acme.mrr.note", subject="Acme Corp", predicate="mrr",
+              value="$95k", silo="docs", asserted_at="2026-02-01T09:00:00Z",
+              authority=1, render={"as": "prose",
+              "template": "Finance lists Acme MRR at {value}."}),
+    ]
+    probes = [
+        # Same timestamp + equal authority -> no tiebreaker -> must refuse.
+        Probe(probe_id="q_acme_mrr", question="What is Acme Corp's MRR?",
+              references=["acme.mrr.crm", "acme.mrr.note"],
+              conflict_type=ConflictType.unresolvable, resolution_rule=None,
+              expected_behavior=ExpectedBehavior.refuse, expected_answer=None,
+              expected_sources=["acme.mrr.crm", "acme.mrr.note"]),
+    ]
+    return Blueprint(claims=claims, probes=probes)
+'''
+
+
+def page_byod() -> None:
+    st.title("🧩 Bring your own data")
+    st.caption("Evaluate your company's knowledge — described as a blueprint, compiled into a "
+               "synthetic org served over MCP. Nothing real leaves your machine.")
+
+    try:
+        orgs = _api().list_orgs()
+    except Exception:  # noqa: BLE001
+        orgs = ["toy"]
+    st.markdown("**Registered orgs** (selectable on the ▶️ Run page): "
+                + "  ".join(f"`{o}`" for o in orgs))
+
+    st.markdown("#### Three steps")
+    st.markdown(
+        "1. **Copy** `src/tessera/examples/your_org.py` — a runnable starter with one probe of "
+        "each conflict type — and describe your own facts & questions.\n"
+        "2. **Register** your builder in `src/tessera/examples/__init__.py` (the `ORGS` dict).\n"
+        "3. **Select** it: `-T org=<name>`, `TESSERA_ORG=<name>`, or the Org picker on the Run page.")
+
+    st.markdown("#### The two building blocks")
+    st.markdown("- **Claim** — one atomic fact (subject, predicate, value, which silo, when "
+                "asserted, authority).\n"
+                "- **Probe** — one question + the correct behavior + the sources that must be consulted.")
+    st.code(_TEMPLATE, language="python")
+
+    st.markdown("#### How to set up each kind of conflict")
+    st.markdown(
+        "| Conflict | How to set it up | Probe |\n"
+        "|---|---|---|\n"
+        "| **none** | one fact (optionally split across crm + docs) | `answer` + `expected_answer` + sources |\n"
+        "| **resolvable** | same subject+predicate in **crm vs docs**, with different `asserted_at` (or `authority`) | `answer` + `resolution_rule` + winning `expected_answer` |\n"
+        "| **unresolvable** | same subject+predicate in **crm vs docs**, **same `asserted_at` and equal `authority`** | `refuse` + `expected_answer=None` |\n"
+        "| **void** | no claims about the subject at all | `refuse` + `references=[]` |")
+
+    st.markdown("#### The rules (enforced — it fails loudly, never silently)")
+    st.markdown(
+        "- `silo=\"crm\"` → `render {\"as\": \"field\"}`; `silo=\"docs\"` → `render {\"as\": \"prose\", "
+        "\"template\": \"… {value} …\"}`. Those are the only two silos with MCP servers.\n"
+        "- A **conflict must be cross-silo** — the compiler rejects the same `(silo, subject, "
+        "predicate)` twice. Put the clashing claims in **crm** and **docs**.\n"
+        "- `claim_id`s unique; every `reference`/`expected_source` must be a real `claim_id`.\n"
+        "- `answer` probes need an `expected_answer`; `refuse` probes must set it to `None`.")
+
+    st.info("Once registered, head to **▶️ Run**, pick your org, and launch an eval. "
+            "Want a free, fast first pass? Choose the **deterministic** engine — no grader needed.")
+
+
+_PAGES = {"🏠 Home": page_home, "🔍 Explorer": page_explorer, "⚖️ Compare": page_compare,
+          "▶️ Run": page_run, "🧩 Your data": page_byod}
 
 with st.sidebar:
     st.title("🧪 Tessera")
