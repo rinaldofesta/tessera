@@ -14,7 +14,7 @@ from inspect_ai.tool import mcp_server_stdio
 from tessera.compiler import compile_blueprint
 from tessera.evals.dataset import blueprint_to_dataset
 from tessera.evals.scoring import deterministic_reliability_scorer, llm_reliability_scorer
-from tessera.examples.toy_org import build_toy_blueprint
+from tessera.examples import get_blueprint
 
 _PROMPT = (
     "You are an enterprise analyst answering from internal systems only. "
@@ -29,8 +29,10 @@ _PROMPT = (
 
 
 @task
-def tessera_probes(judge: str = "deterministic"):
-    blueprint = build_toy_blueprint()
+def tessera_probes(judge: str = "deterministic", org: str | None = None):
+    # Select the org by name: explicit -T org=… wins, else $TESSERA_ORG, else "toy".
+    org_name = org or os.environ.get("TESSERA_ORG", "toy")
+    blueprint = get_blueprint(org_name)
     out = Path(os.environ.get("TESSERA_OUT", "/tmp/tessera/run")).resolve()
     manifest = compile_blueprint(blueprint, out)
 

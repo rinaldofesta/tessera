@@ -10,4 +10,5 @@ class RunRequest(BaseModel):
     model: str
     grader: str | None = None        # required only for the llm engine
     judge: str = "llm"               # "llm" | "deterministic"
+    org: str = "toy"                 # which blueprint to evaluate (see /api/orgs)
     epochs: int = 3

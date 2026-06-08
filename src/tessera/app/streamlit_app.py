@@ -92,6 +92,9 @@ def page_home() -> None:
             "A **compiler** turns the blueprint into the on-disk org (CRM `db.json`, docs "
             "markdown, a `manifest.json` of ground truth). To evaluate **your own** data, you "
             "describe it as claims + probes — the standard stays the same.")
+        st.info("**Bring your own data:** copy `src/tessera/examples/your_org.py` (a commented "
+                "starter with one probe of each conflict type), fill in your facts, and pick "
+                "**your** in the Org dropdown on the ▶️ Run page.")
     with right:
         st.markdown("#### What it's evaluating — the 4 ways knowledge behaves")
         st.markdown(
@@ -180,7 +183,15 @@ def page_run() -> None:
             "| Best for | a quick, free smoke test | trustworthy results to report |\n\n"
             "**Provenance is always deterministic** in both — whether the agent consulted the right "
             "sources is read from its real tool calls, never judged by a model.")
+    try:
+        orgs = _api().list_orgs()
+    except Exception:  # noqa: BLE001
+        orgs = ["toy"]
     with st.form("run"):
+        org = st.selectbox("Org (knowledge to evaluate against)", orgs,
+                           index=orgs.index("toy") if "toy" in orgs else 0,
+                           help="Which blueprint to run. Add your own as a build_* function in "
+                                "src/tessera/examples/ and register it in ORGS — see your_org.py.")
         model = st.selectbox("Model under test", _MODELS, index=0)
         judge = st.radio("Scoring engine", ["llm", "deterministic"], horizontal=True,
                          help="'llm' grades answers with an independent model (needs a grader). "
@@ -193,7 +204,7 @@ def page_run() -> None:
         if judge == "llm" and grader == model:
             st.error("Grader must differ from the model under test (a model can't grade itself).")
             return
-        payload = {"model": model, "judge": judge}
+        payload = {"model": model, "judge": judge, "org": org}
         if judge == "llm":
             payload["grader"] = grader
         try:

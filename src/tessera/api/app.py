@@ -78,6 +78,16 @@ def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = N
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
 
+    @app.get("/api/orgs")
+    def list_orgs():
+        """Named blueprints available to run. Falls back to ['toy'] if a custom org
+        module is broken, so a bad your_org.py never takes down the whole API."""
+        try:
+            from tessera.examples import org_names
+            return org_names()
+        except Exception:  # noqa: BLE001
+            return ["toy"]
+
     @app.get("/api/logs")
     def list_logs():
         out = []

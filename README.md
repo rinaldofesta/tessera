@@ -186,6 +186,16 @@ The report endpoints are deterministic and key-free (they never call a model); o
 the optional live run needs API keys. The API is thin by design — it serializes the
 same aggregation the Markdown scorecard renders, so the two never diverge.
 
+**Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
+with one probe of each conflict type), describe your facts as **Claims** and your
+questions as **Probes**, and register the builder in `src/tessera/examples/__init__.py`.
+Select it by name — `-T org=your`, `TESSERA_ORG=your`, or the Org picker on the Run page:
+
+```bash
+inspect eval src/tessera/evals/task.py -T org=your \
+    --model anthropic/claude-sonnet-4-6 --model-role grader=openai/gpt-4o
+```
+
 ```text
 GET  /api/logs                 list pinned + run logs
 GET  /api/logs/{id}/report     full scorecard as JSON

@@ -102,6 +102,25 @@ def test_upload_foreign_log_400(tmp_path):
     assert r.status_code == 400
 
 
+def test_list_orgs(tmp_path):
+    r = _client(tmp_path).get("/api/orgs")
+    assert r.status_code == 200 and "toy" in r.json()
+
+
+def test_run_passes_org_through(tmp_path):
+    captured = {}
+
+    def _runner(req):
+        captured["org"] = req.org
+        return _eval_log([_answer("q1", 1)])
+
+    client = _client(tmp_path, eval_runner=_runner)
+    r = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
+                                       "grader": "openai/gpt-4o", "judge": "llm", "org": "your"})
+    assert r.status_code == 200
+    assert captured["org"] == "your"
+
+
 def test_run_completes_with_fake_runner(tmp_path):
     client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
     r = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",

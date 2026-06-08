@@ -65,7 +65,7 @@ def default_eval_runner(req: RunRequest):
     logs = inspect_ai.eval(
         "src/tessera/evals/task.py",
         model=req.model,
-        task_args={"judge": req.judge},
+        task_args={"judge": req.judge, "org": req.org},
         log_dir="logs",
         display="none",
         **kwargs,

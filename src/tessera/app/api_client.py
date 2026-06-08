@@ -19,6 +19,11 @@ class TesseraAPI:
         r.raise_for_status()
         return r.json()
 
+    def list_orgs(self) -> list[str]:
+        r = self._client.get("/api/orgs")
+        r.raise_for_status()
+        return r.json()
+
     def get_report(self, log_id: str) -> dict:
         r = self._client.get(f"/api/logs/{log_id}/report")
         r.raise_for_status()
