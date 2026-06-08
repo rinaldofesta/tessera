@@ -168,9 +168,12 @@ The gap between strict `pass^k` and the mean is the whole point: a category at `
 
 ## Learn the concepts (interactive)
 
-New to the ideas? Open **`docs/tessera-lesson.html`** in any browser — a self-contained,
-offline interactive lesson (10 modules, live widgets, comprehension quizzes) that explains
-reliability, the conflict taxonomy, `pass^k`, and provenance in plain language.
+New to the ideas? Open a self-contained, offline interactive lesson in any browser —
+10 modules, live widgets, and comprehension quizzes that explain reliability, the
+conflict taxonomy, `pass^k`, and provenance in plain language:
+
+- 🇬🇧 **`docs/tessera-lesson.html`** (English)
+- 🇮🇹 **`docs/tessera-lezione.html`** (Italiano)
 
 ## Showcase: the Reliability Explorer (API + UI)
 
