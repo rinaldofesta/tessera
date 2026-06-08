@@ -72,6 +72,7 @@ def report_to_dict(log) -> dict:
             "model": header.model,
             "engine": header.engine,
             "grader": header.grader,
+            "org": header.org,
             "k": header.k,
             "created": header.created,
             "location": header.location,

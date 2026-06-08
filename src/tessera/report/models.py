@@ -36,6 +36,7 @@ class RunHeader:
     created: str
     location: str
     grader: str | None
+    org: str | None = None            # which blueprint was evaluated (if recorded)
 
 
 @dataclass(frozen=True)

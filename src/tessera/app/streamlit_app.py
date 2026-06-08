@@ -1,7 +1,7 @@
 """Tessera Reliability Explorer — Streamlit FE over the Tessera API.
 
-Three pages: Explorer (one run), Compare (two runs side-by-side, the pass^k-vs-mean and
-cross-grading story), and Run (a gated live eval that polls the API).
+Pages: Home (orientation), Explorer (one run / upload), Compare (two runs + diff),
+Run (a gated live eval that polls the API), Your data (bring-your-own-blueprint).
 """
 
 from __future__ import annotations
@@ -23,31 +23,44 @@ def _api() -> TesseraAPI:
     return TesseraAPI()
 
 
-def _logs() -> list[dict]:
+def _safe(fn, what: str = "load from the API"):
+    """Call an API method; on failure show a recoverable error and return None."""
     try:
-        return _api().list_logs()
+        return fn()
     except Exception as exc:  # noqa: BLE001
-        st.error(f"Can't reach the Tessera API at {DEFAULT_URL}. Is it running? "
-                 f"Start everything with `bash scripts/dev.sh`.\n\n{exc}")
-        return []
+        st.error(f"Couldn't {what}. Is the API running (`bash scripts/dev.sh`)?\n\n`{exc}`")
+        return None
+
+
+def _logs() -> list[dict]:
+    return _safe(lambda: _api().list_logs(), "list runs") or []
+
+
+def _orgs() -> tuple[list[str], str | None]:
+    """(org names, error). On error fall back to ['toy'] AND surface the reason."""
+    try:
+        return _api().list_orgs(), None
+    except Exception as exc:  # noqa: BLE001
+        return ["toy"], str(exc)
 
 
 def _label(meta: dict) -> str:
-    """A human-readable run label, e.g. '⭐ claude-sonnet-4-6 — judged by gpt-4o · llm · 2026-06-04'."""
     model = meta["model"].split("/")[-1]
     judged = f" — judged by {meta['grader'].split('/')[-1]}" if meta.get("grader") else ""
+    org = f" · {meta['org']}" if meta.get("org") else ""
     star = "⭐ " if meta["source"] == "examples" else ""
-    return f"{star}{model}{judged}  ·  {meta['engine']}  ·  {meta['created'][:10]}"
+    return f"{star}{model}{judged}{org}  ·  {meta['engine']}  ·  {meta['created'][:10]}"
 
 
 def _pick(logs: list[dict], label: str, key: str, prefer: str = "") -> str:
-    """A selectbox over runs with friendly labels; returns the chosen log id."""
     by_label = {_label(m): m["id"] for m in logs}
     labels = list(by_label)
     index = next((i for i, m in enumerate(logs) if prefer in m["id"]), 0) if prefer else 0
     chosen = st.selectbox(label, labels, index=index, key=key)
     return by_label[chosen]
 
+
+# ---------------------------------------------------------------- Home
 
 def page_home() -> None:
     st.title("🧪 Tessera — Reliability Explorer")
@@ -83,27 +96,17 @@ def page_home() -> None:
     with left:
         st.markdown("#### Where the knowledge & evals come from")
         st.markdown(
-            "Everything starts from a human-authored **blueprint** — the part that does *not* "
-            "get automated:\n\n"
+            "Everything starts from a human-authored **blueprint**:\n\n"
             "- **Claims** — the facts. Each has a subject, value, which silo it lives in, when it "
             "was asserted, and its authority.\n"
             "- **Probes** — the questions. Each declares the *correct behavior* and the sources "
             "that must be consulted.\n\n"
             "A **compiler** turns the blueprint into the on-disk org (CRM `db.json`, docs "
-            "markdown, a `manifest.json` of ground truth). To evaluate **your own** data, you "
-            "describe it as claims + probes — the standard stays the same.")
-        st.info("**Bring your own data:** copy `src/tessera/examples/your_org.py` (a commented "
-                "starter with one probe of each conflict type), fill in your facts, and pick "
-                "**your** in the Org dropdown on the ▶️ Run page.")
+            "markdown, a `manifest.json` of ground truth). To evaluate your own data, describe it "
+            "as claims + probes on the **🧩 Your data** page — the standard stays the same.")
     with right:
         st.markdown("#### What it's evaluating — the 4 ways knowledge behaves")
-        st.markdown(
-            "| Situation | Correct behavior |\n"
-            "|---|---|\n"
-            "| **none** — sources agree | **answer**, stitched together |\n"
-            "| **resolvable** — they clash, a rule decides | **answer** (newer / more authoritative wins), cite both |\n"
-            "| **unresolvable** — they clash, no tiebreaker | **refuse** and escalate |\n"
-            "| **void** — the fact isn't there | **refuse**, don't invent |")
+        st.markdown(components.conflict_behavior_table())
 
     st.divider()
     a, b = st.columns(2)
@@ -123,25 +126,61 @@ def page_home() -> None:
             "single score hides.")
 
     st.divider()
-    st.markdown("#### Try it")
-    st.markdown(
-        "- **🔍 Explorer** — open one run and read its scorecard, down to the failed transcripts.\n"
-        "- **⚖️ Compare** — two runs side-by-side (e.g. the same finding under two different judges).\n"
-        "- **▶️ Run** — launch a live eval against a model and watch the scorecard appear.")
-    st.info("New here? Start with **🔍 Explorer** and open the ⭐ *First Contact* run.")
+    c1, c2 = st.columns(2)
+    c1.info("**New here?** Open the ⭐ *First Contact* run on the **🔍 Explorer** page.")
+    c2.success("**Already have your data?** Define it on **🧩 Your data**, then launch it on **▶️ Run**.")
 
+
+# ---------------------------------------------------------------- Explorer
 
 def page_explorer() -> None:
     st.title("Explorer")
     st.caption("Pick one run. Each question is asked several times — the scorecard shows whether "
                "the agent was *reliably* right, and exactly where it wasn't.")
     components.render_glossary()
+
+    up = st.file_uploader(
+        "Open a local `.eval` log (optional)", type=["eval"],
+        help="View a scorecard for a log produced elsewhere (e.g. CI). It's parsed by your local "
+             "API — nothing leaves your machine.")
+    if up is not None:
+        rep = _safe(lambda: _api().upload(up.name, up.getvalue()), "read that .eval log")
+        if rep:
+            st.divider()
+            components.render_full(rep)
+        return
+
     logs = _logs()
     if not logs:
         return
-    log_id = _pick(logs, "Run", "explorer_pick", prefer="examples:first-contact")
+    log_id = _pick(logs, "Eval run", "explorer_pick", prefer="examples:first-contact")
     st.divider()
-    components.render_full(_api().get_report(log_id))
+    rep = _safe(lambda: _api().get_report(log_id), "load that run")
+    if rep:
+        components.render_full(rep)
+
+
+# ---------------------------------------------------------------- Compare
+
+def _pctc(x: float | None) -> str:
+    return "n/a" if x is None else f"{x * 100:.0f}%"
+
+
+def _render_compare_diff(ra: dict, rb: dict) -> None:
+    st.markdown("##### Side-by-side — pass^k by conflict type")
+    da = {c["key"]: c for c in ra["categories"]}
+    db = {c["key"]: c for c in rb["categories"]}
+    order = ["none", "resolvable", "unresolvable", "void"]
+    rows = []
+    for k in [k for k in order if k in da or k in db]:
+        a = da[k]["pass_k_rate"] if k in da else None
+        b = db[k]["pass_k_rate"] if k in db else None
+        delta = "" if (a is None or b is None) else f"{(b - a) * 100:+.0f} pts"
+        rows.append({"conflict": k, "Run A": _pctc(a), "Run B": _pctc(b), "Δ (B−A)": delta})
+    oa, ob = ra["overall"]["pass_k_rate"], rb["overall"]["pass_k_rate"]
+    rows.append({"conflict": "OVERALL", "Run A": _pctc(oa), "Run B": _pctc(ob),
+                 "Δ (B−A)": f"{(ob - oa) * 100:+.0f} pts"})
+    st.table(rows)
 
 
 def page_compare() -> None:
@@ -155,15 +194,40 @@ def page_compare() -> None:
         return
     c1, c2 = st.columns(2)
     with c1:
-        a = _pick(logs, "Left run", "cmp_a", prefer="examples:first-contact")
+        a = _pick(logs, "Run A", "cmp_a", prefer="examples:first-contact")
     with c2:
-        b = _pick(logs, "Right run", "cmp_b", prefer="examples:gpt-4o")
+        b = _pick(logs, "Run B", "cmp_b", prefer="examples:gpt-4o")
+    ra = _safe(lambda: _api().get_report(a), "load Run A")
+    rb = _safe(lambda: _api().get_report(b), "load Run B")
+    if not (ra and rb):
+        return
+    st.divider()
+    _render_compare_diff(ra, rb)
     st.divider()
     col1, col2 = st.columns(2, gap="large")
     with col1:
-        components.render_full(_api().get_report(a))
+        components.render_full(ra)
     with col2:
-        components.render_full(_api().get_report(b))
+        components.render_full(rb)
+
+
+# ---------------------------------------------------------------- Run
+
+def _echo_config(p: dict) -> None:
+    if not p:
+        return
+    grader = f" · grader `{p['grader']}`" if p.get("grader") else ""
+    st.caption(f"**Config** — org `{p.get('org','?')}` · model `{p.get('model','?')}` · "
+               f"engine {p.get('judge','?')}{grader}")
+
+
+def _start_run(payload: dict) -> None:
+    job = _safe(lambda: _api().start_run(payload), "start the run")
+    if job is None:
+        return
+    st.session_state["run"] = {"job_id": job["job_id"], "payload": payload}
+    st.session_state.pop("run_result", None)
+    st.rerun()
 
 
 def page_run() -> None:
@@ -174,7 +238,7 @@ def page_run() -> None:
         st.markdown(
             "Both engines run the **same agent** over the **same** synthetic org. They differ only "
             "in how the agent's answer is **graded**:\n\n"
-            "| | **Deterministic** | **LLM judge** |\n"
+            "| | **Deterministic** | **LLM engine** |\n"
             "|---|---|---|\n"
             "| How it grades | keyword / substring match + refusal keywords | an *independent* model reads the answer and judges it |\n"
             "| Needs a grader | no | yes — a model **different** from the one under test |\n"
@@ -183,15 +247,16 @@ def page_run() -> None:
             "| Best for | a quick, free smoke test | trustworthy results to report |\n\n"
             "**Provenance is always deterministic** in both — whether the agent consulted the right "
             "sources is read from its real tool calls, never judged by a model.")
-    try:
-        orgs = _api().list_orgs()
-    except Exception:  # noqa: BLE001
-        orgs = ["toy"]
-    with st.form("run"):
-        org = st.selectbox("Org (knowledge to evaluate against)", orgs,
+
+    orgs, orgs_err = _orgs()
+    if orgs_err:
+        st.warning(f"Couldn't load the org list (a custom `your_org.py` may be broken) — falling "
+                   f"back to `toy`.\n\n`{orgs_err}`")
+
+    with st.form("run_form"):
+        org = st.selectbox("Org (the blueprint to evaluate against)", orgs,
                            index=orgs.index("toy") if "toy" in orgs else 0,
-                           help="Which blueprint to run. Add your own as a build_* function in "
-                                "src/tessera/examples/ and register it in ORGS — see your_org.py.")
+                           help="Add your own on the 🧩 Your data page, then it appears here.")
         model = st.selectbox("Model under test", _MODELS, index=0)
         judge = st.radio("Scoring engine", ["llm", "deterministic"], horizontal=True,
                          help="'llm' grades answers with an independent model (needs a grader). "
@@ -207,27 +272,62 @@ def page_run() -> None:
         payload = {"model": model, "judge": judge, "org": org}
         if judge == "llm":
             payload["grader"] = grader
-        try:
-            job = _api().start_run(payload)
-        except ValueError as exc:
-            st.error(str(exc))
-            return
-        st.session_state["job_id"] = job["job_id"]
+        _start_run(payload)
 
-    job_id = st.session_state.get("job_id")
-    if job_id:
-        status = _api().poll(job_id)
+    run = st.session_state.get("run")
+    result = st.session_state.get("run_result")
+
+    # Show a finished result (tied to the exact config that produced it — never a stale card).
+    if run and result is not None:
+        st.divider()
+        _echo_config(run["payload"])
+        st.success("✅ Done.")
+        components.render_full(result)
+        loc = result.get("header", {}).get("location", "")
+        if loc:
+            stem = loc.split("/")[-1].rsplit(".eval", 1)[0]
+            st.caption(f"Saved as `logs:{stem}` — open it any time from the 🔍 Explorer page.")
+        b1, b2 = st.columns(2)
+        if b1.button("↺ New run"):
+            st.session_state.pop("run", None)
+            st.session_state.pop("run_result", None)
+            st.rerun()
+        if b2.button("⟳ Run this config again"):
+            _start_run(run["payload"])
+        return
+
+    # A run is in flight: poll, resiliently.
+    if run:
+        st.divider()
+        _echo_config(run["payload"])
+        status = _safe(lambda: _api().poll(run["job_id"]), "check the run")
+        if status is None:
+            st.info("The API may have restarted and lost this job. If it had finished, the log is "
+                    "still on disk — check the 🔍 Explorer page.")
+            if st.button("↺ Start over"):
+                st.session_state.pop("run", None)
+                st.rerun()
+            return
         if status["status"] == "running":
             st.info("⏳ Running the eval… (this page refreshes itself)")
             time.sleep(2)
             st.rerun()
         elif status["status"] == "error":
             st.error(f"Run failed: {status['error']}")
-        else:
-            st.success("✅ Done.")
-            st.divider()
-            components.render_full(status["report"])
+            if "key" in (status["error"] or "").lower():
+                st.caption("Hint: check `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` in `.env`.")
+            b1, b2 = st.columns(2)
+            if b1.button("⟳ Retry"):
+                _start_run(run["payload"])
+            if b2.button("↺ Reset"):
+                st.session_state.pop("run", None)
+                st.rerun()
+        else:  # done -> stash and re-render into the result branch
+            st.session_state["run_result"] = status["report"]
+            st.rerun()
 
+
+# ---------------------------------------------------------------- Your data
 
 _TEMPLATE = '''from tessera.models import (
     Blueprint, Claim, Probe, ConflictType, ExpectedBehavior, ResolutionRule)
@@ -261,12 +361,12 @@ def page_byod() -> None:
     st.caption("Evaluate your company's knowledge — described as a blueprint, compiled into a "
                "synthetic org served over MCP. Nothing real leaves your machine.")
 
-    try:
-        orgs = _api().list_orgs()
-    except Exception:  # noqa: BLE001
-        orgs = ["toy"]
-    st.markdown("**Registered orgs** (selectable on the ▶️ Run page): "
-                + "  ".join(f"`{o}`" for o in orgs))
+    orgs, orgs_err = _orgs()
+    if orgs_err:
+        st.warning(f"Couldn't load the org list — a custom `your_org.py` may be broken.\n\n`{orgs_err}`")
+    else:
+        st.markdown("**Registered orgs** (selectable on the ▶️ Run page): "
+                    + "  ".join(f"`{o}`" for o in orgs))
 
     st.markdown("#### Three steps")
     st.markdown(
@@ -282,13 +382,7 @@ def page_byod() -> None:
     st.code(_TEMPLATE, language="python")
 
     st.markdown("#### How to set up each kind of conflict")
-    st.markdown(
-        "| Conflict | How to set it up | Probe |\n"
-        "|---|---|---|\n"
-        "| **none** | one fact (optionally split across crm + docs) | `answer` + `expected_answer` + sources |\n"
-        "| **resolvable** | same subject+predicate in **crm vs docs**, with different `asserted_at` (or `authority`) | `answer` + `resolution_rule` + winning `expected_answer` |\n"
-        "| **unresolvable** | same subject+predicate in **crm vs docs**, **same `asserted_at` and equal `authority`** | `refuse` + `expected_answer=None` |\n"
-        "| **void** | no claims about the subject at all | `refuse` + `references=[]` |")
+    st.markdown(components.conflict_setup_table())
 
     st.markdown("#### The rules (enforced — it fails loudly, never silently)")
     st.markdown(
@@ -302,6 +396,8 @@ def page_byod() -> None:
     st.info("Once registered, head to **▶️ Run**, pick your org, and launch an eval. "
             "Want a free, fast first pass? Choose the **deterministic** engine — no grader needed.")
 
+
+# ---------------------------------------------------------------- nav
 
 _PAGES = {"🏠 Home": page_home, "🔍 Explorer": page_explorer, "⚖️ Compare": page_compare,
           "▶️ Run": page_run, "🧩 Your data": page_byod}

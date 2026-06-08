@@ -65,6 +65,7 @@ def _header_meta(source: str, path: Path) -> dict | None:
         "model": str(spec.model),
         "engine": engine,
         "grader": grader,
+        "org": (str(spec.task_args["org"]) if spec.task_args and "org" in spec.task_args else None),
         "created": str(spec.created),
         "k": (spec.config.epochs or 1),
     }
@@ -80,13 +81,11 @@ def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = N
 
     @app.get("/api/orgs")
     def list_orgs():
-        """Named blueprints available to run. Falls back to ['toy'] if a custom org
-        module is broken, so a bad your_org.py never takes down the whole API."""
-        try:
-            from tessera.examples import org_names
-            return org_names()
-        except Exception:  # noqa: BLE001
-            return ["toy"]
+        """Named blueprints available to run. Raises (500) if a custom org module fails
+        to import — the frontend surfaces that as a visible warning rather than letting a
+        broken your_org.py silently disappear from the picker."""
+        from tessera.examples import org_names
+        return org_names()
 
     @app.get("/api/logs")
     def list_logs():

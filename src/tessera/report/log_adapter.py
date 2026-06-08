@@ -43,7 +43,8 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         raise ReportError("log contains no samples")
 
     spec = log.eval
-    engine = str(spec.task_args.get("judge", "deterministic")) if spec.task_args else "deterministic"
+    args = spec.task_args or {}
+    engine = str(args.get("judge", "deterministic"))
     header = RunHeader(
         model=str(spec.model),
         engine=engine,
@@ -51,6 +52,7 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         created=str(spec.created),
         location=str(log.location),
         grader=(_grader_id(spec.model_roles) if engine == "llm" else None),
+        org=(str(args["org"]) if "org" in args else None),
     )
 
     records: list[ProbeEpoch] = []

@@ -92,3 +92,14 @@ def test_probe_failures_carry_missing_sources():
 def test_full_probes_list_includes_passing_probes():
     d = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
     assert len(d["probes"]) == 1 and d["probes"][0]["failures"] == []
+
+
+def test_header_org_present_when_recorded_else_none():
+    from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
+    spec = EvalSpec(created="2026-06-08T00:00:00+00:00", task="tessera_probes",
+                    dataset=EvalDataset(), model="m", config=EvalConfig(epochs=3),
+                    task_args={"judge": "deterministic", "org": "acme"}, model_roles={})
+    log = EvalLog(eval=spec, samples=[_answer("q1", 1, "none", True)], location="x.eval")
+    assert report_to_dict(log)["header"]["org"] == "acme"
+    # without org in task_args -> None (e.g. pre-org logs)
+    assert report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))["header"]["org"] is None
