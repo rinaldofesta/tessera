@@ -1,49 +1,21 @@
-"""Live-run job registry and the eval-runner seam.
+"""The eval-runner seam + the job driver.
 
 The runner is injected (see `create_app`) so tests exercise the full job lifecycle
 with a fake runner and never call a real model. The default runner drives a real
 Tessera eval in a worker thread — `inspect_ai.eval()` owns its own asyncio runtime,
-so it must NOT be awaited inside the server's event loop.
+so it must NOT be awaited inside the server's event loop. Job state lives in a
+durable RunStore (see run_store.py).
 """
 
 from __future__ import annotations
 
 import os
 import uuid
-from dataclasses import dataclass
 
 import anyio
 
 from tessera.api.schemas import RunRequest
 from tessera.report.serialize import report_to_dict
-
-
-@dataclass
-class Job:
-    status: str = "running"          # "running" | "done" | "error"
-    report: dict | None = None
-    error: str | None = None
-
-
-class JobRegistry:
-    """In-memory job store. Single-process, lost on restart — fine for a local showcase."""
-
-    def __init__(self) -> None:
-        self._jobs: dict[str, Job] = {}
-
-    def create(self) -> str:
-        job_id = uuid.uuid4().hex
-        self._jobs[job_id] = Job()
-        return job_id
-
-    def get(self, job_id: str) -> Job | None:
-        return self._jobs.get(job_id)
-
-    def complete(self, job_id: str, report: dict) -> None:
-        self._jobs[job_id] = Job(status="done", report=report)
-
-    def error(self, job_id: str, message: str) -> None:
-        self._jobs[job_id] = Job(status="error", error=message)
 
 
 def _eval_kwargs(req: RunRequest) -> dict:
@@ -81,13 +53,14 @@ def default_eval_runner(req: RunRequest):
     return read_eval_log(logs[0].location, resolve_attachments=True)
 
 
-async def run_eval_job(job_id: str, req: RunRequest, registry: JobRegistry, eval_runner) -> None:
+async def run_eval_job(job_id: str, req: RunRequest, store, eval_runner) -> None:
     """Drive one job to completion. eval_runner runs in a worker thread (no running loop
-    there), keeping inspect_ai's runtime clear of the server's event loop."""
+    there), keeping inspect_ai's runtime clear of the server's event loop. `store` is any
+    object with complete(job_id, report) / error(job_id, message)."""
     try:
         log = await anyio.to_thread.run_sync(eval_runner, req)
-        registry.complete(job_id, report_to_dict(log))
+        store.complete(job_id, report_to_dict(log))
     except ValueError as exc:            # self-grading guard, bad model id, ...
-        registry.error(job_id, str(exc))
+        store.error(job_id, str(exc))
     except Exception as exc:             # noqa: BLE001 — surface any runtime failure to the UI
-        registry.error(job_id, f"{type(exc).__name__}: {exc}")
+        store.error(job_id, f"{type(exc).__name__}: {exc}")

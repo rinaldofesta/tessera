@@ -21,14 +21,18 @@ from pathlib import Path
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from inspect_ai.log import read_eval_log
 
+import json
+
 from tessera.api import blueprint_store
-from tessera.api.runner import JobRegistry, default_eval_runner, run_eval_job
+from tessera.api.run_store import RunStore
+from tessera.api.runner import default_eval_runner, run_eval_job
 from tessera.api.schemas import RunRequest
 from tessera.report.models import ReportError
 from tessera.report.serialize import report_to_dict
 
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
+_DEFAULT_RUNS_DB = Path("runs.db")
 
 
 def _validate_blueprint(data: dict):
@@ -92,11 +96,11 @@ def _header_meta(source: str, path: Path) -> dict | None:
     }
 
 
-def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = None,
+def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
                blueprint_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="Tessera Reliability Explorer")
-    app.state.registry = registry or JobRegistry()
+    app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
@@ -226,18 +230,66 @@ def create_app(eval_runner=default_eval_runner, registry: JobRegistry | None = N
             if req.grader == req.model:
                 raise HTTPException(
                     400, "grader must differ from the model under test (self-grading guard)")
-        registry = app.state.registry
-        job_id = registry.create()
-        await app.state.schedule(run_eval_job(job_id, req, registry, app.state.eval_runner))
-        job = registry.get(job_id)
-        return {"job_id": job_id, "status": job.status if job else "running"}
+        store = app.state.run_store
+        job_id = store.create(req)
+        await app.state.schedule(run_eval_job(job_id, req, store, app.state.eval_runner))
+        job = store.get(job_id)
+        return {"job_id": job_id, "status": job["status"] if job else "running"}
+
+    @app.get("/api/runs")
+    def list_runs():
+        """Run history (newest first) with headline rates — for the monitor + dashboard."""
+        return app.state.run_store.list()
 
     @app.get("/api/runs/{job_id}")
     def get_run(job_id: str):
-        job = app.state.registry.get(job_id)
+        job = app.state.run_store.get(job_id)
         if job is None:
             raise HTTPException(404, f"unknown job: {job_id}")
-        return {"status": job.status, "report": job.report, "error": job.error}
+        return {"status": job["status"], "report": job["report"], "error": job["error"]}
+
+    @app.get("/api/runs/{job_id}/events")
+    async def run_events(job_id: str):
+        """Server-Sent Events stream of run status until terminal. SSE (not WebSocket) is
+        simpler and more air-gap-friendly; the FE shows live status off this."""
+        from fastapi.responses import StreamingResponse
+
+        async def gen():
+            for _ in range(600):  # ~10 min ceiling
+                job = app.state.run_store.get(job_id)
+                if job is None:
+                    yield f"event: error\ndata: {json.dumps({'error': 'unknown job'})}\n\n"
+                    return
+                yield f"data: {json.dumps({'status': job['status'], 'error': job['error']})}\n\n"
+                if job["status"] != "running":
+                    return
+                await asyncio.sleep(1)
+        return StreamingResponse(gen(), media_type="text/event-stream")
+
+    @app.get("/api/trends")
+    def trends(org: str | None = None, model: str | None = None, engine: str | None = None):
+        """Time-ordered series across finished runs (optionally filtered) for the dashboard:
+        pass^k/mean overall, per-conflict pass^k, and the three axes."""
+        out = []
+        for row in app.state.run_store.finished():
+            if org and row["org"] != org:
+                continue
+            if model and row["model"] != model:
+                continue
+            if engine and row["judge"] != engine:
+                continue
+            rep = row["report"]
+            if not rep:
+                continue
+            out.append({
+                "id": row["id"], "created_at": row["created_at"],
+                "model": row["model"], "org": row["org"], "engine": row["judge"],
+                "pass_k_rate": rep["overall"]["pass_k_rate"],
+                "mean_rate": rep["overall"]["mean_rate"],
+                "categories": {c["key"]: c["pass_k_rate"] for c in rep["categories"]},
+                "axes": rep["axes"],
+            })
+        return out
 
     return app
 

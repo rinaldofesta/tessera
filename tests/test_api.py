@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from tessera.api.app import create_app
+from tessera.api.run_store import RunStore
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
@@ -51,6 +52,7 @@ def _client(tmp_path, *, eval_runner=None):
         log_dirs={"examples": examples, "logs": logs},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
+        run_store=RunStore(tmp_path / "runs.db"),
     )
     return TestClient(app)
 
@@ -157,6 +159,41 @@ def test_run_surfaces_runner_valueerror_as_error_status(tmp_path):
 
 def test_unknown_job_404(tmp_path):
     assert _client(tmp_path).get("/api/runs/deadbeef").status_code == 404
+
+
+def test_runs_history_and_trends_after_a_run(tmp_path):
+    client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
+    client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
+                                   "grader": "openai/gpt-4o", "judge": "llm", "org": "toy"})
+    hist = client.get("/api/runs").json()
+    assert len(hist) == 1 and hist[0]["status"] == "done" and hist[0]["pass_k_rate"] == 1.0
+    assert hist[0]["org"] == "toy" and hist[0]["model"] == "anthropic/claude-sonnet-4-6"
+    trends = client.get("/api/trends").json()
+    assert len(trends) == 1 and trends[0]["pass_k_rate"] == 1.0 and "none" in trends[0]["categories"]
+    # filter that excludes it -> empty
+    assert client.get("/api/trends", params={"org": "nope"}).json() == []
+
+
+def test_run_persists_across_restart_same_db(tmp_path):
+    from tessera.api.schemas import RunRequest
+    db = tmp_path / "runs.db"
+    store = RunStore(db)
+    jid = store.create(RunRequest(model="m", judge="deterministic", org="toy"))
+    store.complete(jid, {"overall": {"pass_k_rate": 1.0, "mean_rate": 1.0}})
+    # a brand-new app on the SAME db file still sees the finished run (durable)
+    fresh = create_app(run_store=RunStore(db), blueprint_dir=tmp_path / "bp2",
+                       log_dirs={}, schedule=_inline_schedule)
+    got = TestClient(fresh).get(f"/api/runs/{jid}").json()
+    assert got["status"] == "done" and got["report"]["overall"]["pass_k_rate"] == 1.0
+
+
+def test_run_events_sse_terminal(tmp_path):
+    client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
+    jid = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
+                                         "grader": "openai/gpt-4o", "judge": "llm", "org": "toy"}).json()["job_id"]
+    r = client.get(f"/api/runs/{jid}/events")
+    assert r.status_code == 200 and "text/event-stream" in r.headers["content-type"]
+    assert "data:" in r.text and "done" in r.text
 
 
 # ----- Datasets (blueprints) -----

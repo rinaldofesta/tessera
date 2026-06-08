@@ -18,6 +18,8 @@ dist/
 
 # Blueprint store (user-authored datasets, runtime data)
 blueprints/
+# Run store (durable run history)
+runs.db
 
 # Inspect logs
 logs/
