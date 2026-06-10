@@ -152,19 +152,19 @@ Scoring runs through **two engines behind one pure combiner** (`grade_from_signa
 ```text
 # Tessera Reliability Report
 **Model:** anthropic/claude-sonnet-4-6 · **Engine:** llm (grader: openai/gpt-4o)
-**Run:** 2026-06-03 · **Probes:** 4 × 3 epochs
+**Run:** 2026-06-04 · **Probes:** 4 × 3 epochs
 
 ## Reliability — pass^3 (strict)
-OVERALL  pass^3  75%   (mean 92%)
+OVERALL  pass^3  75%   (mean 75%)
 
 by conflict type        pass^3            mean
   none          ██████████ 100%           100%
-  resolvable    ░░░░░░░░░░   0%            67%  ⚠ flaky
-  unresolvable  ██████████ 100%           100%
+  resolvable    ██████████ 100%           100%
+  unresolvable  ░░░░░░░░░░   0%             0%
   void          ██████████ 100%           100%
 ```
 
-The gap between strict `pass^k` and the mean is the whole point: a category at `0% / 67%` is *capable but inconsistent* — a reliability bug a single accuracy number would hide. The report is pure arithmetic over the log; it never calls a model.
+This is the actual [First Contact](#first-contact) run; the full report, including the per-epoch failure transcript excerpts, ships in [`examples/first-contact-report.md`](examples/first-contact-report.md). A category at `0% / 0%` is a consistent failure mode — every epoch fails the same way. The strict-vs-mean split is there to expose the opposite case too: a flaky category at, say, `0% / 67%` would be capable but inconsistent, a reliability bug a single accuracy number would hide. The report is pure arithmetic over the log; it never calls a model.
 
 ## Learn the concepts (interactive)
 
@@ -244,7 +244,7 @@ A first, deliberately small measurement: the **4-probe reference organization ab
 **Claude Sonnet 4.6**, graded by an independent cross-provider judge (GPT-4o): **pass^3 = 75%**.
 
 - **Strong where it counts.** Provenance **100%**, accuracy **100%** — it consults the right sources every time, and overrides a stale CRM record with a newer document by recency, citing both. Cross-source aggregation and freshness handling are solid.
-- **One stable, independently-verified gap — "overrode the standoff."** On the *unresolvable* probe (two systems of record disagree on a contract value with **identical timestamps and equal authority**), the only compliant outcome is to refuse and escalate. Instead, across all three runs, the model explicitly acknowledged the tie and then **manufactured a tiebreaker** ("the deal desk outranks the CRM") to commit to a single figure. A grader from a different lab confirmed the failure to refuse every time.
+- **One stable, independently-verified gap — "overrode the standoff."** On the *unresolvable* probe (two systems of record disagree on a contract value with **identical timestamps and equal authority**), the only compliant outcome is to refuse and escalate. Instead, across all three runs, the model explicitly acknowledged the tie and then **manufactured a tiebreaker** (in effect, the deal desk outranks the CRM) to commit to a single figure. A grader from a different lab confirmed the failure to refuse every time.
 
 For an enterprise agent touching contracts or compliance, that one line — *it will invent a business rule to commit on irreconcilable data rather than escalate* — is the entire reason to measure. A capability score hides it.
 
