@@ -31,6 +31,14 @@ def test_crm_lookup_missing_account_returns_none(out):
     assert crm_lookup_record(out, "Beta Corp") is None
 
 
+def test_crm_lookup_filters_to_requested_fields(out):
+    # det-4: the agent can fetch just the fields it needs; provenance follows the response
+    rec = crm_lookup_record(out, "Acme Corp", fields=["tier"])
+    assert rec == {"tier": {"value": "Gold", "asserted_at": None}}
+    assert crm_lookup_record(out, "Acme Corp", fields=["no_such_field"]) == {}
+    assert crm_lookup_record(out, "Beta Corp", fields=["tier"]) is None
+
+
 def test_docs_search_finds_the_renewal_note(out):
     hits = docs_search(out, "renewal")
     paths = [h["path"] for h in hits]

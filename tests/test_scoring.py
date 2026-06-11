@@ -9,7 +9,7 @@ from tessera.examples.toy_org import build_toy_blueprint
 from tessera.evals.scoring import (
     consulted_claims,
     extract_final_answer,
-    extract_tool_calls,
+    extract_tool_events,
     grade_probe,
     is_refusal,
     match_answer,
@@ -20,29 +20,55 @@ def _manifest(tmp_path):
     return compile_blueprint(build_toy_blueprint(), tmp_path)
 
 
-def test_extract_tool_calls_reads_function_and_arguments():
+def test_extract_tool_events_pairs_calls_with_their_results():
     messages = [
         ChatMessageAssistant(
             content="",
             tool_calls=[ToolCall(id="1", function="crm_lookup",
                                  arguments={"account_name": "Acme Corp"})],
         ),
-        ChatMessageTool(content="{...}", tool_call_id="1", function="crm_lookup"),
+        ChatMessageTool(content='{"tier": {"value": "Gold"}}',
+                        tool_call_id="1", function="crm_lookup"),
+        ChatMessageAssistant(
+            content="",
+            tool_calls=[ToolCall(id="2", function="docs_search",
+                                 arguments={"query": "sla"})],
+        ),  # never answered -> result is None
     ]
-    assert extract_tool_calls(messages) == [("crm_lookup", {"account_name": "Acme Corp"})]
+    assert extract_tool_events(messages) == [
+        ("crm_lookup", {"account_name": "Acme Corp"}, '{"tier": {"value": "Gold"}}'),
+        ("docs_search", {"query": "sla"}, None),
+    ]
 
 
-def test_consulted_claims_maps_crm_lookup_to_all_subject_claims(tmp_path):
+def test_consulted_claims_credits_only_the_fields_the_lookup_returned(tmp_path):
+    # det-4: CRM credit is per-field and comes from the RESPONSE, not the request
     manifest = _manifest(tmp_path)
-    calls = [("crm_lookup", {"account_name": "Acme Corp"})]
-    assert consulted_claims(calls, manifest) == {"acme.tier.crm", "acme.renewal.crm"}
+    full = '{"tier": {"value": "Gold"}, "renewal_date": {"value": "2026-01-01"}}'
+    events = [("crm_lookup", {"account_name": "Acme Corp"}, full)]
+    assert consulted_claims(events, manifest) == {"acme.tier.crm", "acme.renewal.crm"}
+    only_tier = [("crm_lookup", {"account_name": "Acme Corp"},
+                  '{"tier": {"value": "Gold"}}')]
+    assert consulted_claims(only_tier, manifest) == {"acme.tier.crm"}
+
+
+def test_consulted_claims_credits_nothing_without_a_real_record(tmp_path):
+    # the latent det-3 over-credit: a failed lookup used to count as consulted
+    manifest = _manifest(tmp_path)
+    assert consulted_claims(
+        [("crm_lookup", {"account_name": "Beta Corp"}, "NOT_FOUND")], manifest) == set()
+    assert consulted_claims(
+        [("crm_lookup", {"account_name": "Acme Corp"}, None)], manifest) == set()
+    assert consulted_claims(
+        [("crm_lookup", {"account_name": "Acme Corp"}, "Error: boom")], manifest) == set()
 
 
 def test_consulted_claims_maps_docs_get_file_to_artifact(tmp_path):
     manifest = _manifest(tmp_path)
     note_path = manifest["acme.renewal.note"]["artifact"]
-    calls = [("docs_get_file", {"path": note_path})]
-    assert consulted_claims(calls, manifest) == {"acme.renewal.note"}
+    events = [("docs_get_file", {"path": note_path},
+               "Renewal pushed to 2026-03-01 per the QBR.")]
+    assert consulted_claims(events, manifest) == {"acme.renewal.note"}
 
 
 def test_is_refusal_detects_abstention():
@@ -235,7 +261,7 @@ def test_score_attempt_stamps_scorer_version_and_format_flag(tmp_path):
                      expected_sources=[])
     s = score_attempt(messages=[], completion="Renewal date is 2026-03-01.",
                       meta=meta, manifest=manifest)
-    assert s.metadata["scorer_version"] == "det-3"
+    assert s.metadata["scorer_version"] == "det-4"
     assert s.metadata["answer_format_ok"] is False     # no ANSWER line -> fallback path
     s2 = score_attempt(messages=[], completion="ANSWER: 2026-03-01",
                        meta=meta, manifest=manifest)
@@ -248,12 +274,16 @@ def test_score_attempt_fails_answer_probe_missing_a_source(tmp_path):
                      resolution_rule="recency_wins", expected_behavior="answer",
                      expected_answer="2026-03-01",
                      expected_sources=["acme.renewal.crm", "acme.renewal.note"])
-    # consulted only CRM (surfaces both crm claims) -> still missing the docs note
-    messages = [ChatMessageAssistant(
-        content="",
-        tool_calls=[ToolCall(id="1", function="crm_lookup",
-                             arguments={"account_name": "Acme Corp"})],
-    )]
+    # consulted the CRM (response carries renewal_date) -> still missing the docs note
+    messages = [
+        ChatMessageAssistant(
+            content="",
+            tool_calls=[ToolCall(id="1", function="crm_lookup",
+                                 arguments={"account_name": "Acme Corp"})],
+        ),
+        ChatMessageTool(content='{"renewal_date": {"value": "2026-01-01"}}',
+                        tool_call_id="1", function="crm_lookup"),
+    ]
     s = score_attempt(messages=messages, completion="Renewal date is 2026-03-01.",
                       meta=meta, manifest=manifest)
     assert s.value == INCORRECT
@@ -310,10 +340,16 @@ async def _stub_false(*args):
 
 def _both_globex_calls(manifest):
     note_path = manifest["globex.contract.note"]["artifact"]
-    return [ChatMessageAssistant(content="", tool_calls=[
-        ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Globex Inc"}),
-        ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
-    ])]
+    return [
+        ChatMessageAssistant(content="", tool_calls=[
+            ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Globex Inc"}),
+            ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
+        ]),
+        ChatMessageTool(content='{"contract_value": {"value": "$1.2M"}}',
+                        tool_call_id="1", function="crm_lookup"),
+        ChatMessageTool(content="Per the deal desk, the Globex contract value is $1.5M.",
+                        tool_call_id="2", function="docs_get_file"),
+    ]
 
 
 def test_sophisticated_refusal_is_recognized(tmp_path):
@@ -342,10 +378,16 @@ def test_llm_answer_probe_passes_when_judges_say_correct_and_committed(tmp_path)
                      resolution_rule="recency_wins", expected_behavior="answer",
                      expected_answer="2026-03-01",
                      expected_sources=["acme.renewal.crm", "acme.renewal.note"])
-    messages = [ChatMessageAssistant(content="", tool_calls=[
-        ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Acme Corp"}),
-        ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
-    ])]
+    messages = [
+        ChatMessageAssistant(content="", tool_calls=[
+            ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Acme Corp"}),
+            ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
+        ]),
+        ChatMessageTool(content='{"renewal_date": {"value": "2026-01-01"}}',
+                        tool_call_id="1", function="crm_lookup"),
+        ChatMessageTool(content="Renewal pushed to 2026-03-01 per the QBR.",
+                        tool_call_id="2", function="docs_get_file"),
+    ]
     s = asyncio.run(llm_score_attempt(
         grader=None, question="When is Acme's renewal?", messages=messages,
         completion="2026-03-01 (the newer QBR note overrides the CRM).",
@@ -361,10 +403,16 @@ def test_llm_answer_probe_fails_when_accuracy_judge_says_wrong(tmp_path):
                      resolution_rule="recency_wins", expected_behavior="answer",
                      expected_answer="2026-03-01",
                      expected_sources=["acme.renewal.crm", "acme.renewal.note"])
-    messages = [ChatMessageAssistant(content="", tool_calls=[
-        ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Acme Corp"}),
-        ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
-    ])]
+    messages = [
+        ChatMessageAssistant(content="", tool_calls=[
+            ToolCall(id="1", function="crm_lookup", arguments={"account_name": "Acme Corp"}),
+            ToolCall(id="2", function="docs_get_file", arguments={"path": note_path}),
+        ]),
+        ChatMessageTool(content='{"renewal_date": {"value": "2026-01-01"}}',
+                        tool_call_id="1", function="crm_lookup"),
+        ChatMessageTool(content="Renewal pushed to 2026-03-01 per the QBR.",
+                        tool_call_id="2", function="docs_get_file"),
+    ]
     s = asyncio.run(llm_score_attempt(
         grader=None, question="When is Acme's renewal?", messages=messages,
         completion="It is 2026-01-01.", meta=meta, manifest=manifest,

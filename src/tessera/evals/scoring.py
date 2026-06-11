@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from typing import Any
 
@@ -23,24 +24,51 @@ _REFUSAL_MARKERS = (
 )
 
 
-def extract_tool_calls(messages: list[Any]) -> list[tuple[str, dict]]:
-    """Collect (tool_name, arguments) from assistant tool calls, in order."""
-    calls: list[tuple[str, dict]] = []
+def extract_tool_events(messages: list[Any]) -> list[tuple[str, dict, str | None]]:
+    """Collect (tool_name, arguments, result_text) from the transcript, in call order.
+
+    result_text is the paired ChatMessageTool content (matched via tool_call_id), or
+    None when the call never got a recorded result."""
+    results: dict[str, str] = {}
+    for msg in messages:
+        call_id = getattr(msg, "tool_call_id", None)
+        if call_id is not None:
+            results[call_id] = getattr(msg, "text", "") or ""
+    events: list[tuple[str, dict, str | None]] = []
     for msg in messages:
         for tc in (getattr(msg, "tool_calls", None) or []):
-            calls.append((tc.function, dict(tc.arguments or {})))
-    return calls
+            events.append((tc.function, dict(tc.arguments or {}), results.get(tc.id)))
+    return events
 
 
-def consulted_claims(tool_calls: list[tuple[str, dict]], manifest: dict[str, dict]) -> set[str]:
-    """Map tool calls to the claim_ids they surfaced, via the compiled manifest."""
+def _crm_record_fields(result: str | None) -> frozenset[str]:
+    """The field names a crm_lookup actually returned; empty for NOT_FOUND/errors."""
+    if not result:
+        return frozenset()
+    try:
+        record = json.loads(result)
+    except ValueError:
+        return frozenset()
+    return frozenset(record) if isinstance(record, dict) else frozenset()
+
+
+def consulted_claims(tool_events: list[tuple[str, dict, str | None]],
+                     manifest: dict[str, dict]) -> set[str]:
+    """Map tool calls to the claim_ids they surfaced, via the compiled manifest.
+
+    CRM credit is per-field and comes from the RESPONSE (det-4 / ADR-0005): a claim
+    counts only if its predicate is a key of the record the lookup actually returned —
+    NOT_FOUND, errored, and unanswered calls credit nothing. Docs files are one
+    claim-bundle per file, so the path argument is the address."""
     consulted: set[str] = set()
-    for name, args in tool_calls:
+    for name, args, result in tool_events:
         if name == "crm_lookup":
             subject = args.get("account_name")
+            fields = _crm_record_fields(result)
             consulted |= {
                 cid for cid, m in manifest.items()
                 if m.get("silo") == "crm" and m.get("subject") == subject
+                and m.get("predicate") in fields
             }
         elif name == "docs_get_file":
             path = args.get("path")
@@ -54,9 +82,11 @@ def is_refusal(completion: str) -> bool:
 
 
 # det-1 was raw case-insensitive substring; det-2 scored the COMMITTED answer for
-# accuracy; det-3 decides refusal on that same line (keyword scan only as fallback).
-_SCORER_VERSION_DET = "det-3"
-_SCORER_VERSION_LLM = "llm-1"
+# accuracy; det-3 decides refusal on that same line (keyword scan only as fallback);
+# det-4 makes CRM provenance field-granular and response-based (llm-2 mirrors it —
+# both engines share the deterministic provenance signal).
+_SCORER_VERSION_DET = "det-4"
+_SCORER_VERSION_LLM = "llm-2"
 
 # Last 'ANSWER: ...' line wins — models self-correct (inspect's own pattern convention).
 _ANSWER_LINE = re.compile(r"(?im)^\s*answer\s*:\s*(.+?)\s*$")
@@ -172,8 +202,8 @@ def grade_probe(
 def score_attempt(*, messages: list, completion: str, meta: ProbeMeta,
                   manifest: dict[str, dict]) -> Score:
     """Pure: build a Score from one attempt's messages + final completion."""
-    calls = extract_tool_calls(messages)
-    consulted = consulted_claims(calls, manifest)
+    events = extract_tool_events(messages)
+    consulted = consulted_claims(events, manifest)
     result = grade_probe(
         expected_behavior=meta.expected_behavior,
         expected_answer=meta.expected_answer,
@@ -187,7 +217,7 @@ def score_attempt(*, messages: list, completion: str, meta: ProbeMeta,
         answer=completion,
         explanation=(
             f"axes={result} consulted={sorted(consulted)} "
-            f"expected_sources={meta.expected_sources} tools={[c[0] for c in calls]}"
+            f"expected_sources={meta.expected_sources} tools={[e[0] for e in events]}"
         ),
         metadata={**result, "consulted": sorted(consulted),
                   "scorer_version": _SCORER_VERSION_DET,
@@ -200,7 +230,7 @@ async def llm_score_attempt(*, grader, question: str, messages: list, completion
                             refusal_judge=_default_refusal_judge,
                             accuracy_judge=_default_accuracy_judge) -> Score:
     """Async seam: compute the three signals (judges + deterministic provenance) and combine."""
-    consulted = consulted_claims(extract_tool_calls(messages), manifest)
+    consulted = consulted_claims(extract_tool_events(messages), manifest)
     provenance_ok = set(meta.expected_sources).issubset(consulted)
 
     if meta.expected_behavior == "refuse":
@@ -258,9 +288,12 @@ def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
     return score
 
 
-# --- Known limitations (deterministic engine, det-3) ---
-# * Provenance for crm_lookup is SUBJECT-granular, not field-granular: one lookup
-#   credits every CRM claim for that subject (the tool returns the whole record).
+# --- Known limitations (deterministic engine, det-4) ---
+# * CRM provenance is FIELD-granular and response-based: a claim is credited only
+#   when its predicate came back in the lookup's recorded response — NOT_FOUND and
+#   errored calls credit nothing. The scorer therefore depends on crm_lookup
+#   responses being recorded as JSON text in the log; docs credit stays call-based
+#   (one claim-bundle per file, the path is the address).
 # * Accuracy scores the COMMITTED answer: the last 'ANSWER:' line when present
 #   (transparent reasoning above it is never penalized), else a boundary-guarded
 #   match over the whole completion with distractor-exclusion (last-mention-wins).

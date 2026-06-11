@@ -1,7 +1,7 @@
 # ADR-0005 — Per-field CRM provenance: credit what the agent actually received
 
 - **Date**: 2026-06-11
-- **Status**: Proposed (design for Week 3; implementation would ship as `det-4`)
+- **Status**: Accepted (shipped as `det-4` / `llm-2`)
 
 ## Context
 
