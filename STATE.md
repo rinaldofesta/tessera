@@ -1,6 +1,6 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico), T3 (contratto unico), T4 (scoring det-2) e T5 (refusal det-3 + ADR) (branch `main`, **3 commit avanti** su origin — push da fare).
+> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico), T3 (contratto unico), T4 (scoring det-2) e T5 (refusal det-3 + ADR) (branch `main`, sincronizzato con origin).
 > Verificato: suite test **175 passed** (key-free, offline) · build SPA ok · smoke sui log pinnati · CI attiva (test + build + drift contratto).
 
 ---
@@ -59,7 +59,7 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 - **Branch**: solo `main` (nessun branch di feature aperto). **Issue/PR GitHub**: nessuna aperta.
 - **TODO/FIXME/xfail nel codice**: zero — né in `src/`, né in `web/src/`, né in `tests/`.
-- **Working tree pulito**: HEAD rappresenta l'app reale, CI fa da gate (pytest + build SPA + drift contratto). `main` è 3 commit avanti su origin (det-3, ADR, sync docs) — push da fare.
+- **Working tree pulito**: HEAD rappresenta l'app reale, CI fa da gate (pytest + build SPA + drift contratto). `main` sincronizzato con origin (push T5: det-3, ADR, sync docs).
 
 ## 5. Piano 14 settimane
 
@@ -79,9 +79,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **Push verso origin** dei 3 commit di T5 (det-3, ADR, sync docs) — CI farà da verifica.
-2. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design — l'ADR sarebbe lo 0004), org pubblica (design), nota su reliability under delegation.
-3. **Opzionale**: una run deterministica live (`-T judge=deterministic`) per misurare det-3 sul toy org e popolare la Dashboard con un punto deterministico; guardare `answer_format_ok` per vedere quanto spesso i modelli saltano la riga `ANSWER:`.
+1. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design — l'ADR sarebbe lo 0004), org pubblica (design), nota su reliability under delegation.
+2. **Opzionale**: una run deterministica live (`-T judge=deterministic`) per misurare det-3 sul toy org e popolare la Dashboard con un punto deterministico; guardare `answer_format_ok` per vedere quanto spesso i modelli saltano la riga `ANSWER:`.
+3. **Igiene build, quando capita**: code-splitting del chunk JS da 794 kB; ricordare che i pin del job CI `contract` si aggiornano insieme alla rigenerazione del contratto.
 
 ## 7. Domande aperte
 
