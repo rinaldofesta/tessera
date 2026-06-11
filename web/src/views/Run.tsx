@@ -12,8 +12,10 @@ import {
 import { useAsync } from "@/hooks";
 import type { Report, RunConfig } from "@/types";
 
-const MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"];
-const ENGINES = [
+// Offline fallback only — the canonical list lives server-side at GET /api/models.
+const FALLBACK_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"];
+type Engine = RunConfig["judge"];
+const ENGINES: { value: Engine; label: string }[] = [
   { value: "llm", label: "llm — independent grader" },
   { value: "deterministic", label: "deterministic — key-free" },
 ];
@@ -24,10 +26,12 @@ const clampEpochs = (s: string) => Math.max(1, Math.min(10, parseInt(s, 10) || 3
 export default function Run() {
   const orgs = useAsync(() => api.listOrgs().catch(() => ["toy"]), []);
   const orgList = orgs.data ?? ["toy"];
+  const models = useAsync(() => api.listModels().catch(() => FALLBACK_MODELS), []);
+  const modelList = models.data ?? FALLBACK_MODELS;
 
-  const [model, setModel] = useState(MODELS[0]);
-  const [engine, setEngine] = useState("llm");
-  const [grader, setGrader] = useState(MODELS[1]);
+  const [model, setModel] = useState(FALLBACK_MODELS[0]);
+  const [engine, setEngine] = useState<Engine>("llm");
+  const [grader, setGrader] = useState(FALLBACK_MODELS[1]);
   const [org, setOrg] = useState("toy");
   const [epochsStr, setEpochsStr] = useState("3");
 
@@ -46,6 +50,13 @@ export default function Run() {
   useEffect(() => {
     if (orgList.length && !orgList.includes(org)) setOrg(orgList[0]);
   }, [orgs.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // reconcile selections when the fetched model list arrives
+  useEffect(() => {
+    if (!modelList.length) return;
+    if (!modelList.includes(model)) setModel(modelList[0]);
+    if (!modelList.includes(grader)) setGrader(modelList.find((m) => m !== model) ?? modelList[0]);
+  }, [models.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const elapsed = () => Math.floor((Date.now() - startedAt.current) / 1000);
   const log = (s: string) => setLines((l) => [...l, s]);
@@ -169,7 +180,7 @@ export default function Run() {
   function onModelChange(v: string) {
     setModel(v);
     if (engine === "llm" && grader === v) {
-      setGrader(MODELS.find((m) => m !== v) ?? MODELS[0]);
+      setGrader(modelList.find((m) => m !== v) ?? modelList[0]);
     }
   }
 
@@ -205,7 +216,7 @@ export default function Run() {
               <Select value={model} onValueChange={(v) => onModelChange(v as string)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {MODELS.map((m) => (
+                  {modelList.map((m) => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
@@ -217,7 +228,7 @@ export default function Run() {
               </Label>
               <Select
                 value={engine}
-                onValueChange={(v) => setEngine(v as string)}
+                onValueChange={(v) => setEngine(v as Engine)}
                 items={ENGINES}
               >
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -236,7 +247,7 @@ export default function Run() {
                 <Select value={grader} onValueChange={(v) => setGrader(v as string)}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {MODELS.map((m) => (
+                    {modelList.map((m) => (
                       <SelectItem key={m} value={m} disabled={m === model}>
                         {m}{m === model ? " (under test)" : ""}
                       </SelectItem>

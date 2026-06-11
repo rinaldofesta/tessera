@@ -1,6 +1,6 @@
 import type {
-  Artifacts, Blueprint, BlueprintMeta, LogMeta, Report, RunConfig, RunSummary,
-  TrendPoint, ValidationResult,
+  Artifacts, Blueprint, BlueprintMeta, LogMeta, Report, RunConfig, RunStatus,
+  RunSummary, StartRunResult, TrendPoint, ValidationResult,
 } from "./types";
 
 async function j<T>(res: Response): Promise<T> {
@@ -28,12 +28,13 @@ export const api = {
     return fetch("/api/reports", { method: "POST", body: fd }).then(j<Report>);
   },
 
-  // orgs + runs
+  // orgs + models + runs
   listOrgs: () => fetch("/api/orgs").then(j<string[]>),
+  listModels: () => fetch("/api/models").then(j<string[]>),
   startRun: (cfg: RunConfig) =>
     fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
-      .then(j<{ job_id: string; status: string }>),
-  getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<{ status: string; report: Report | null; error: string | null }>),
+      .then(j<StartRunResult>),
+  getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<RunStatus>),
   listRuns: () => fetch("/api/runs").then(j<RunSummary[]>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);

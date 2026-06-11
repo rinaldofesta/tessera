@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:api": "openapi-typescript ../openapi.json -o src/api-types.gen.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -28,6 +29,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "openapi-typescript": "7.13.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.8"

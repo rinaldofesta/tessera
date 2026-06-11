@@ -31,3 +31,26 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  # The single-contract gate: regenerate openapi.json + the SPA's generated types
+  # and fail if they differ from what's committed. fastapi/pydantic are pinned to
+  # the versions the committed schema was generated with — schema emission details
+  # shift across their minors, so a dep bump means regenerate + update these pins.
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: pip install -e ".[app]" "fastapi==0.136.3" "pydantic==2.13.4"
+      - run: npm ci
+        working-directory: web
+      - run: PYTHON=python bash scripts/gen-types.sh
+      - name: Fail on contract drift
+        run: git diff --exit-code -- openapi.json web/src/api-types.gen.ts

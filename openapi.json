@@ -1,0 +1,1768 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tessera Reliability Explorer",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/orgs": {
+      "get": {
+        "summary": "List Orgs",
+        "description": "Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a\ndataset authored on the Datasets page is immediately runnable here. Raises (500)\nif a custom org module fails to import \u2014 surfaced by the frontend as a warning.",
+        "operationId": "list_orgs_api_orgs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response List Orgs Api Orgs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "summary": "List Models",
+        "description": "The canonical model choices for the Run form (model under test + grader).",
+        "operationId": "list_models_api_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response List Models Api Models Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/blueprints": {
+      "get": {
+        "summary": "List Blueprints",
+        "operationId": "list_blueprints_api_blueprints_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlueprintMeta"
+                  },
+                  "type": "array",
+                  "title": "Response List Blueprints Api Blueprints Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Blueprint",
+        "operationId": "create_blueprint_api_blueprints_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintId"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/blueprints/{blueprint_id}": {
+      "get": {
+        "summary": "Get Blueprint",
+        "operationId": "get_blueprint_api_blueprints__blueprint_id__get",
+        "parameters": [
+          {
+            "name": "blueprint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Blueprint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Blueprint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Upsert Blueprint",
+        "operationId": "upsert_blueprint_api_blueprints__blueprint_id__put",
+        "parameters": [
+          {
+            "name": "blueprint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Blueprint Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Blueprint"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintId"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Blueprint",
+        "operationId": "delete_blueprint_api_blueprints__blueprint_id__delete",
+        "parameters": [
+          {
+            "name": "blueprint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Blueprint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/blueprints/validate": {
+      "post": {
+        "summary": "Validate Blueprint",
+        "operationId": "validate_blueprint_api_blueprints_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Blueprint"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/blueprints/preview": {
+      "post": {
+        "summary": "Preview Blueprint",
+        "description": "Compile in memory and return the resulting org (CRM db.json, docs, manifest) \u2014\nno disk write, no eval. Powers the editor's live preview.",
+        "operationId": "preview_blueprint_api_blueprints_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Blueprint"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifacts"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs": {
+      "get": {
+        "summary": "List Logs",
+        "operationId": "list_logs_api_logs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LogMeta"
+                  },
+                  "type": "array",
+                  "title": "Response List Logs Api Logs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logs/{log_id}/report": {
+      "get": {
+        "summary": "Get Report",
+        "operationId": "get_report_api_logs__log_id__report_get",
+        "parameters": [
+          {
+            "name": "log_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Log Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "summary": "Upload Report",
+        "operationId": "upload_report_api_reports_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_report_api_reports_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "summary": "List Runs",
+        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
+        "operationId": "list_runs_api_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Runs Api Runs Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start Run",
+        "operationId": "start_run_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartRunResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{job_id}": {
+      "get": {
+        "summary": "Get Run",
+        "operationId": "get_run_api_runs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{job_id}/events": {
+      "get": {
+        "summary": "Run Events",
+        "description": "Server-Sent Events stream of run status until terminal. SSE (not WebSocket) is\nsimpler and more air-gap-friendly; the FE shows live status off this.",
+        "operationId": "run_events_api_runs__job_id__events_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trends": {
+      "get": {
+        "summary": "Trends",
+        "description": "Time-ordered series across finished runs (optionally filtered) for the dashboard:\npass^k/mean overall, per-conflict pass^k, and the three axes.",
+        "operationId": "trends_api_trends_get",
+        "parameters": [
+          {
+            "name": "org",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          },
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engine"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrendPoint"
+                  },
+                  "title": "Response Trends Api Trends Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Artifacts": {
+        "properties": {
+          "manifest": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ManifestEntry"
+            },
+            "type": "object",
+            "title": "Manifest"
+          },
+          "silos": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/SiloField"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Silos"
+          },
+          "docs": {
+            "items": {
+              "$ref": "#/components/schemas/DocFile"
+            },
+            "type": "array",
+            "title": "Docs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manifest",
+          "silos",
+          "docs"
+        ],
+        "title": "Artifacts"
+      },
+      "Blueprint": {
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/Probe"
+            },
+            "type": "array",
+            "title": "Probes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claims"
+        ],
+        "title": "Blueprint",
+        "description": "A fragmented organization: the claims it knows and the probes we ask it."
+      },
+      "BlueprintDeleted": {
+        "properties": {
+          "deleted": {
+            "type": "string",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "title": "BlueprintDeleted"
+      },
+      "BlueprintId": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "BlueprintId"
+      },
+      "BlueprintMeta": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "claims": {
+            "type": "integer",
+            "title": "Claims"
+          },
+          "probes": {
+            "type": "integer",
+            "title": "Probes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "claims",
+          "probes"
+        ],
+        "title": "BlueprintMeta"
+      },
+      "Body_upload_report_api_reports_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_report_api_reports_post"
+      },
+      "Claim": {
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "title": "Claim Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "predicate": {
+            "type": "string",
+            "title": "Predicate"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "silo": {
+            "type": "string",
+            "title": "Silo"
+          },
+          "asserted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asserted At"
+          },
+          "authority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority"
+          },
+          "render": {
+            "$ref": "#/components/schemas/Render"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claim_id",
+          "subject",
+          "predicate",
+          "value",
+          "silo",
+          "render"
+        ],
+        "title": "Claim",
+        "description": "An atomic knowledge unit that lives in exactly one silo."
+      },
+      "ConflictType": {
+        "type": "string",
+        "enum": [
+          "none",
+          "resolvable",
+          "unresolvable",
+          "void"
+        ],
+        "title": "ConflictType"
+      },
+      "DocFile": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "DocFile"
+      },
+      "ExpectedBehavior": {
+        "type": "string",
+        "enum": [
+          "answer",
+          "refuse"
+        ],
+        "title": "ExpectedBehavior"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LogMeta": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "created": {
+            "type": "string",
+            "title": "Created"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "path",
+          "model",
+          "engine",
+          "grader",
+          "org",
+          "created",
+          "k"
+        ],
+        "title": "LogMeta"
+      },
+      "ManifestEntry": {
+        "properties": {
+          "silo": {
+            "type": "string",
+            "title": "Silo"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "predicate": {
+            "type": "string",
+            "title": "Predicate"
+          },
+          "artifact": {
+            "type": "string",
+            "title": "Artifact"
+          },
+          "locator": {
+            "type": "string",
+            "title": "Locator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "silo",
+          "subject",
+          "predicate",
+          "artifact",
+          "locator"
+        ],
+        "title": "ManifestEntry"
+      },
+      "Probe": {
+        "properties": {
+          "probe_id": {
+            "type": "string",
+            "title": "Probe Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "references": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "References"
+          },
+          "conflict_type": {
+            "$ref": "#/components/schemas/ConflictType"
+          },
+          "resolution_rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expected_behavior": {
+            "$ref": "#/components/schemas/ExpectedBehavior"
+          },
+          "expected_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Answer"
+          },
+          "expected_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "probe_id",
+          "question",
+          "conflict_type",
+          "expected_behavior"
+        ],
+        "title": "Probe",
+        "description": "A question that references claims and declares expected behavior."
+      },
+      "Render": {
+        "properties": {
+          "as": {
+            "$ref": "#/components/schemas/RenderAs"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as"
+        ],
+        "title": "Render",
+        "description": "Rendering directive for a claim. ``as`` is aliased (Python keyword)."
+      },
+      "RenderAs": {
+        "type": "string",
+        "enum": [
+          "field",
+          "prose"
+        ],
+        "title": "RenderAs",
+        "description": "How a claim is materialized into its silo."
+      },
+      "Report": {
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/ReportHeader"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/ReportOverall"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCategory"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "axes": {
+            "$ref": "#/components/schemas/ReportAxes"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/ReportProbe"
+            },
+            "type": "array",
+            "title": "Probes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "header",
+          "overall",
+          "categories",
+          "axes",
+          "probes"
+        ],
+        "title": "Report"
+      },
+      "ReportAxes": {
+        "properties": {
+          "accuracy_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy Rate"
+          },
+          "provenance_rate": {
+            "type": "number",
+            "title": "Provenance Rate"
+          },
+          "refusal_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal Rate"
+          },
+          "n_answer_epochs": {
+            "type": "integer",
+            "title": "N Answer Epochs"
+          },
+          "n_refuse_epochs": {
+            "type": "integer",
+            "title": "N Refuse Epochs"
+          },
+          "n_total_epochs": {
+            "type": "integer",
+            "title": "N Total Epochs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accuracy_rate",
+          "provenance_rate",
+          "refusal_rate",
+          "n_answer_epochs",
+          "n_refuse_epochs",
+          "n_total_epochs"
+        ],
+        "title": "ReportAxes"
+      },
+      "ReportCategory": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "n_probes": {
+            "type": "integer",
+            "title": "N Probes"
+          },
+          "pass_k_rate": {
+            "type": "number",
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "type": "number",
+            "title": "Mean Rate"
+          },
+          "flaky": {
+            "type": "boolean",
+            "title": "Flaky"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "n_probes",
+          "pass_k_rate",
+          "mean_rate",
+          "flaky"
+        ],
+        "title": "ReportCategory"
+      },
+      "ReportFailure": {
+        "properties": {
+          "epoch": {
+            "type": "integer",
+            "title": "Epoch"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "accuracy_ok": {
+            "type": "boolean",
+            "title": "Accuracy Ok"
+          },
+          "provenance_ok": {
+            "type": "boolean",
+            "title": "Provenance Ok"
+          },
+          "refusal_ok": {
+            "type": "boolean",
+            "title": "Refusal Ok"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "consulted": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Consulted"
+          },
+          "expected_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Sources"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "epoch",
+          "passed",
+          "accuracy_ok",
+          "provenance_ok",
+          "refusal_ok",
+          "question",
+          "answer",
+          "consulted",
+          "expected_sources",
+          "missing"
+        ],
+        "title": "ReportFailure"
+      },
+      "ReportHeader": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K"
+          },
+          "created": {
+            "type": "string",
+            "title": "Created"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "engine",
+          "grader",
+          "org",
+          "k",
+          "created",
+          "location"
+        ],
+        "title": "ReportHeader"
+      },
+      "ReportOverall": {
+        "properties": {
+          "pass_k_rate": {
+            "type": "number",
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "type": "number",
+            "title": "Mean Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pass_k_rate",
+          "mean_rate"
+        ],
+        "title": "ReportOverall"
+      },
+      "ReportProbe": {
+        "properties": {
+          "probe_id": {
+            "type": "string",
+            "title": "Probe Id"
+          },
+          "conflict_type": {
+            "type": "string",
+            "title": "Conflict Type"
+          },
+          "expected_behavior": {
+            "type": "string",
+            "title": "Expected Behavior"
+          },
+          "epochs_total": {
+            "type": "integer",
+            "title": "Epochs Total"
+          },
+          "epochs_passed": {
+            "type": "integer",
+            "title": "Epochs Passed"
+          },
+          "pass_k": {
+            "type": "boolean",
+            "title": "Pass K"
+          },
+          "mean_pass": {
+            "type": "number",
+            "title": "Mean Pass"
+          },
+          "failures": {
+            "items": {
+              "$ref": "#/components/schemas/ReportFailure"
+            },
+            "type": "array",
+            "title": "Failures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "probe_id",
+          "conflict_type",
+          "expected_behavior",
+          "epochs_total",
+          "epochs_passed",
+          "pass_k",
+          "mean_pass",
+          "failures"
+        ],
+        "title": "ReportProbe"
+      },
+      "ResolutionRule": {
+        "type": "string",
+        "enum": [
+          "recency_wins",
+          "authority_wins"
+        ],
+        "title": "ResolutionRule"
+      },
+      "RunRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "judge": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "deterministic"
+            ],
+            "title": "Judge",
+            "default": "llm"
+          },
+          "org": {
+            "type": "string",
+            "title": "Org",
+            "default": "toy"
+          },
+          "epochs": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Epochs",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "RunRequest"
+      },
+      "RunStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Report"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "report",
+          "error"
+        ],
+        "title": "RunStatus"
+      },
+      "RunSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "org": {
+            "type": "string",
+            "title": "Org"
+          },
+          "judge": {
+            "type": "string",
+            "title": "Judge"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "epochs": {
+            "type": "integer",
+            "title": "Epochs"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "pass_k_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "error",
+          "model",
+          "org",
+          "judge",
+          "grader",
+          "epochs",
+          "created_at",
+          "finished_at",
+          "pass_k_rate",
+          "mean_rate"
+        ],
+        "title": "RunSummary"
+      },
+      "SiloField": {
+        "properties": {
+          "value": {
+            "title": "Value"
+          },
+          "asserted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asserted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "asserted_at"
+        ],
+        "title": "SiloField"
+      },
+      "StartRunResult": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "StartRunResult"
+      },
+      "TrendPoint": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "org": {
+            "type": "string",
+            "title": "Org"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "pass_k_rate": {
+            "type": "number",
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "type": "number",
+            "title": "Mean Rate"
+          },
+          "categories": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Categories"
+          },
+          "axes": {
+            "$ref": "#/components/schemas/ReportAxes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "model",
+          "org",
+          "engine",
+          "pass_k_rate",
+          "mean_rate",
+          "categories",
+          "axes"
+        ],
+        "title": "TrendPoint"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationIssue": {
+        "properties": {
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "location",
+          "message"
+        ],
+        "title": "ValidationIssue"
+      },
+      "ValidationResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "errors"
+        ],
+        "title": "ValidationResult"
+      }
+    }
+  }
+}
