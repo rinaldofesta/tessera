@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from inspect_ai import Epochs, Task, task
-from inspect_ai.agent import react
+from inspect_ai.agent import AgentSubmit, react
 from inspect_ai.scorer import pass_k
 from inspect_ai.tool import mcp_server_stdio
 
@@ -25,8 +25,20 @@ _PROMPT = (
     "When sources conflict, prefer the most recent one and state why. "
     "If the information is missing or genuinely cannot be resolved, say you do not know "
     "rather than guessing. Cite the sources you used. "
-    "End with a single final line formatted exactly as 'ANSWER: <your answer>'; if you "
-    "are refusing because the data is missing or irreconcilable, end with "
+    "The answer you pass to the submit tool MUST end with a single final line formatted "
+    "exactly as 'ANSWER: <value>', keeping the winning source's wording — units and "
+    "date formats included; if you are refusing because the data is missing or "
+    "irreconcilable, that line must be 'ANSWER: cannot determine'."
+)
+
+# The same contract at the point of use: the model reads the submit tool's
+# description at the moment it answers — live runs showed the prompt alone
+# yields ~50% format compliance under the react submit protocol.
+_SUBMIT_DESC = (
+    "Submit your final answer for scoring. The answer MUST end with a single final "
+    "line formatted exactly as 'ANSWER: <value>', keeping the winning source's "
+    "wording (units and date formats included). If you are refusing because the "
+    "data is missing or irreconcilable, that final line must be "
     "'ANSWER: cannot determine'."
 )
 
@@ -57,7 +69,8 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
 
     return Task(
         dataset=blueprint_to_dataset(blueprint),
-        solver=react(prompt=_PROMPT, tools=[crm, docs]),
+        solver=react(prompt=_PROMPT, tools=[crm, docs],
+                     submit=AgentSubmit(description=_SUBMIT_DESC)),
         scorer=scorer,
         epochs=Epochs(k, [pass_k(k), "mean"]),
     )
