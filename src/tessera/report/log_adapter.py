@@ -45,23 +45,17 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
     spec = log.eval
     args = spec.task_args or {}
     engine = str(args.get("judge", "deterministic"))
-    header = RunHeader(
-        model=str(spec.model),
-        engine=engine,
-        k=(spec.config.epochs or 1),
-        created=str(spec.created),
-        location=str(log.location),
-        grader=(_grader_id(spec.model_roles) if engine == "llm" else None),
-        org=(str(args["org"]) if "org" in args else None),
-    )
 
     records: list[ProbeEpoch] = []
+    scorer_version: str | None = None
     for s in log.samples:
         score = _select_score(s.scores or {})
         if score is None or not score.metadata or not _AXIS_KEYS.issubset(score.metadata.keys()):
             raise ReportError("not a Tessera reliability log (no axis metadata in scores)")
         m = s.metadata or {}
         sm = score.metadata
+        scorer_version = scorer_version or sm.get("scorer_version")
+        fmt = sm.get("answer_format_ok")
         records.append(ProbeEpoch(
             probe_id=str(s.id),
             epoch=int(s.epoch),
@@ -76,5 +70,17 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
             question=(s.input if isinstance(s.input, str) else str(s.input)),
             answer=str(score.answer or ""),
             expected_answer=m.get("expected_answer"),
+            answer_format_ok=(bool(fmt) if fmt is not None else None),
         ))
+
+    header = RunHeader(
+        model=str(spec.model),
+        engine=engine,
+        k=(spec.config.epochs or 1),
+        created=str(spec.created),
+        location=str(log.location),
+        grader=(_grader_id(spec.model_roles) if engine == "llm" else None),
+        org=(str(args["org"]) if "org" in args else None),
+        scorer_version=(str(scorer_version) if scorer_version else None),
+    )
     return header, records

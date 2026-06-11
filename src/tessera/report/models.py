@@ -26,6 +26,7 @@ class ProbeEpoch:
     question: str
     answer: str
     expected_answer: str | None
+    answer_format_ok: bool | None = None  # det-2+ only; None when the log predates it
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ class RunHeader:
     location: str
     grader: str | None
     org: str | None = None            # which blueprint was evaluated (if recorded)
+    scorer_version: str | None = None # det-4/llm-2 etc.; None on pre-versioned logs
 
 
 @dataclass(frozen=True)
@@ -67,3 +69,4 @@ class AxesSummary:
     n_answer_epochs: int
     n_refuse_epochs: int
     n_total_epochs: int
+    answer_format_rate: float | None = None  # over format-flagged epochs; None if unflagged

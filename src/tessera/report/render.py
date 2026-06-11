@@ -48,14 +48,19 @@ def render_axes(axes: AxesSummary) -> str:
         shown = "n/a" if rate is None else _pct(rate)
         return f"| {shown} | {denom} ({n}) |"
 
-    return "\n".join([
+    lines = [
         "## Operational axes (across probe-epochs)",
         "| Axis | Rate | Denominator |",
         "|------|-----:|-------------|",
         f"| Accuracy   {cell(axes.accuracy_rate, axes.n_answer_epochs, 'answer probe-epochs')}",
         f"| Provenance {cell(axes.provenance_rate, axes.n_total_epochs, 'all probe-epochs')}",
         f"| Refusal    {cell(axes.refusal_rate, axes.n_refuse_epochs, 'refuse probe-epochs')}",
-    ])
+    ]
+    if axes.answer_format_rate is not None:  # det-2+ logs only; absent on older logs
+        lines.append(
+            f"| ANSWER format {cell(axes.answer_format_rate, axes.n_total_epochs, 'all probe-epochs')}"
+        )
+    return "\n".join(lines)
 
 
 def render_appendix(probes: list[ProbeReliability], header: RunHeader) -> str:
@@ -96,9 +101,10 @@ def render_report(header: RunHeader, overall_pass_k: float, overall_mean: float,
                   categories: list[CategoryReliability], axes: AxesSummary,
                   probes: list[ProbeReliability]) -> str:
     grader = f" (grader: {header.grader})" if header.grader else ""
+    scorer = f" · **Scorer:** {header.scorer_version}" if header.scorer_version else ""
     title = [
         "# Tessera Reliability Report",
-        f"**Model:** {header.model} · **Engine:** {header.engine}{grader}",
+        f"**Model:** {header.model} · **Engine:** {header.engine}{grader}{scorer}",
         f"**Run:** {header.created} · **Probes:** {len(probes)} × {header.k} epochs",
     ]
     footer = [

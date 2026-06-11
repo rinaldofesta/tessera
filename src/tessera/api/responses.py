@@ -29,6 +29,7 @@ class ReportHeader(BaseModel):
     k: int
     created: str
     location: str
+    scorer_version: str | None = None  # det-4/llm-2 etc.; null on pre-versioned logs
 
 
 class ReportOverall(BaseModel):
@@ -51,6 +52,7 @@ class ReportAxes(BaseModel):
     n_answer_epochs: int
     n_refuse_epochs: int
     n_total_epochs: int
+    answer_format_rate: float | None = None  # null when the log never recorded the flag
 
 
 class ReportFailure(BaseModel):
@@ -64,6 +66,7 @@ class ReportFailure(BaseModel):
     consulted: list[str]
     expected_sources: list[str]
     missing: list[str]
+    answer_format_ok: bool | None = None  # det-2+ only; null on older logs
 
 
 class ReportProbe(BaseModel):
