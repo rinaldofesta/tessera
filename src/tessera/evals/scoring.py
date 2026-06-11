@@ -53,8 +53,9 @@ def is_refusal(completion: str) -> bool:
     return any(marker in text for marker in _REFUSAL_MARKERS)
 
 
-# det-1 was raw case-insensitive substring; det-2 scores the COMMITTED answer.
-_SCORER_VERSION_DET = "det-2"
+# det-1 was raw case-insensitive substring; det-2 scored the COMMITTED answer for
+# accuracy; det-3 decides refusal on that same line (keyword scan only as fallback).
+_SCORER_VERSION_DET = "det-3"
 _SCORER_VERSION_LLM = "llm-1"
 
 # Last 'ANSWER: ...' line wins — models self-correct (inspect's own pattern convention).
@@ -148,11 +149,13 @@ def grade_probe(
 ) -> dict[str, bool]:
     """Deterministic-signal convenience wrapper over grade_from_signals."""
     provenance_ok = set(expected_sources).issubset(consulted)
-    refused = is_refusal(completion)
+    final = extract_final_answer(completion)
+    # the committed line decides refusal too: hedged reasoning above a committed
+    # answer is not a refusal, and abstain-then-commit IS a commitment
+    refused = is_refusal(final) if final is not None else is_refusal(completion)
     if expected_behavior == "answer":
         if not expected_answer:
             raise ValueError("answer probes require a non-empty expected_answer")
-        final = extract_final_answer(completion)
         if final is not None:
             # the committed line is the answer; reasoning above it is never penalized
             answered_correctly = match_answer(final, expected_answer)
@@ -223,7 +226,8 @@ async def llm_score_attempt(*, grader, question: str, messages: list, completion
 
 @scorer(metrics=[accuracy(), stderr()])
 def deterministic_reliability_scorer(manifest: dict[str, dict]):
-    """Key-free deterministic engine (keyword refusal + committed-answer accuracy)."""
+    """Key-free deterministic engine: the committed ANSWER line decides accuracy and
+    refusal; heuristic fallbacks (distractors / keyword scan) apply without it."""
     async def score(state: TaskState, target: Target) -> Score:
         return score_attempt(
             messages=state.messages,
@@ -254,7 +258,7 @@ def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
     return score
 
 
-# --- Known limitations (deterministic engine, det-2) ---
+# --- Known limitations (deterministic engine, det-3) ---
 # * Provenance for crm_lookup is SUBJECT-granular, not field-granular: one lookup
 #   credits every CRM claim for that subject (the tool returns the whole record).
 # * Accuracy scores the COMMITTED answer: the last 'ANSWER:' line when present
@@ -264,5 +268,7 @@ def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
 #   ("X (CRM still shows Y)"); date/number paraphrases ("March 1, 2026" for
 #   "2026-03-01") are not matched — keep expected_answer in the wording the org
 #   materializes. Score.metadata records scorer_version + answer_format_ok.
-# * is_refusal is a heuristic; an abstention phrase plus a hallucinated assertion on a
-#   refuse-probe is not fully caught. The llm engine is the higher-fidelity cross-check.
+# * Refusal is also decided by the committed line when present ('ANSWER: cannot
+#   determine' refuses; 'ANSWER: $1.2M' under hedged reasoning commits — abstain-then-
+#   hallucinate IS caught). Without an ANSWER line the full-text keyword scan remains,
+#   where that case is not. The llm engine is the higher-fidelity cross-check.

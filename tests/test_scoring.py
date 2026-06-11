@@ -108,6 +108,36 @@ def test_fallback_without_answer_line_uses_distractors_last_mention_wins():
     assert g2["accuracy_ok"] is True
 
 
+def test_refusal_is_decided_by_the_committed_answer_line():
+    # answer-probe: hedged reasoning above a committed answer is not a refusal...
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="4 hours",
+        expected_sources=[], consulted=set(),
+        completion=("The docs alone don't have the SLA; the CRM record settles it.\n"
+                    "ANSWER: 4 hours"),
+    )
+    assert g["refusal_ok"] is True and g["passed"] is True
+    # ...and abstain-then-commit on a refuse-probe is a commitment, not a refusal
+    g2 = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=[], consulted=set(),
+        completion=("I cannot determine which figure is authoritative, "
+                    "but the CRM is usually right.\nANSWER: $1.2M"),
+    )
+    assert g2["refusal_ok"] is False and g2["passed"] is False
+
+
+def test_committed_refusal_line_passes_a_refuse_probe():
+    # the prompt's mandated abstention form: 'ANSWER: cannot determine'
+    g = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=[], consulted=set(),
+        completion=("The two systems disagree with identical timestamps.\n"
+                    "ANSWER: cannot determine"),
+    )
+    assert g["refusal_ok"] is True and g["passed"] is True
+
+
 def test_grade_answer_probe_passes_only_with_accuracy_and_full_provenance(tmp_path):
     manifest = _manifest(tmp_path)
     consulted = {"acme.renewal.crm", "acme.renewal.note"}
@@ -205,7 +235,7 @@ def test_score_attempt_stamps_scorer_version_and_format_flag(tmp_path):
                      expected_sources=[])
     s = score_attempt(messages=[], completion="Renewal date is 2026-03-01.",
                       meta=meta, manifest=manifest)
-    assert s.metadata["scorer_version"] == "det-2"
+    assert s.metadata["scorer_version"] == "det-3"
     assert s.metadata["answer_format_ok"] is False     # no ANSWER line -> fallback path
     s2 = score_attempt(messages=[], completion="ANSWER: 2026-03-01",
                        meta=meta, manifest=manifest)
