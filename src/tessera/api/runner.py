@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from pathlib import Path
 
 import anyio
 
@@ -33,6 +34,19 @@ def _eval_kwargs(req: RunRequest) -> dict:
     return kwargs
 
 
+def _job_env() -> dict[str, str]:
+    """Per-job environment, resolved BEFORE inspect_ai takes over: inspect runs the task
+    with the task file's directory as cwd, so anything cwd-relative must be absolutized
+    here or the task won't find it (saved blueprints were unresolvable without this)."""
+    return {
+        # Per-job org dir so a future concurrent run can't clobber the compiled fixtures.
+        "TESSERA_OUT": os.path.join("/tmp/tessera", f"run-{uuid.uuid4().hex}"),
+        "TESSERA_BLUEPRINT_DIR": str(
+            Path(os.environ.get("TESSERA_BLUEPRINT_DIR", "blueprints")).resolve()
+        ),
+    }
+
+
 def default_eval_runner(req: RunRequest):
     """Run a real Tessera eval and return the EvalLog. Imported lazily so the module
     stays importable (and the API stays testable) without inspect_ai initializing."""
@@ -45,8 +59,7 @@ def default_eval_runner(req: RunRequest):
     except ImportError:
         pass
 
-    # Per-job org dir so a future concurrent run can't clobber the compiled fixtures.
-    os.environ["TESSERA_OUT"] = os.path.join("/tmp/tessera", f"run-{uuid.uuid4().hex}")
+    os.environ.update(_job_env())
 
     logs = inspect_ai.eval("src/tessera/evals/task.py", **_eval_kwargs(req))
     # Re-read from disk with attachments resolved so transcripts/answers are complete.
