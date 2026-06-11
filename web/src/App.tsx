@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useApiHealth } from "@/hooks";
 import { cn } from "@/lib/utils";
-import Dashboard from "@/views/Dashboard";
-import Datasets from "@/views/Datasets";
-import Results from "@/views/Results";
-import Run from "@/views/Run";
+
+// one chunk per view: recharts (Dashboard's trend line) stays out of the others
+const Dashboard = lazy(() => import("@/views/Dashboard"));
+const Datasets = lazy(() => import("@/views/Datasets"));
+const Results = lazy(() => import("@/views/Results"));
+const Run = lazy(() => import("@/views/Run"));
 
 const NAV = [
   { to: "/dashboard", key: "1", label: "dashboard" },
@@ -90,14 +92,22 @@ export default function App() {
 
         <main className="min-w-0 flex-1 overflow-auto">
           <div className="mx-auto max-w-6xl p-5">
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/datasets" element={<Datasets />} />
-              <Route path="/run" element={<Run />} />
-              <Route path="/results" element={<Results />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense
+              fallback={
+                <div className="text-xs text-muted-foreground">
+                  <span className="select-none">$ </span>loading view…
+                </div>
+              }
+            >
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/datasets" element={<Datasets />} />
+                <Route path="/run" element={<Run />} />
+                <Route path="/results" element={<Results />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
           </div>
         </main>
       </div>
