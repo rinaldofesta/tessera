@@ -28,7 +28,7 @@ type BpRows = { claims: ClaimRow[]; probes: ProbeRow[] };
 const uid = () => crypto.randomUUID();
 const withUids = (b: Blueprint): BpRows => ({
   claims: b.claims.map((c) => ({ ...c, _uid: uid() })),
-  probes: b.probes.map((p) => ({ ...p, _uid: uid() })),
+  probes: (b.probes ?? []).map((p) => ({ ...p, _uid: uid() })),
 });
 const stripUids = (b: BpRows): Blueprint => ({
   claims: b.claims.map(({ _uid, ...c }) => c),
@@ -416,10 +416,10 @@ export default function Datasets() {
                           </div>
                         )}
                         <label><FieldLabel>references (claim_ids, comma-sep)</FieldLabel>
-                          <Input value={p.references.join(", ")}
+                          <Input value={(p.references ?? []).join(", ")}
                             onChange={(e) => setProbe(p._uid, { references: csv(e.target.value) })} /></label>
                         <label><FieldLabel>expected_sources (claim_ids, comma-sep)</FieldLabel>
-                          <Input value={p.expected_sources.join(", ")}
+                          <Input value={(p.expected_sources ?? []).join(", ")}
                             onChange={(e) => setProbe(p._uid, { expected_sources: csv(e.target.value) })} /></label>
                       </div>
                     </div>
