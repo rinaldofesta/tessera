@@ -110,6 +110,35 @@ def test_list_orgs(tmp_path):
     assert r.status_code == 200 and "toy" in r.json()
 
 
+def test_list_models(tmp_path):
+    r = _client(tmp_path).get("/api/models")
+    assert r.status_code == 200
+    models = r.json()
+    assert "anthropic/claude-sonnet-4-6" in models and len(models) >= 2
+
+
+def test_every_api_route_declares_a_response_model(tmp_path):
+    # The OpenAPI schema is the single contract the SPA types are generated from:
+    # a route without a response_model publishes `unknown` and silently re-opens
+    # the hand-maintained-types drift this guard exists to close.
+    from fastapi.routing import APIRoute
+
+    from tessera.api.app import create_app
+    from tessera.api.run_store import RunStore
+
+    app = create_app(run_store=RunStore(tmp_path / "runs.db"),
+                     blueprint_dir=tmp_path / "bp")
+    exempt = {"/api/runs/{job_id}/events"}        # SSE stream, not JSON
+    for route in app.routes:
+        if isinstance(route, APIRoute) and route.path.startswith("/api/") and route.path not in exempt:
+            assert route.response_model is not None, f"{route.path} has no response_model"
+
+
+def test_run_rejects_unknown_judge(tmp_path):
+    r = _client(tmp_path).post("/api/runs", json={"model": "m", "judge": "vibes"})
+    assert r.status_code == 422   # judge is a closed enum: 'llm' | 'deterministic'
+
+
 def test_run_passes_org_through(tmp_path):
     captured = {}
 
@@ -187,7 +216,16 @@ def test_run_persists_across_restart_same_db(tmp_path):
     db = tmp_path / "runs.db"
     store = RunStore(db)
     jid = store.create(RunRequest(model="m", judge="deterministic", org="toy"))
-    store.complete(jid, {"overall": {"pass_k_rate": 1.0, "mean_rate": 1.0}})
+    # a complete report shape — the response contract (RunStatus.report) rejects partials
+    store.complete(jid, {
+        "header": {"model": "m", "engine": "deterministic", "grader": None, "org": "toy",
+                   "k": 1, "created": "2026-06-03", "location": "x.eval"},
+        "overall": {"pass_k_rate": 1.0, "mean_rate": 1.0},
+        "categories": [],
+        "axes": {"accuracy_rate": None, "provenance_rate": 1.0, "refusal_rate": None,
+                 "n_answer_epochs": 0, "n_refuse_epochs": 0, "n_total_epochs": 1},
+        "probes": [],
+    })
     # a brand-new app on the SAME db file still sees the finished run (durable)
     fresh = create_app(run_store=RunStore(db), blueprint_dir=tmp_path / "bp2",
                        log_dirs={}, schedule=_inline_schedule)

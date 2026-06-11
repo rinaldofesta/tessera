@@ -15,7 +15,16 @@ from tessera.app.api_client import DEFAULT_URL, TesseraAPI
 
 st.set_page_config(page_title="Tessera Reliability Explorer", page_icon="🧪", layout="wide")
 
-_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"]
+# Offline fallback only — the canonical list lives server-side at GET /api/models.
+_FALLBACK_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"]
+
+
+def _models() -> list[str]:
+    """Model choices from the API, falling back silently to the bundled list."""
+    try:
+        return _api().list_models() or _FALLBACK_MODELS
+    except Exception:  # noqa: BLE001 — the form must render even with the API down
+        return _FALLBACK_MODELS
 
 
 @st.cache_resource
@@ -257,11 +266,12 @@ def page_run() -> None:
         org = st.selectbox("Org (the blueprint to evaluate against)", orgs,
                            index=orgs.index("toy") if "toy" in orgs else 0,
                            help="Add your own on the 🧩 Your data page, then it appears here.")
-        model = st.selectbox("Model under test", _MODELS, index=0)
+        models = _models()
+        model = st.selectbox("Model under test", models, index=0)
         judge = st.radio("Scoring engine", ["llm", "deterministic"], horizontal=True,
                          help="'llm' grades answers with an independent model (needs a grader). "
                               "'deterministic' uses keyword/substring matching — free, no grader.")
-        grader = st.selectbox("Independent grader (llm engine only)", _MODELS, index=1,
+        grader = st.selectbox("Independent grader (llm engine only)", models, index=1 if len(models) > 1 else 0,
                               help="Must differ from the model under test — a model can't grade itself.")
         submitted = st.form_submit_button("▶ Run eval", type="primary")
 
