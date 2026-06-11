@@ -248,7 +248,7 @@ GET    /api/trends                pass^k/mean series for the Dashboard
 - [x] **v0 (shipped mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
 - [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
-- [ ] **Scorer hardening:** parametric `k` (today the reducer is pinned to `pass_k(3)`), structured accuracy matching (substring scoring over-credits), per-field provenance granularity.
+- [ ] **Scorer hardening:** parametric `k` (✓ shipped — the task builds `pass_k(k)` from `-T k=N`, any k ≥ 1), structured accuracy matching (substring scoring over-credits), per-field provenance granularity.
 - [ ] **The public reference org:** a dataset designed for the leaderboard — the toy org is a teaching artifact, not the benchmark — then a leaderboard of frontier models run against it.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.

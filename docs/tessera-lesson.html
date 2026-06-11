@@ -876,7 +876,7 @@ const IMP_CORE = [
   {tag:"green", tagtxt:"quick win", tt:"4 probes is a demo, not a measurement",
    bd:"One probe per conflict type proves the machinery; it can't give confidence intervals. A single flaky probe swings overall pass^3 by 25 points. <b>Fix:</b> grow the toy org to 5–10 probes per type (the Datasets UI makes this fast now), and treat per-type pass^k as the headline only once each cell has real n."},
   {tag:"amber", tagtxt:"medium", tt:"k is fixed at 3 in the task definition",
-   bd:"Three epochs catches stable failures (like First Contact's) but is weak against flakiness — a 90%-flaky probe passes pass^3 about 73% of the time. Worse, discovered empirically: the task hardcodes the pass_k(3) reducer, and inspect refuses to run with fewer epochs ('Reducer pass_k_3 requires 3 epochs') — so the UI's k=1–2 options error today. <b>Fix:</b> parameterize the reducer with the epoch count, then make k sweeps a first-class experiment (see module 12)."}
+   bd:"Three epochs catches stable failures (like First Contact's) but is weak against flakiness — a 90%-flaky probe passes pass^3 about 73% of the time. Worse, discovered empirically: the task hardcoded the pass_k(3) reducer, and inspect refused to run with fewer epochs ('Reducer pass_k_3 requires 3 epochs') — the UI's k=1–2 options errored. <b>Fix — shipped ✓:</b> the task now takes <code>-T k=N</code> and builds <code>pass_k(k)</code> itself, so count and reducer can never diverge: any k≥1 runs, and k sweeps are unblocked (see module 12)."}
 ];
 const IMP_PROD = [
   {tag:"green", tagtxt:"quick win", tt:"Scratch logs leak into the product UI",
@@ -895,8 +895,8 @@ const NEXT = [
    cmd:".venv/bin/uvicorn tessera.api.app:app --port 8000   # → Results → Compare"},
   {tt:"Run evals from the UI until the Dashboard tells a story", why:"Every run from the Run view writes a durable row into the run store and feeds the Dashboard's history and trend lines. A handful of runs across models/engines turns those views from empty panels into an actual reliability record.",
    cmd:"# Run view → org: toy · engine: llm · grader ≠ model · epochs: 3"},
-  {tt:"Sweep k on the toy org", why:"The flakiness experiment: mean stays flat while pass^k decays. Run the same eval at increasing k and find where each probe starts failing — that's its real reliability, and it makes the module-8 curve real. Caveat: k<3 currently errors (the task hardcodes the pass_k(3) reducer) — parameterize it first, then sweep.",
-   cmd:"for k in 3 5 10; do .venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 --epochs $k; done"},
+  {tt:"Sweep k on the toy org", why:"The flakiness experiment: mean stays flat while pass^k decays. Run the same eval at increasing k and find where each probe starts failing — that's its real reliability, and it makes the module-8 curve real. Unblocked: the task now takes <code>-T k=N</code> (count and reducer follow together), so the sweep runs as-is.",
+   cmd:"for k in 1 3 5 10; do .venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 -T k=$k; done"},
   {tt:"Author a probe for authority_wins ✓ (done — 'initech')", why:"Shipped 2026-06-10 through the author→run loop: the initech blueprint pairs a plain CRM field against a 'signed master agreement' doc — Sonnet 4.6 picked the contract 3/3. The next twist: an UNRESOLVABLE variant of the same clash (equal wording, same timestamps) — module 5 has the recipe.",
    cmd:"# Datasets view → initech → duplicate the discount pair with neutral wording → expected_behavior: refuse"},
   {tt:"Test grader sensitivity", why:"Same run, different judge: does the scorecard change if a third model grades? If yes, the LLM judges need tighter prompts — a measurement that moves with the grader isn't a measurement.",
