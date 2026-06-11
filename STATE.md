@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica) e T2 (k parametrico) (branch `main`).
-> Verificato: suite test **163 passed** (key-free, offline) · build SPA ok · smoke end-to-end k=2 via mockllm · CI attiva.
+> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico) e T3 (contratto unico) (branch `main`).
+> Verificato: suite test **166 passed** (key-free, offline) · build SPA ok · rigenerazione contratto deterministica · CI attiva (test + build + drift).
 
 ---
 
@@ -21,7 +21,7 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 - `src/tessera/evals/` — il task inspect_ai: react agent + scorer a 3 assi, doppio motore (deterministico / LLM-judge con guardia anti-self-grading), `Epochs(k, [pass_k(k), "mean"])` con `-T k=N`
 - `src/tessera/report/` — log `.eval` → scorecard: CLI `tessera-report` (Markdown) e `report_to_dict` (JSON per l'API)
 - `src/tessera/examples/` — registry delle org nominate (`toy`, `your`) con fallback, protetto da path traversal, sui JSON salvati in `blueprints/`
-- `src/tessera/api/` — FastAPI: CRUD+validate+preview blueprint, run con SSE/polling, store SQLite (`runs.db`), trends; serve anche la SPA buildata da `web/dist`
+- `src/tessera/api/` — FastAPI: CRUD+validate+preview blueprint, run con SSE/polling, store SQLite (`runs.db`), trends, `/api/models`; ogni endpoint JSON ha un response model (`responses.py`) — l'OpenAPI che ne esce è IL contratto; serve anche la SPA buildata da `web/dist`
 - `src/tessera/app/` — UI Streamlit **legacy** (stesso API; sostituita da `web/`, ancora lanciata da `scripts/dev.sh`)
 - `web/` — la UI prodotto: SPA React+Vite+TS, 4 viste (Dashboard, Datasets, Run, Results), stile terminale monocromo su shadcn/Tailwind v4
 - `tests/` — 159 test key-free (motori scorer stubbati, log inspect fabbricati in memoria; nessuna API key richiesta)
@@ -50,10 +50,9 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ### Cosa è incompleto o rotto
 
-- **`web/src/types.ts` è scritto a mano** (specchio manuale del contratto FastAPI; il file stesso rimanda la generazione da OpenAPI). → T3
 - **Scoring accuratezza a substring**: sovra-accredita (la risposta giusta dentro una frase sbagliata passa). → T4
 - Warning di build: chunk JS da 794 kB (>500 kB) — nessun code-splitting.
-- Liste modelli duplicate a mano in due UI (`app/streamlit_app.py` e `web/src/views/Run.tsx`): drifteranno. → T3
+- I pin del job CI `contract` (fastapi 0.136.3 / pydantic 2.13.4) vanno aggiornati insieme a ogni bump di quelle dipendenze (rigenerare il contratto nello stesso commit).
 
 ## 4. Lavori in corso
 
@@ -79,9 +78,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **T3 — contratto unico** (mar 16/6): generare `web/src/types.ts` dall'OpenAPI di FastAPI con check anti-drift in CI; unificare la lista modelli duplicata (Streamlit / Run.tsx) in un'unica fonte.
-2. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
-3. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (decisione scoring + k parametrico — incluso il perché k vive nel task: un override eval-level cambia il conteggio ma non il reducer).
+1. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
+2. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (decisione scoring + k parametrico + contratto unico — incluso il perché k vive nel task e perché i response model sono il contratto).
+3. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design), org pubblica (design), nota su reliability under delegation.
 
 ## 7. Domande aperte
 
@@ -100,3 +99,4 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 - **2026-06-10** — creato STATE.md; audit completo dei docs.
 - **2026-06-11 (T1, bonifica)** — working tree (+7383/−1911) spezzato in 7 commit tematici: fix author→run in salvo per primo, poi SPA, lezioni, sync docs (v0 dichiarato, roadmap aggiornata, call-doc rimossi), pulizia root, CI minima. HEAD verde che rappresenta l'app reale. Prossimo: T2 (k parametrico).
 - **2026-06-11 (T2, k parametrico)** — il task ora possiede conteggio E reducer: `tessera_probes(k=N)` costruisce `Epochs(k, [pass_k(k), "mean"])`; il runner passa `task_args["k"]` e NON più l'override eval-level (che cambia il conteggio ma tiene il reducer — la causa del bug). `RunRequest.epochs` validato 1..10. Studio verificato su inspect_ai 0.3.235 installato (merge in `_eval/run.py`: epochs e reducer mergiati indipendentemente). Smoke key-free: eval con mockllm a k=2 → log `pass_k_2` → scorecard «pass^2 (strict), 4 × 2 epochs». 163 test. Prossimo: T3 (contratto unico).
+- **2026-06-11 (T3, contratto unico)** — ogni endpoint JSON ora dichiara un response model (`api/responses.py`): FastAPI valida ogni risposta, quindi i 166 test key-free sono anche contract test (la rete ha subito beccato una fixture che mentiva sulla forma del report). `web/src/types.ts` non dichiara più nulla a mano: alias dei tipi GENERATI (`api-types.gen.ts`, da openapi-typescript 7.13.0 su `openapi.json` committato; `bash scripts/gen-types.sh`); il drift trovato dall'audit (LogMeta senza `path`) è morto con la generazione. Job CI `contract` fallisce su drift (fastapi/pydantic pinnati lì). Lista modelli unificata: `GET /api/models` alimenta Run.tsx e Streamlit (fallback offline in entrambi); `judge` ora è Literal (typo → 422). Prossimo: T4 (scoring accuratezza).
