@@ -21,7 +21,7 @@ export class ApiError extends Error {
 export const api = {
   // logs / reports
   listLogs: () => fetch("/api/logs").then(j<LogMeta[]>),
-  getReport: (id: string) => fetch(`/api/logs/${id}/report`).then(j<Report>),
+  getReport: (id: string) => fetch(`/api/logs/${encodeURIComponent(id)}/report`).then(j<Report>),
   uploadReport: (file: File) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -33,7 +33,7 @@ export const api = {
   startRun: (cfg: RunConfig) =>
     fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
       .then(j<{ job_id: string; status: string }>),
-  getRun: (id: string) => fetch(`/api/runs/${id}`).then(j<{ status: string; report: Report | null; error: string | null }>),
+  getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<{ status: string; report: Report | null; error: string | null }>),
   listRuns: () => fetch("/api/runs").then(j<RunSummary[]>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);
@@ -42,7 +42,7 @@ export const api = {
 
   // blueprints (datasets)
   listBlueprints: () => fetch("/api/blueprints").then(j<BlueprintMeta[]>),
-  getBlueprint: (id: string) => fetch(`/api/blueprints/${id}`).then(j<Blueprint>),
+  getBlueprint: (id: string) => fetch(`/api/blueprints/${encodeURIComponent(id)}`).then(j<Blueprint>),
   validateBlueprint: (bp: Blueprint) =>
     fetch("/api/blueprints/validate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(bp) }).then(j<ValidationResult>),
   previewBlueprint: (bp: Blueprint) =>
@@ -50,7 +50,7 @@ export const api = {
   createBlueprint: (id: string, blueprint: Blueprint) =>
     fetch("/api/blueprints", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, blueprint }) }).then(j<{ id: string }>),
   saveBlueprint: (id: string, blueprint: Blueprint) =>
-    fetch(`/api/blueprints/${id}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(blueprint) }).then(j<{ id: string }>),
+    fetch(`/api/blueprints/${encodeURIComponent(id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(blueprint) }).then(j<{ id: string }>),
   deleteBlueprint: (id: string) =>
-    fetch(`/api/blueprints/${id}`, { method: "DELETE" }).then(j<{ deleted: string }>),
+    fetch(`/api/blueprints/${encodeURIComponent(id)}`, { method: "DELETE" }).then(j<{ deleted: string }>),
 };

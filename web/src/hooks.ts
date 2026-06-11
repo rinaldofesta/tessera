@@ -28,7 +28,8 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): AsyncState<T
     return () => { alive = false; };
   }, [run, nonce]);
 
-  return { data, loading, error, reload: () => setNonce((n) => n + 1) };
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  return { data, loading, error, reload };
 }
 
 /** Poll the API health (list runs is cheap) every `ms`. */
