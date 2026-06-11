@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico) e T3 (contratto unico) (branch `main`).
-> Verificato: suite test **166 passed** (key-free, offline) · build SPA ok · rigenerazione contratto deterministica · CI attiva (test + build + drift).
+> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico), T3 (contratto unico) e T4 (scoring det-2) (branch `main`, sincronizzato con origin).
+> Verificato: suite test **173 passed** (key-free, offline) · build SPA ok · smoke sui log pinnati · CI attiva (test + build + drift contratto).
 
 ---
 
@@ -50,7 +50,7 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ### Cosa è incompleto o rotto
 
-- **Scoring accuratezza a substring**: sovra-accredita (la risposta giusta dentro una frase sbagliata passa). → T4
+- **Fallback accuratezza det-2**: senza riga `ANSWER:` le negazioni «X, non Y» e le parentetiche finali sono ancora fraintese (documentato in scoring.py); le parafrasi di date/numeri non matchano — tenere `expected_answer` nella formulazione dell'org.
 - Warning di build: chunk JS da 794 kB (>500 kB) — nessun code-splitting.
 - I pin del job CI `contract` (fastapi 0.136.3 / pydantic 2.13.4) vanno aggiornati insieme a ogni bump di quelle dipendenze (rigenerare il contratto nello stesso commit).
 
@@ -78,9 +78,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
-2. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (decisione scoring + k parametrico + contratto unico — incluso il perché k vive nel task e perché i response model sono il contratto).
-3. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design), org pubblica (design), nota su reliability under delegation.
+1. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (scoring det-2 + k parametrico + contratto unico). Punti per l'ADR: perché k vive nel task; perché i response model sono il contratto; perché l'estrazione committed batte l'esclusione cieca dei distractor; e la correzione fattuale: **First Contact NON dipendeva dal substring** (era motore llm — la comparabilità regge; det-1→det-2 tocca solo le run deterministiche, marcate da `scorer_version` nei log).
+2. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design), org pubblica (design), nota su reliability under delegation.
+3. **Opzionale dopo det-2**: una run deterministica live (`-T judge=deterministic`) per misurare il nuovo motore sul toy org e popolare la Dashboard con un punto det-2.
 
 ## 7. Domande aperte
 
@@ -100,3 +100,5 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 - **2026-06-11 (T1, bonifica)** — working tree (+7383/−1911) spezzato in 7 commit tematici: fix author→run in salvo per primo, poi SPA, lezioni, sync docs (v0 dichiarato, roadmap aggiornata, call-doc rimossi), pulizia root, CI minima. HEAD verde che rappresenta l'app reale. Prossimo: T2 (k parametrico).
 - **2026-06-11 (T2, k parametrico)** — il task ora possiede conteggio E reducer: `tessera_probes(k=N)` costruisce `Epochs(k, [pass_k(k), "mean"])`; il runner passa `task_args["k"]` e NON più l'override eval-level (che cambia il conteggio ma tiene il reducer — la causa del bug). `RunRequest.epochs` validato 1..10. Studio verificato su inspect_ai 0.3.235 installato (merge in `_eval/run.py`: epochs e reducer mergiati indipendentemente). Smoke key-free: eval con mockllm a k=2 → log `pass_k_2` → scorecard «pass^2 (strict), 4 × 2 epochs». 163 test. Prossimo: T3 (contratto unico).
 - **2026-06-11 (T3, contratto unico)** — ogni endpoint JSON ora dichiara un response model (`api/responses.py`): FastAPI valida ogni risposta, quindi i 166 test key-free sono anche contract test (la rete ha subito beccato una fixture che mentiva sulla forma del report). `web/src/types.ts` non dichiara più nulla a mano: alias dei tipi GENERATI (`api-types.gen.ts`, da openapi-typescript 7.13.0 su `openapi.json` committato; `bash scripts/gen-types.sh`); il drift trovato dall'audit (LogMeta senza `path`) è morto con la generazione. Job CI `contract` fallisce su drift (fastapi/pydantic pinnati lì). Lista modelli unificata: `GET /api/models` alimenta Run.tsx e Streamlit (fallback offline in entrambi); `judge` ora è Literal (typo → 422). Prossimo: T4 (scoring accuratezza).
+- **2026-06-11 (push + rebase)** — origin era stato riscritto (purge dalla history dei 3 call-doc, incluso demo-runbook, + un commit README col vero report First Contact): rebase dei 13 commit locali sulla base riscritta, runbook tenuto cancellato per onorare il purge, push fast-forward. Prima run CI su GitHub.
+- **2026-06-11 (T4, scoring det-2)** — prima la rete: smoke test sui log pinnati (`tests/test_pinned_examples.py`, numeri headline + testo «$1.5M»). Poi il fix: l'accuratezza deterministica valuta la **risposta committed** — ultima riga `ANSWER:` (il prompt ora la richiede), match con guardie sui confini («24 hours» non colpisce più «4 hours», «115%» ≠ «15%»); senza riga, fallback distractor-aware a ultima-menzione-vince — i distractor derivano meccanicamente dai claim in conflitto del blueprint (`dataset._distractor_values`: solo gruppi (subject,predicate) con valori diversi — «Gold» non diventa mai distractor). `Score.metadata` porta `scorer_version` (det-2/llm-1) e `answer_format_ok`. Scoperta chiave dal recon: **First Contact era motore llm — il substring non c'entrava**; la sua comparabilità non è toccata. 173 test; smoke mockllm end-to-end ok. Prossimo: T5 (ADR).

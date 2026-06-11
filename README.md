@@ -94,7 +94,7 @@ uv pip install -e .
 .venv/bin/inspect view   # browse the log: per-sample tool calls, provenance, refusal
 ```
 
-By default, scoring is deterministic (keyword/substring, no grader). For model-graded accuracy and refusal, select the LLM engine and bind an **independent** grader:
+By default, scoring is deterministic (keyword refusal + committed-answer matching, no grader). For model-graded accuracy and refusal, select the LLM engine and bind an **independent** grader:
 
 ```bash
 .venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm \
@@ -139,7 +139,10 @@ Each probe is scored on three axes, not just accuracy, and repeated under `pass^
 
 Scoring runs through **two engines behind one pure combiner** (`grade_from_signals`):
 
-- **Deterministic** — keyword refusal + substring accuracy. Zero-cost, key-free, the default.
+- **Deterministic** — keyword refusal + committed-answer accuracy: the agent ends with an
+  `ANSWER:` line and only that line is matched (boundary-guarded); without it, a fallback
+  rejects answers whose last mention is a known conflicting value — the blueprint knows
+  the wrong values and ships them as distractors. Zero-cost, key-free, the default.
 - **LLM-judge** — model-graded accuracy and refusal, for paraphrase- and format-tolerant grading.
 
 > **The moat is the standard; provenance keeps it honest.** The durable contribution is the *standard* — the conflict taxonomy and the adversarial ground truth that define what "reliable enough" means. Provenance is how that standard stays verifiable: whether the agent consulted the right sources is read straight from its real MCP tool calls and checked against the compiled `manifest.json`, never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
@@ -248,7 +251,7 @@ GET    /api/trends                pass^k/mean series for the Dashboard
 - [x] **v0 (shipped mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
 - [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
-- [ ] **Scorer hardening:** parametric `k` (✓ shipped — the task builds `pass_k(k)` from `-T k=N`, any k ≥ 1), structured accuracy matching (substring scoring over-credits), per-field provenance granularity.
+- [ ] **Scorer hardening:** parametric `k` (✓ shipped — the task builds `pass_k(k)` from `-T k=N`, any k ≥ 1), committed-answer accuracy matching (✓ shipped — `det-2`: ANSWER-line extraction + distractor-aware fallback), per-field provenance granularity.
 - [ ] **The public reference org:** a dataset designed for the leaderboard — the toy org is a teaching artifact, not the benchmark — then a leaderboard of frontier models run against it.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
