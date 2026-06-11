@@ -36,9 +36,9 @@ def _prose(claim_id: str, subject: str, predicate: str, value, template: str, *,
 def build_meridian_blueprint() -> Blueprint:
     claims = [
         # ---- none: cross-silo chains (CRM holds the key, Docs hold the rule) ----
-        _field("veltrix.plan.crm", "Veltrix Labs", "support_plan", "Prime-7"),
-        _prose("plan.prime7.docs", "Prime-7 plan", "response_window", "7 hours",
-               "Prime-7 plan tickets get a first response within {value}."),
+        _field("veltrix.plan.crm", "Veltrix Labs", "support_plan", "Larkspur"),
+        _prose("plan.larkspur.docs", "Larkspur plan", "response_window", "7 hours",
+               "Larkspur plan tickets get a first response within {value}."),
         _field("bluepine.manager.crm", "Bluepine Logistics", "account_manager",
                "Dana Okafor"),
         _prose("bluepine.countersign.docs", "Bluepine Logistics", "renewal_countersigner",
@@ -56,7 +56,7 @@ def build_meridian_blueprint() -> Blueprint:
         _prose("msa2024.cap.docs", "MSA-2024rev", "liability_cap", "$425k",
                "Under MSA-2024rev the liability cap is {value} per incident."),
         _field("arcadia.plan.crm", "Arcadia Systems", "support_plan", "Juniper"),
-        _prose("plan.juniper.docs", "Juniper plan", "triage_window", "90 minutes",
+        _prose("plan.juniper.docs", "Juniper plan", "triage_window", "110 minutes",
                "Juniper-plan tickets are triaged within {value}."),
 
         # ---- resolvable, recency_wins: stale CRM vs newer Docs note ----
@@ -151,10 +151,10 @@ def build_meridian_blueprint() -> Blueprint:
     probes = [
         # ---- none (6) ----
         Probe(probe_id="q_veltrix_response", conflict_type=ConflictType.none,
-              question="Within how many hours does Veltrix Labs get a first support response?",
-              references=["veltrix.plan.crm", "plan.prime7.docs"],
+              question="What is the first-response window for Veltrix Labs support tickets?",
+              references=["veltrix.plan.crm", "plan.larkspur.docs"],
               expected_behavior=A, expected_answer="7 hours",
-              expected_sources=["veltrix.plan.crm", "plan.prime7.docs"]),
+              expected_sources=["veltrix.plan.crm", "plan.larkspur.docs"]),
         Probe(probe_id="q_bluepine_countersign", conflict_type=ConflictType.none,
               question="Who countersigns Bluepine Logistics' renewal orders?",
               references=["bluepine.manager.crm", "bluepine.countersign.docs"],
@@ -176,9 +176,9 @@ def build_meridian_blueprint() -> Blueprint:
               expected_behavior=A, expected_answer="$425k",
               expected_sources=["northgate.contractform.crm", "msa2024.cap.docs"]),
         Probe(probe_id="q_arcadia_triage", conflict_type=ConflictType.none,
-              question="Within how many minutes are Arcadia Systems' tickets triaged?",
+              question="What is the triage window for Arcadia Systems' tickets?",
               references=["arcadia.plan.crm", "plan.juniper.docs"],
-              expected_behavior=A, expected_answer="90 minutes",
+              expected_behavior=A, expected_answer="110 minutes",
               expected_sources=["arcadia.plan.crm", "plan.juniper.docs"]),
 
         # ---- resolvable (6: 4 recency + 2 authority) ----
