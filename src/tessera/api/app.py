@@ -4,11 +4,16 @@ Endpoints
   GET  /api/logs                 list pinned (examples/) + run (logs/) .eval files
   GET  /api/logs/{id}/report     full report JSON for one log
   POST /api/reports              upload an .eval, get report JSON back
+  GET  /api/orgs · /api/models   vocabulary for the Run form (orgs, model choices)
+  *    /api/blueprints…          dataset CRUD + validate + compile-preview (key-free)
   POST /api/runs                 start a gated live eval run
-  GET  /api/runs/{job_id}        poll a run; report JSON when done
+  GET  /api/runs[/{job_id}]      history / poll one run (+ /events for SSE)
+  GET  /api/trends               time-ordered pass^k series for the dashboard
 
 The report endpoints are pure and key-free. Live runs need model keys (loaded from
-.env by the default runner) and run one-at-a-time in a worker thread.
+.env by the default runner) and run one-at-a-time in a worker thread. Every JSON
+endpoint declares a response_model (see responses.py) — the OpenAPI schema they
+produce is the contract web/src/api-types.gen.ts is generated from.
 """
 
 from __future__ import annotations
@@ -24,15 +29,25 @@ from inspect_ai.log import read_eval_log
 import json
 
 from tessera.api import blueprint_store
+from tessera.api import responses as R
 from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner, run_eval_job
 from tessera.api.schemas import RunRequest
+from tessera.models import Blueprint
 from tessera.report.models import ReportError
 from tessera.report.serialize import report_to_dict
 
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
+
+# The canonical model list — the ONE source both UIs (React Run view, Streamlit)
+# read via GET /api/models, so the choices can never drift between them.
+_MODELS = [
+    "anthropic/claude-sonnet-4-6",
+    "openai/gpt-4o",
+    "anthropic/claude-opus-4-8",
+]
 
 
 def _validate_blueprint(data: dict):
@@ -106,7 +121,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
 
-    @app.get("/api/orgs")
+    @app.get("/api/orgs", response_model=list[str])
     def list_orgs():
         """Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
         dataset authored on the Datasets page is immediately runnable here. Raises (500)
@@ -119,15 +134,20 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             pass
         return sorted(names)
 
+    @app.get("/api/models", response_model=list[str])
+    def list_models():
+        """The canonical model choices for the Run form (model under test + grader)."""
+        return _MODELS
+
     # ----- Datasets (blueprints): CRUD + validate + pure compile-preview -----
     # The authoring/validate/preview loop is KEY-FREE (no model calls), so air-gapped
     # users can build and inspect datasets with zero credentials.
 
-    @app.get("/api/blueprints")
+    @app.get("/api/blueprints", response_model=list[R.BlueprintMeta])
     def list_blueprints():
         return blueprint_store.list_blueprints(app.state.blueprint_dir)
 
-    @app.get("/api/blueprints/{blueprint_id}")
+    @app.get("/api/blueprints/{blueprint_id}", response_model=Blueprint)
     def get_blueprint(blueprint_id: str):
         blueprint_store.seed_from_orgs(app.state.blueprint_dir)  # built-ins fetchable by id
         try:
@@ -136,14 +156,14 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             raise HTTPException(400, str(exc))
         if bp is None:
             raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
-        return bp.model_dump(by_alias=True)
+        return bp
 
-    @app.post("/api/blueprints/validate")
+    @app.post("/api/blueprints/validate", response_model=R.ValidationResult)
     def validate_blueprint(blueprint: dict = Body(...)):
         _, errors = _validate_blueprint(blueprint)
         return {"ok": not errors, "errors": errors}
 
-    @app.post("/api/blueprints/preview")
+    @app.post("/api/blueprints/preview", response_model=R.Artifacts)
     def preview_blueprint(blueprint: dict = Body(...)):
         """Compile in memory and return the resulting org (CRM db.json, docs, manifest) —
         no disk write, no eval. Powers the editor's live preview."""
@@ -153,7 +173,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             raise HTTPException(400, detail=errors)
         return build_artifacts(bp)
 
-    @app.post("/api/blueprints", status_code=201)
+    @app.post("/api/blueprints", status_code=201, response_model=R.BlueprintId)
     def create_blueprint(payload: dict = Body(...)):
         blueprint_id = payload.get("id")
         bp, errors = _validate_blueprint(payload.get("blueprint", {}))
@@ -169,7 +189,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             raise HTTPException(400, str(exc))
         return {"id": blueprint_id}
 
-    @app.put("/api/blueprints/{blueprint_id}")
+    @app.put("/api/blueprints/{blueprint_id}", response_model=R.BlueprintId)
     def upsert_blueprint(blueprint_id: str, blueprint: dict = Body(...)):
         bp, errors = _validate_blueprint(blueprint)
         if errors:
@@ -180,7 +200,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             raise HTTPException(400, str(exc))
         return {"id": blueprint_id}
 
-    @app.delete("/api/blueprints/{blueprint_id}")
+    @app.delete("/api/blueprints/{blueprint_id}", response_model=R.BlueprintDeleted)
     def delete_blueprint(blueprint_id: str):
         try:
             removed = blueprint_store.delete_blueprint(app.state.blueprint_dir, blueprint_id)
@@ -190,7 +210,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
         return {"deleted": blueprint_id}
 
-    @app.get("/api/logs")
+    @app.get("/api/logs", response_model=list[R.LogMeta])
     def list_logs():
         out = []
         for source, d in app.state.log_dirs.items():
@@ -202,7 +222,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
                     out.append(meta)
         return out
 
-    @app.get("/api/logs/{log_id}/report")
+    @app.get("/api/logs/{log_id}/report", response_model=R.Report)
     def get_report(log_id: str):
         path = _resolve(app.state.log_dirs, log_id)
         if path is None:
@@ -212,7 +232,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         except ReportError as exc:
             raise HTTPException(422, str(exc))
 
-    @app.post("/api/reports")
+    @app.post("/api/reports", response_model=R.Report)
     async def upload_report(file: UploadFile = File(...)):
         data = await file.read()
         with tempfile.NamedTemporaryFile(suffix=".eval", delete=False) as tmp:
@@ -227,7 +247,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         finally:
             os.unlink(tmp_path)
 
-    @app.post("/api/runs")
+    @app.post("/api/runs", response_model=R.StartRunResult)
     async def start_run(req: RunRequest):
         if req.judge == "llm":
             if not req.grader:
@@ -241,12 +261,12 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         job = store.get(job_id)
         return {"job_id": job_id, "status": job["status"] if job else "running"}
 
-    @app.get("/api/runs")
+    @app.get("/api/runs", response_model=list[R.RunSummary])
     def list_runs():
         """Run history (newest first) with headline rates — for the monitor + dashboard."""
         return app.state.run_store.list()
 
-    @app.get("/api/runs/{job_id}")
+    @app.get("/api/runs/{job_id}", response_model=R.RunStatus)
     def get_run(job_id: str):
         job = app.state.run_store.get(job_id)
         if job is None:
@@ -271,7 +291,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
                 await asyncio.sleep(1)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
-    @app.get("/api/trends")
+    @app.get("/api/trends", response_model=list[R.TrendPoint])
     def trends(org: str | None = None, model: str | None = None, engine: str | None = None):
         """Time-ordered series across finished runs (optionally filtered) for the dashboard:
         pass^k/mean overall, per-conflict pass^k, and the three axes."""
