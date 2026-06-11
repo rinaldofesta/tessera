@@ -96,6 +96,34 @@ def test_extract_final_answer_takes_the_last_answer_line():
     assert extract_final_answer("no committed final line here") is None
 
 
+def test_extract_final_answer_tolerates_markdown_dressing():
+    # bold/bullet/'Final' variants must route to the strong committed-line path,
+    # not silently drop to the weaker fallback
+    assert extract_final_answer("**ANSWER:** 9%") == "9%"
+    assert extract_final_answer("- ANSWER: 9%") == "9%"
+    assert extract_final_answer("Final ANSWER: 9%") == "9%"
+    assert extract_final_answer("**ANSWER: 9%**") == "9%"
+    # ...but prose mentioning 'the answer:' mid-sentence is not a commitment
+    assert extract_final_answer("see the answer: below") is None
+
+
+def test_justification_tail_on_a_committed_answer_is_not_a_refusal():
+    # 'no record' inside a trailing parenthetical must not veto a correct answer
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="$425k",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: $425k (no record of a later amendment)",
+    )
+    assert g["refusal_ok"] is True and g["accuracy_ok"] is True and g["passed"] is True
+    # a committed line that LEADS with the abstention still refuses
+    g2 = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: cannot determine (the figures tie)",
+    )
+    assert g2["refusal_ok"] is True and g2["passed"] is True
+
+
 def test_committed_answer_line_beats_quoted_values():
     # quoting the right value while COMMITTING to the stale one must not be credited
     g = grade_probe(

@@ -89,7 +89,21 @@ _SCORER_VERSION_DET = "det-4"
 _SCORER_VERSION_LLM = "llm-2"
 
 # Last 'ANSWER: ...' line wins — models self-correct (inspect's own pattern convention).
-_ANSWER_LINE = re.compile(r"(?im)^\s*answer\s*:\s*(.+?)\s*$")
+# Tolerates markdown dressing (**ANSWER:**, '- ANSWER:', 'Final ANSWER:') so dressed
+# commitments still route to the strong committed-line path, not the weaker fallback.
+_ANSWER_LINE = re.compile(r"(?im)^[\s>*#-]*(?:final\s+)?answer\**\s*:\s*\**\s*(.+?)[\s*]*$")
+
+# A committed line refuses only when it LEADS with the abstention — a justification
+# tail ('$425k (no record of a later amendment)') is a commitment, not a refusal.
+_COMMITTED_REFUSALS = (
+    "cannot determine", "can't determine", "unknown",
+    "i don't know", "i do not know", "no answer", "n/a",
+)
+
+
+def _committed_refusal(line: str) -> bool:
+    norm = _norm(line).strip(".,;:!? ")
+    return norm.startswith(_COMMITTED_REFUSALS)
 
 
 def extract_final_answer(completion: str) -> str | None:
@@ -182,7 +196,7 @@ def grade_probe(
     final = extract_final_answer(completion)
     # the committed line decides refusal too: hedged reasoning above a committed
     # answer is not a refusal, and abstain-then-commit IS a commitment
-    refused = is_refusal(final) if final is not None else is_refusal(completion)
+    refused = _committed_refusal(final) if final is not None else is_refusal(completion)
     if expected_behavior == "answer":
         if not expected_answer:
             raise ValueError("answer probes require a non-empty expected_answer")
