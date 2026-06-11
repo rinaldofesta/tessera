@@ -10,6 +10,7 @@ import os
 import re
 from pathlib import Path
 
+from tessera.examples.meridian_org import build_meridian_blueprint
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.examples.your_org import build_your_blueprint
 from tessera.models import Blueprint
@@ -23,6 +24,7 @@ _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 ORGS = {
     "toy": build_toy_blueprint,
     "your": build_your_blueprint,
+    "meridian": build_meridian_blueprint,
 }
 
 
