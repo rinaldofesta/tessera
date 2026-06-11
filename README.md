@@ -4,11 +4,11 @@
 
 > *tessera* (n.): a single tile of a mosaic. No tile is the picture. The picture is how they fit.
 
-[![status](https://img.shields.io/badge/status-pre--v0-orange)](#status-and-roadmap)
+[![status](https://img.shields.io/badge/status-v0-brightgreen)](#status-and-roadmap)
 [![license](https://img.shields.io/badge/code-Apache--2.0-blue)](#license)
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](#license)
 
-> ⚠️ **Building in public.** Methodology and generator in progress. v0 targeted **mid-2026**. A first model has now been measured on the 4-probe reference org (see [First Contact](#first-contact)) — that is not a leaderboard, and I will not pretend it is one. Open issues, tell me where I am wrong.
+> ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. A first model has been measured on the 4-probe reference org (see [First Contact](#first-contact)) — that is not a leaderboard, and I will not pretend it is one. Open issues, tell me where I am wrong.
 
 ---
 
@@ -108,6 +108,7 @@ By default, scoring is deterministic (keyword/substring, no grader). For model-g
 src/tessera/
   models.py             [STANDARD] declarative blueprint: Claims + Probes (the eval's source of truth)
   examples/toy_org.py   [STANDARD] four probes spanning the full conflict taxonomy
+  examples/your_org.py  [STANDARD] commented bring-your-own-data starter (one probe per conflict type)
   compiler.py           [RENEWABLE] blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
   silos/                pure data-access functions over the compiled org
   mcp/                  FastMCP stdio servers that serve the org to the agent (crm, docs)
@@ -117,6 +118,11 @@ src/tessera/
     judges.py           model-graded accuracy + refusal judges (the LLM engine)
     task.py             the runnable Inspect task (a react agent over MCP, pass^k epochs)
   report/               tessera-report: a pure scorecard over an .eval log (no model)
+  api/                  FastAPI backend: logs / reports / blueprints / runs + SSE / trends (SQLite run store)
+  app/                  legacy Streamlit reference UI (superseded by web/)
+web/                    the product UI: React + Vite + TypeScript SPA (Dashboard, Datasets, Run, Results)
+blueprints/             datasets authored in the UI (JSON, gitignored, runnable by name)
+docs/                   interactive lessons (EN/IT) + the scorecard field guide
 tests/                  the whole suite — key-free, runs offline
 ```
 
@@ -169,8 +175,9 @@ This is the actual [First Contact](#first-contact) run; the full report, includi
 ## Learn the concepts (interactive)
 
 New to the ideas? Open a self-contained, offline interactive lesson in any browser —
-10 modules, live widgets, and comprehension quizzes that explain reliability, the
-conflict taxonomy, `pass^k`, and provenance in plain language:
+a welcome tour + 12 modules, live widgets, and comprehension quizzes that explain
+reliability, the conflict taxonomy, `pass^k`, provenance, and how to author your own
+claims & probes, in plain language:
 
 - 🇬🇧 **`docs/tessera-lesson.html`** (English)
 - 🇮🇹 **`docs/tessera-lezione.html`** (Italiano)
@@ -183,19 +190,19 @@ static assets by the **FastAPI** backend (one process, no Node at runtime):
 ```bash
 uv pip install -e ".[app]"
 cd web && npm install && npm run build && cd ..   # build the SPA once
-.venv/bin/uvicorn tessera.api.app:app --port 8000  # serves the app + API at :8000
+.venv/bin/tessera-api   # = uvicorn tessera.api.app:app --port 8000; serves the app + API
 ```
 
 Open **http://localhost:8000**. Four views:
 
-- **Dashboard** — headline pass^k/mean tiles, a pass^k trend line over runs, recent-run history.
+- **Dashboard** — headline pass^k/mean tiles, a pass^k trend line (Recharts) over runs, recent-run history.
 - **Datasets** — author a dataset in the browser: an editor for **Claims** + **Probes**
   with **live validation** and a **compiled-org preview** (CRM `db.json` + rendered docs),
   create / save / delete. No Python editing required.
 - **Run** — configure (org / model / engine / grader / k), launch, and watch a **live**
   monitor (SSE), with run history.
-- **Results** — the pass^k scorecard (Recharts), axes, failure drill-down, and a
-  **Compare** mode with a key-aligned diff.
+- **Results** — the pass^k scorecard, axes, failure drill-down, and a **Compare**
+  mode with a key-aligned diff.
 
 The report/blueprint endpoints are deterministic and **key-free** (they never call a
 model); only a live run needs API keys. A dataset authored on the **Datasets** page is
@@ -215,10 +222,17 @@ inspect eval src/tessera/evals/task.py -T org=your \
 ```
 
 ```text
-GET  /api/logs                 list pinned + run logs
-GET  /api/logs/{id}/report     full scorecard as JSON
-POST /api/reports              upload an .eval -> JSON
-POST /api/runs                 start a gated live run   (GET /api/runs/{id} to poll)
+GET    /api/logs                  list pinned + run logs
+GET    /api/logs/{id}/report      full scorecard as JSON
+POST   /api/reports               upload an .eval -> JSON
+GET    /api/orgs                  runnable orgs: built-ins + saved datasets
+GET    /api/blueprints            list datasets        (POST to create;
+POST   /api/blueprints/validate   validation as JSON    GET|PUT|DELETE /{id})
+POST   /api/blueprints/preview    compiled-org preview, in memory (key-free)
+POST   /api/runs                  start a gated live run
+GET    /api/runs                  run history           (GET /api/runs/{id} to poll)
+GET    /api/runs/{id}/events      SSE live status — what the Run view watches
+GET    /api/trends                pass^k/mean series for the Dashboard
 ```
 
 ## Development
@@ -231,8 +245,11 @@ POST /api/runs                 start a gated live run   (GET /api/runs/{id} to p
 
 ## Status and roadmap
 
-- [ ] **v0 (mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
-- [ ] Showcase: a public synthetic dataset and a leaderboard of frontier models run against it.
+- [x] **v0 (shipped mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
+- [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
+- [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
+- [ ] **Scorer hardening:** parametric `k` (today the reducer is pinned to `pass_k(3)`), structured accuracy matching (substring scoring over-credits), per-field provenance granularity.
+- [ ] **The public reference org:** a dataset designed for the leaderboard — the toy org is a teaching artifact, not the benchmark — then a leaderboard of frontier models run against it.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
 - [ ] **Reliability under delegation:** agent-consuming-agent suites — when one agent's output is another's input, does an unresolved tie *propagate* down the chain, or get caught? The reliability question for the pyramid-of-agents org.
