@@ -29,7 +29,14 @@ _PROMPT = (
 
 
 @task
-def tessera_probes(judge: str = "deterministic", org: str | None = None):
+def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int = 3):
+    # The task owns BOTH the epoch count and the pass_k reducer: an eval-level
+    # epochs override would change the count while this reducer stayed pinned,
+    # so the two silently diverge (k<3 hard-errors, k>3 mislabels the metric).
+    k = int(k)                       # -T k=… arrives as a string from the inspect CLI
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k}")
+
     # Select the org by name: explicit -T org=… wins, else $TESSERA_ORG, else "toy".
     org_name = org or os.environ.get("TESSERA_ORG", "toy")
     blueprint = get_blueprint(org_name)
@@ -49,5 +56,5 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None):
         dataset=blueprint_to_dataset(blueprint),
         solver=react(prompt=_PROMPT, tools=[crm, docs]),
         scorer=scorer,
-        epochs=Epochs(3, [pass_k(3), "mean"]),
+        epochs=Epochs(k, [pass_k(k), "mean"]),
     )

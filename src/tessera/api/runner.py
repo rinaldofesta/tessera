@@ -20,12 +20,13 @@ from tessera.report.serialize import report_to_dict
 
 
 def _eval_kwargs(req: RunRequest) -> dict:
-    """The kwargs passed to inspect_ai.eval — pure, so the epochs/org/grader wiring is
-    unit-testable without running a model. (epochs was previously dropped on the floor.)"""
+    """The kwargs passed to inspect_ai.eval — pure, so the k/org/grader wiring is
+    unit-testable without running a model. k rides task_args, NOT eval's epochs
+    kwarg: an eval-level override changes the epoch count but keeps the task's
+    pass_k reducer, so count and k would diverge — the task owns both."""
     kwargs = {
         "model": req.model,
-        "task_args": {"judge": req.judge, "org": req.org},
-        "epochs": req.epochs,          # FIX: was never forwarded -> the k selector was a no-op
+        "task_args": {"judge": req.judge, "org": req.org, "k": req.epochs},
         "log_dir": "logs",
         "display": "none",
     }

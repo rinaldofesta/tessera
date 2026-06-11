@@ -3,7 +3,7 @@ report.serialize.report_to_dict, so only the run request needs a schema."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RunRequest(BaseModel):
@@ -11,4 +11,4 @@ class RunRequest(BaseModel):
     grader: str | None = None        # required only for the llm engine
     judge: str = "llm"               # "llm" | "deterministic"
     org: str = "toy"                 # which blueprint to evaluate (see /api/orgs)
-    epochs: int = 3
+    epochs: int = Field(3, ge=1, le=10)   # k for pass^k; bounds match the UI selector
