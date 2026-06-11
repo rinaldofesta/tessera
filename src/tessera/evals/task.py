@@ -24,7 +24,10 @@ _PROMPT = (
     "them. Treat one record as a lead to corroborate, not a conclusion. "
     "When sources conflict, prefer the most recent one and state why. "
     "If the information is missing or genuinely cannot be resolved, say you do not know "
-    "rather than guessing. Cite the sources you used."
+    "rather than guessing. Cite the sources you used. "
+    "End with a single final line formatted exactly as 'ANSWER: <your answer>'; if you "
+    "are refusing because the data is missing or irreconcilable, end with "
+    "'ANSWER: cannot determine'."
 )
 
 

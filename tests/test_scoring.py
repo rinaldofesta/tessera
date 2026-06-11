@@ -8,6 +8,7 @@ from tessera.compiler import compile_blueprint
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.evals.scoring import (
     consulted_claims,
+    extract_final_answer,
     extract_tool_calls,
     grade_probe,
     is_refusal,
@@ -50,9 +51,61 @@ def test_is_refusal_detects_abstention():
     assert not is_refusal("The renewal date is 2026-03-01.")
 
 
-def test_match_answer_is_substring_case_insensitive():
+def test_match_answer_requires_value_boundaries():
     assert match_answer("The SLA is 4 hours.", "4 hours")
+    assert match_answer("THE SLA IS 4 HOURS.", "4 hours")            # case-insensitive
     assert not match_answer("The renewal date is 2026-03-01.", "4 hours")
+    # regression: raw substring over-credited all of these
+    assert not match_answer("The SLA is 24 hours.", "4 hours")
+    assert not match_answer("The discount is 115%.", "15%")
+    assert not match_answer("The rate is 8.15%.", "15%")
+    assert not match_answer("Date: 2026-03-015.", "2026-03-01")
+    assert match_answer("Maximum discount: 15%.", "15%")
+
+
+def test_extract_final_answer_takes_the_last_answer_line():
+    # last occurrence wins — models self-correct (same convention as inspect's patterns)
+    assert extract_final_answer("ANSWER: 10%\nwait — the contract wins.\nANSWER: 15%") == "15%"
+    assert extract_final_answer("answer:   4 hours  ") == "4 hours"
+    assert extract_final_answer("no committed final line here") is None
+
+
+def test_committed_answer_line_beats_quoted_values():
+    # quoting the right value while COMMITTING to the stale one must not be credited
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=[], consulted=set(),
+        completion="The CRM shows 2026-01-01; a newer note says 2026-03-01.\nANSWER: 2026-01-01",
+    )
+    assert g["accuracy_ok"] is False
+    # ...and transparent reasoning above a correct commitment is never penalized
+    g2 = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=[], consulted=set(),
+        completion="The CRM shows 2026-01-01, but the newer QBR note wins.\nANSWER: 2026-03-01",
+    )
+    assert g2["accuracy_ok"] is True
+
+
+def test_fallback_without_answer_line_uses_distractors_last_mention_wins():
+    # no ANSWER line: committing to the stale value while quoting the right one fails...
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=[], consulted=set(),
+        completion=("One note says 2026-03-01, but the CRM is the system of record, "
+                    "so the renewal date is 2026-01-01."),
+        distractor_values=["2026-01-01"],
+    )
+    assert g["accuracy_ok"] is False
+    # ...while resolve-then-commit phrasing (expected value last) still passes
+    g2 = grade_probe(
+        expected_behavior="answer", expected_answer="2026-03-01",
+        expected_sources=[], consulted=set(),
+        completion=("The CRM says 2026-01-01 but the newer QBR note says 2026-03-01, "
+                    "which takes precedence: 2026-03-01."),
+        distractor_values=["2026-01-01"],
+    )
+    assert g2["accuracy_ok"] is True
 
 
 def test_grade_answer_probe_passes_only_with_accuracy_and_full_provenance(tmp_path):
@@ -141,6 +194,22 @@ def test_score_attempt_marks_clean_refusal_correct(tmp_path):
                       meta=meta, manifest=manifest)
     assert s.value == CORRECT
     assert s.metadata["refusal_ok"] is True
+
+
+def test_score_attempt_stamps_scorer_version_and_format_flag(tmp_path):
+    # the version marker is what keeps reports comparable across scorer changes
+    manifest = _manifest(tmp_path)
+    meta = ProbeMeta(probe_id="q_acme_renewal", conflict_type="resolvable",
+                     resolution_rule="recency_wins", expected_behavior="answer",
+                     expected_answer="2026-03-01",
+                     expected_sources=[])
+    s = score_attempt(messages=[], completion="Renewal date is 2026-03-01.",
+                      meta=meta, manifest=manifest)
+    assert s.metadata["scorer_version"] == "det-2"
+    assert s.metadata["answer_format_ok"] is False     # no ANSWER line -> fallback path
+    s2 = score_attempt(messages=[], completion="ANSWER: 2026-03-01",
+                       meta=meta, manifest=manifest)
+    assert s2.metadata["answer_format_ok"] is True
 
 
 def test_score_attempt_fails_answer_probe_missing_a_source(tmp_path):
