@@ -63,6 +63,16 @@ def test_consulted_claims_credits_nothing_without_a_real_record(tmp_path):
         [("crm_lookup", {"account_name": "Acme Corp"}, "Error: boom")], manifest) == set()
 
 
+def test_consulted_claims_ignores_schema_feedback_keys(tmp_path):
+    # the server's unknown-field feedback must not earn credit: naming the schema
+    # is not reading the data
+    manifest = _manifest(tmp_path)
+    feedback = ('{"tier": {"value": "Gold"}, "_unknown_fields": ["seats"], '
+                '"_available_fields": ["tier", "renewal_date"]}')
+    events = [("crm_lookup", {"account_name": "Acme Corp"}, feedback)]
+    assert consulted_claims(events, manifest) == {"acme.tier.crm"}
+
+
 def test_consulted_claims_maps_docs_get_file_to_artifact(tmp_path):
     manifest = _manifest(tmp_path)
     note_path = manifest["acme.renewal.note"]["artifact"]

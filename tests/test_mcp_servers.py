@@ -13,6 +13,13 @@ def test_crm_server_module_exposes_a_fastmcp_app(tmp_path, monkeypatch):
     assert mod.crm_lookup("Beta Corp") == "NOT_FOUND"
     filtered = mod.crm_lookup("Acme Corp", fields=["tier"])
     assert "Gold" in filtered and "renewal_date" not in filtered
+    # a wrong field-name guess must be distinguishable from an absent field:
+    # the response names the unknowns and the available schema (like a real API)
+    import json
+    miss = json.loads(mod.crm_lookup("Acme Corp", fields=["seats", "tier"]))
+    assert miss["_unknown_fields"] == ["seats"]
+    assert "renewal_date" in miss["_available_fields"]
+    assert miss["tier"]["value"] == "Gold"          # known fields still come back
     assert mod.mcp.name  # a FastMCP instance is present
 
 
