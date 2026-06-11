@@ -107,7 +107,8 @@ By default, scoring is deterministic (no grader): the committed `ANSWER:` line d
 ```
 src/tessera/
   models.py             [STANDARD] declarative blueprint: Claims + Probes (the eval's source of truth)
-  examples/toy_org.py   [STANDARD] four probes spanning the full conflict taxonomy
+  examples/toy_org.py   [STANDARD] four probes spanning the full conflict taxonomy (teaching artifact)
+  examples/meridian_org.py [STANDARD] the public reference org: 22 probes, the benchmark (ADR-0006)
   examples/your_org.py  [STANDARD] commented bring-your-own-data starter (one probe per conflict type)
   compiler.py           [RENEWABLE] blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
   silos/                pure data-access functions over the compiled org
@@ -127,7 +128,7 @@ tests/                  the whole suite — key-free, runs offline
 
 ## How scoring works
 
-Each probe is scored on three axes, not just accuracy, and repeated under `pass^k` because models are stochastic. The toy organization ships **four probes spanning the complete conflict taxonomy** — the four ways enterprise knowledge actually behaves:
+Each probe is scored on three axes, not just accuracy, and repeated under `pass^k` because models are stochastic. The toy organization ships **four probes spanning the complete conflict taxonomy** — the four ways enterprise knowledge actually behaves (the benchmark org, **meridian**, covers the same taxonomy at measurement scale: ≥5 probes per type, `-T org=meridian`):
 
 | Probe | Conflict type | Correct behavior |
 |---|---|---|
@@ -146,7 +147,7 @@ Scoring runs through **two engines behind one pure combiner** (`grade_from_signa
   refusal. Zero-cost, key-free, the default.
 - **LLM-judge** — model-graded accuracy and refusal, for paraphrase- and format-tolerant grading.
 
-> **The moat is the standard; provenance keeps it honest.** The durable contribution is the *standard* — the conflict taxonomy and the adversarial ground truth that define what "reliable enough" means. Provenance is how that standard stays verifiable: whether the agent consulted the right sources is read straight from its real MCP tool calls and checked against the compiled `manifest.json`, never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
+> **The moat is the standard; provenance keeps it honest.** The durable contribution is the *standard* — the conflict taxonomy and the adversarial ground truth that define what "reliable enough" means. Provenance is how that standard stays verifiable: whether the agent consulted the right sources is read straight from its real MCP tool traffic — per-field for the CRM, credited only for data that actually came back (`det-4`) — and checked against the compiled `manifest.json`, never a model's "vibe check," in either engine. The verifiable axis stays verifiable.
 
 > **The self-grading guard.** The LLM engine requires an *independent* grader (`--model-role grader=<other-model>`). If the grader resolves to the model under test, or none is bound, the eval aborts loudly rather than letting a model grade itself.
 
@@ -251,8 +252,8 @@ GET    /api/trends                pass^k/mean series for the Dashboard
 - [x] **v0 (shipped mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
 - [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
-- [ ] **Scorer hardening:** parametric `k` (✓ shipped — the task builds `pass_k(k)` from `-T k=N`, any k ≥ 1), committed-answer accuracy matching (✓ shipped — `det-2`: ANSWER-line extraction + distractor-aware fallback), committed-answer refusal (✓ shipped — `det-3`: the ANSWER line decides refusal too; see [docs/adr/](docs/adr/)), per-field provenance granularity.
-- [ ] **The public reference org:** a dataset designed for the leaderboard — the toy org is a teaching artifact, not the benchmark — then a leaderboard of frontier models run against it.
+- [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
+- [ ] **The public reference org:** the dataset is ✓ shipped — **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (Sonnet 4.6, k=3, det-4: pass^3 86.4%, the only failing category the unresolvable tie — ADR-0006). Next: the leaderboard of frontier models run against it.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
 - [ ] **Reliability under delegation:** agent-consuming-agent suites — when one agent's output is another's input, does an unresolved tie *propagate* down the chain, or get caught? The reliability question for the pyramid-of-agents org.

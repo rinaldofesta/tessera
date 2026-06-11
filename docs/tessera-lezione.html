@@ -622,10 +622,11 @@ const MODULES = [
   <div class="analogy"><b>Analogia.</b> Invece di chiedere a uno studente «hai letto il libro?»,
   Tessera controlla i <b>filmati delle telecamere</b> della biblioteca per vedere quali libri ha
   davvero preso dallo scaffale. Fatti, non dichiarazioni.</div>
-  <p>Una sottigliezza onesta: la granularità cambia per silo. Una singola
-  <code>crm_lookup("Globex Inc")</code> restituisce l’intero record, quindi accredita <i>ogni</i>
-  claim CRM su Globex. I docs sono più severi — conta solo <code>docs_get_file</code> sul file
-  esatto; un risultato di ricerca da solo non vale nulla.</p>
+  <p>Una sottigliezza onesta: il credito segue la <b>risposta</b>, per campo (det-4). Una
+  <code>crm_lookup</code> accredita solo i campi che la sua risposta ha davvero portato — una
+  lookup fallita o filtrata non accredita nulla, e l'argomento <code>fields</code> permette
+  all'agente di chiedere solo ciò che serve. I docs sono esatti al file — conta solo
+  <code>docs_get_file</code> sul file esatto; un risultato di ricerca da solo non vale nulla.</p>
   <h3>Due motori per correggere la risposta in sé</h3>
   <div class="grid c2">
     <div class="card"><b>⚙️ Deterministico</b> <span class="pill">senza key</span><br><span class="muted">Accuratezza E rifiuto = la riga «ANSWER:» committed — match con guardie sui confini, «cannot determine» rifiuta; fallback distractor-aware / parole-chiave senza di essa (det-3). Gratis, istantaneo, gira air-gapped. Può perdersi le parafrasi — tieni le risposte attese nella formulazione dell’org.</span></div>
@@ -761,7 +762,7 @@ const ANAT = {
       {k:"claim_id", v:'"initech.discount.contract"',
        d:"<b>claim_id</b> — il riferimento unico. Le probe puntano ai claim tramite questo id (in references ed expected_sources). Deve essere unico in tutto il blueprint; scegli qualcosa di leggibile, lo ritroverai nei dettagli dei fallimenti."},
       {k:"subject", v:'"Initech"',
-       d:"<b>subject</b> — l’entità. Per i claim CRM è la chiave del record: crm_lookup(\"Initech\") restituisce TUTTI i claim crm con questo subject — ed è anche la granularità del credito di provenance CRM (una lookup accredita ogni claim CRM su quel subject)."},
+       d:"<b>subject</b> — l’entità. Per i claim CRM è la chiave del record: crm_lookup(\"Initech\") restituisce i claim di quel subject — e da det-4 il credito di provenance è per campo: una lookup accredita solo i campi che la sua risposta ha davvero portato."},
       {k:"predicate", v:'"max_discount"',
        d:"<b>predicate</b> — il nome del campo. Una coppia (subject, predicate) può comparire al massimo una volta PER SILO; il compilatore rifiuta i duplicati intra-silo, ed è esattamente ciò che forza le contraddizioni a essere cross-silo."},
       {k:"value", v:'"15%"',
@@ -886,9 +887,9 @@ const IMP_CORE = [
   {tag:"amber", tagtxt:"medio", tt:"Le keyword del rifiuto si perdono l’«astieniti-e-poi-allucina»",
    bd:"Il rilevamento deterministico del rifiuto ERA una lista di parole-chiave su tutta la trascrizione — un agente che dice «non posso esserne certo, ma il valore è probabilmente $1.5M» poteva sembrare un rifiuto pur impegnandosi. <b>Correzione — shipped ✓ (det-3):</b> ora è la riga ANSWER: committed a decidere il rifiuto — «ANSWER: cannot determine» rifiuta, un valore committed no — la linea dura del giudice LLM (impegno «coperto» = impegno), portata nell’euristica. La scansione a parole-chiave sopravvive solo quando l’agente salta la riga."},
   {tag:"red", tagtxt:"difficile", tt:"La provenance CRM è a granularità di subject — in entrambi i motori",
-   bd:"Una crm_lookup('Globex Inc') accredita OGNI claim CRM su Globex, perché il tool restituisce record interi. Un agente potrebbe ottenere credito di provenance per un campo che non ha mai usato davvero. I docs sono già a granularità di file. <b>Correzione:</b> locator più fini nel manifest (per campo), oppure valutare su quali campi la risposta si è davvero appoggiata. Difficile, ma è il fossato — ne vale la pena."},
+   bd:"Una crm_lookup('Globex Inc') accreditava OGNI claim CRM su Globex, perché il tool restituiva record interi — credito anche per campi mai usati. <b>Correzione — shipped ✓ (det-4):</b> ora il credito segue la RISPOSTA del tool, per campo: un claim conta solo se il suo campo è davvero tornato indietro (NOT_FOUND non accredita nulla), crm_lookup accetta un argomento fields per chiedere solo il necessario, e un nome di campo sbagliato si vede rispondere lo schema disponibile invece di un '{}' ambiguo. Era il fossato — e ne valeva la pena."},
   {tag:"green", tagtxt:"vittoria rapida", tt:"4 probe sono una demo, non una misurazione",
-   bd:"Una probe per tipo di conflitto dimostra il meccanismo; non può dare intervalli di confidenza. Una singola probe instabile sposta il pass^3 complessivo di 25 punti. <b>Correzione:</b> far crescere l’org giocattolo a 5–10 probe per tipo (la UI Datasets ora lo rende veloce), e trattare il pass^k per tipo come titolo solo quando ogni cella ha un n reale."},
+   bd:"Una probe per tipo di conflitto dimostra il meccanismo; non può dare intervalli di confidenza. Una singola probe instabile sposta il pass^3 complessivo di 25 punti. <b>Correzione — shipped ✓ (meridian):</b> l’org di riferimento pubblica ha 22 probe (≥5 per tipo di conflitto, entrambe le regole di risoluzione, valori anti-prior), validata da review avversaria e baseline live — Sonnet 4.6 a det-4 pass^3 86,4%, con l’UNICA categoria che fallisce il pareggio irrisolvibile. L’org giocattolo resta l’artefatto didattico."},
   {tag:"amber", tagtxt:"medio", tt:"k è fissato a 3 nella definizione del task",
    bd:"Tre epoch intercettano i fallimenti stabili (come quello di First Contact) ma sono deboli contro l’instabilità — una probe instabile al 90% passa il pass^3 circa il 73% delle volte. Peggio, scoperto empiricamente: il task hardcodava il reducer pass_k(3), e inspect si rifiutava di girare con meno epoch («Reducer pass_k_3 requires 3 epochs») — le opzioni k=1–2 della UI andavano in errore. <b>Correzione — shipped ✓:</b> ora il task accetta <code>-T k=N</code> e costruisce da sé <code>pass_k(k)</code>, così conteggio e reducer non possono divergere: qualsiasi k≥1 gira, e gli sweep di k sono sbloccati (vedi modulo 12)."}
 ];
