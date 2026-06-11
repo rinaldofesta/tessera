@@ -146,6 +146,14 @@ def test_run_llm_without_grader_400(tmp_path):
     assert r.status_code == 400
 
 
+def test_run_rejects_out_of_range_epochs(tmp_path):
+    # epochs=0 used to sail straight into inspect_ai and die there; bounds match the UI (1..10)
+    client = _client(tmp_path)
+    base = {"model": "openai/gpt-4o", "judge": "deterministic"}
+    assert client.post("/api/runs", json={**base, "epochs": 0}).status_code == 422
+    assert client.post("/api/runs", json={**base, "epochs": 11}).status_code == 422
+
+
 def test_run_surfaces_runner_valueerror_as_error_status(tmp_path):
     def _bad(req):
         raise ValueError("grader must differ from the model under test")

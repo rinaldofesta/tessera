@@ -139,7 +139,7 @@ export default function Run() {
     setLines([
       `$ inspect eval tessera_probes --model ${model} -T org=${org} -T judge=${engine}` +
         (engine === "llm" ? ` --model-role grader=${grader}` : "") +
-        ` --epochs ${epochs}`,
+        ` -T k=${epochs}`,
     ]);
     api
       .startRun(cfg)
