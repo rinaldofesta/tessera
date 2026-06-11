@@ -343,7 +343,7 @@ const QUIZZES = {
      answer:1, explain:"Tessera risolve un grader indipendente e si rifiuta di partire se coincide col modello sotto test."},
     {stem:"Quale asse è SEMPRE meccanico (mai giudicato da un’AI)?",
      options:["Accuratezza","Rifiuto","Provenance","Tutti"],
-     answer:2, explain:"La provenance è sempre deterministica. Accuratezza e rifiuto alternano tra euristiche deterministiche (keyword per il rifiuto, match della risposta committed) e giudici LLM indipendenti."}
+     answer:2, explain:"La provenance è sempre deterministica. Accuratezza e rifiuto alternano tra il motore deterministico (la riga ANSWER: committed decide entrambi, con fallback euristici senza di essa) e giudici LLM indipendenti."}
   ],
   m9:[
     {stem:"Nella run First Contact, quale categoria è fallita — e quante volte?",
@@ -356,7 +356,7 @@ const QUIZZES = {
   m10:[
     {stem:"Quale di questi è un limite reale e noto del motore deterministico?",
      options:["Richiede una API key","Se l’agente salta la riga ANSWER:, il fallback può ancora fraintendere le negazioni «X, non Y»","Non può girare offline","Funziona solo in italiano"],
-     answer:1, explain:"det-2 valuta la riga ANSWER: committed (con guardie sui confini); senza quella riga si applica un fallback distractor-aware a ultima-menzione-vince — che fraintende ancora le negazioni. Il motore LLM resta il controllo semantico incrociato."},
+     answer:1, explain:"det-3 valuta la riga ANSWER: committed (con guardie sui confini, e decide anche il rifiuto); senza quella riga si applica un fallback distractor-aware a ultima-menzione-vince — che fraintende ancora le negazioni. Il motore LLM resta il controllo semantico incrociato."},
     {stem:"Vuoi che authority_wins decida un conflitto. Cosa deve portare il segnale di autorevolezza?",
      options:["Il numero authority sul claim","Il testo del documento — il numero non viene mai compilato nel mondo","Il manifest","Il solo campo resolution_rule"],
      answer:1, explain:"La run initech ha dimostrato che la regola funziona — ma solo perché il documento DICE «per the signed master agreement». L’intero authority è annotazione inerte: non compare mai in nessun artefatto compilato né in alcun risultato dei tool."}
@@ -565,7 +565,7 @@ const MODULES = [
   <div class="grid c3">
     <div class="card"><span class="pill green">accuratezza</span><br><span class="muted">La risposta corrisponde a quella attesa? Controllo substring (deterministico) o giudice LLM indipendente (semantico).</span></div>
     <div class="card"><span class="pill blue">provenance</span><br><span class="muted">Le chiamate tool registrate hanno coperto ogni claim in <code>expected_sources</code>? Sempre meccanico — modulo 9.</span></div>
-    <div class="card"><span class="pill amber">rifiuto</span><br><span class="muted">Ha rifiutato di impegnarsi su un valore? Parole-chiave (deterministico) o un giudice LLM con una linea dura: una risposta «coperta» è comunque una risposta.</span></div>
+    <div class="card"><span class="pill amber">rifiuto</span><br><span class="muted">Ha rifiutato di impegnarsi su un valore? La riga ANSWER: committed (deterministico; parole-chiave solo senza di essa) o un giudice LLM — entrambi con una linea dura: una risposta «coperta» è comunque una risposta.</span></div>
   </div>
   <div class="quiz" data-quiz-id="m6"></div>` },
 
@@ -628,7 +628,7 @@ const MODULES = [
   esatto; un risultato di ricerca da solo non vale nulla.</p>
   <h3>Due motori per correggere la risposta in sé</h3>
   <div class="grid c2">
-    <div class="card"><b>⚙️ Deterministico</b> <span class="pill">senza key</span><br><span class="muted">Rifiuto = parole-chiave; accuratezza = la riga «ANSWER:» committed, con guardie sui confini e fallback distractor-aware (det-2). Gratis, istantaneo, gira air-gapped. Può perdersi le parafrasi — tieni le risposte attese nella formulazione dell’org.</span></div>
+    <div class="card"><b>⚙️ Deterministico</b> <span class="pill">senza key</span><br><span class="muted">Accuratezza E rifiuto = la riga «ANSWER:» committed — match con guardie sui confini, «cannot determine» rifiuta; fallback distractor-aware / parole-chiave senza di essa (det-3). Gratis, istantaneo, gira air-gapped. Può perdersi le parafrasi — tieni le risposte attese nella formulazione dell’org.</span></div>
     <div class="card"><b>🧑‍⚖️ Giudice LLM</b> <span class="pill purple">indipendente</span><br><span class="muted">Due giudici a temperatura 0 leggono la domanda e la <i>risposta finale</i> dell’agente: uno chiede «si è impegnato su un valore?», l’altro «la risposta è semanticamente corretta?». Non vedono mai le chiamate tool — quello resta il lavoro meccanico della provenance. Tollerante alle formulazioni; costa chiamate API.</span></div>
   </div>
   <div class="callout"><b>La guardia anti-autovalutazione.</b> In modalità LLM Tessera risolve un
@@ -884,7 +884,7 @@ const IMP_CORE = [
   {tag:"amber", tagtxt:"medio", tt:"L’accuratezza substring può premiare troppo",
    bd:"Il motore deterministico controllava se la risposta attesa compariva OVUNQUE nella risposta — citare entrambi i valori («è $1.2M oppure $1.5M») otteneva il credito. <b>Correzione — shipped ✓ (det-2):</b> ora l’agente si impegna su una riga finale «ANSWER: <valore>» e si valuta solo quella, con guardie sui confini («24 hours» non colpisce più «4 hours»); senza la riga, un fallback respinge le risposte la cui ULTIMA menzione è un valore in conflitto noto — il blueprint fornisce i valori sbagliati come distractor. I limiti residui («X, non Y» nel fallback) sono documentati in scoring.py."},
   {tag:"amber", tagtxt:"medio", tt:"Le keyword del rifiuto si perdono l’«astieniti-e-poi-allucina»",
-   bd:"Il rilevamento deterministico del rifiuto è una lista di parole-chiave. Un agente che dice «non posso esserne certo, ma il valore è probabilmente $1.5M» può sembrare un rifiuto pur impegnandosi. Il giudice LLM lo gestisce già (impegno «coperto» = impegno). <b>Correzione:</b> portare quella linea dura nell’euristica — es. i marcatori di rifiuto NON devono essere seguiti da un valore concreto preso dal set di claim."},
+   bd:"Il rilevamento deterministico del rifiuto ERA una lista di parole-chiave su tutta la trascrizione — un agente che dice «non posso esserne certo, ma il valore è probabilmente $1.5M» poteva sembrare un rifiuto pur impegnandosi. <b>Correzione — shipped ✓ (det-3):</b> ora è la riga ANSWER: committed a decidere il rifiuto — «ANSWER: cannot determine» rifiuta, un valore committed no — la linea dura del giudice LLM (impegno «coperto» = impegno), portata nell’euristica. La scansione a parole-chiave sopravvive solo quando l’agente salta la riga."},
   {tag:"red", tagtxt:"difficile", tt:"La provenance CRM è a granularità di subject — in entrambi i motori",
    bd:"Una crm_lookup('Globex Inc') accredita OGNI claim CRM su Globex, perché il tool restituisce record interi. Un agente potrebbe ottenere credito di provenance per un campo che non ha mai usato davvero. I docs sono già a granularità di file. <b>Correzione:</b> locator più fini nel manifest (per campo), oppure valutare su quali campi la risposta si è davvero appoggiata. Difficile, ma è il fossato — ne vale la pena."},
   {tag:"green", tagtxt:"vittoria rapida", tt:"4 probe sono una demo, non una misurazione",

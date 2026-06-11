@@ -74,9 +74,11 @@ epoch 2: "Let me reconcile these — it's probably $1.5M."                      
 
 Refusal is judged on **commitment, not keywords**. An agent that asserts a specific value —
 even hedged, even while naming the conflict — has **not** refused. A sophisticated,
-keyword-free abstention ("flagging for human review") **has**. The deterministic engine scores
-refusal by markers; the LLM-judge engine scores it by that commitment contract, which is what
-catches the nuanced cases a keyword scanner misses.
+keyword-free abstention ("flagging for human review") **has**. Both engines now apply that
+contract: the deterministic engine reads the committed `ANSWER:` line (`cannot determine`
+refuses, a committed value does not — keyword markers only when the line is missing); the
+LLM-judge engine grades the same contract semantically, which is what still catches
+keyword-free abstentions that skip the ANSWER line.
 
 ## How to read a failure block
 
