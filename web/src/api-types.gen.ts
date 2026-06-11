@@ -442,6 +442,8 @@ export interface components {
             n_refuse_epochs: number;
             /** N Total Epochs */
             n_total_epochs: number;
+            /** Answer Format Rate */
+            answer_format_rate?: number | null;
         };
         /** ReportCategory */
         ReportCategory: {
@@ -478,6 +480,8 @@ export interface components {
             expected_sources: string[];
             /** Missing */
             missing: string[];
+            /** Answer Format Ok */
+            answer_format_ok?: boolean | null;
         };
         /** ReportHeader */
         ReportHeader: {
@@ -495,6 +499,8 @@ export interface components {
             created: string;
             /** Location */
             location: string;
+            /** Scorer Version */
+            scorer_version?: string | null;
         };
         /** ReportOverall */
         ReportOverall: {

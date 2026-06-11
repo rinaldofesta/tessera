@@ -1141,6 +1141,17 @@
           "n_total_epochs": {
             "type": "integer",
             "title": "N Total Epochs"
+          },
+          "answer_format_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Format Rate"
           }
         },
         "type": "object",
@@ -1237,6 +1248,17 @@
             },
             "type": "array",
             "title": "Missing"
+          },
+          "answer_format_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Format Ok"
           }
         },
         "type": "object",
@@ -1297,6 +1319,17 @@
           "location": {
             "type": "string",
             "title": "Location"
+          },
+          "scorer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Version"
           }
         },
         "type": "object",

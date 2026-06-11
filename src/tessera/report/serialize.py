@@ -28,6 +28,7 @@ def _epoch_to_dict(e: ProbeEpoch) -> dict:
         "consulted": list(e.consulted),
         "expected_sources": list(e.expected_sources),
         "missing": sorted(set(e.expected_sources) - set(e.consulted)),
+        "answer_format_ok": e.answer_format_ok,
     }
 
 
@@ -76,6 +77,7 @@ def report_to_dict(log) -> dict:
             "k": header.k,
             "created": header.created,
             "location": header.location,
+            "scorer_version": header.scorer_version,
         },
         "overall": {
             "pass_k_rate": overall_pass_k_rate(probes),
@@ -89,6 +91,7 @@ def report_to_dict(log) -> dict:
             "n_answer_epochs": axes.n_answer_epochs,
             "n_refuse_epochs": axes.n_refuse_epochs,
             "n_total_epochs": axes.n_total_epochs,
+            "answer_format_rate": axes.answer_format_rate,
         },
         "probes": [_probe_to_dict(p) for p in probes_sorted],
     }

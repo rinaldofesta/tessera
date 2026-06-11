@@ -17,17 +17,23 @@ def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
 
 def _eval_sample(probe_id, epoch, *, conflict_type, expected_behavior, passed, accuracy_ok,
                  provenance_ok, refusal_ok, consulted, expected_sources, answer,
-                 scorer_name="llm_reliability_scorer", question="Q?", expected_answer=None):
+                 scorer_name="llm_reliability_scorer", question="Q?", expected_answer=None,
+                 scorer_version=None, answer_format_ok=None):
     from inspect_ai.log import EvalSample
     from inspect_ai.scorer import Score
+    score_meta = {"passed": passed, "accuracy_ok": accuracy_ok,
+                  "provenance_ok": provenance_ok, "refusal_ok": refusal_ok,
+                  "consulted": list(consulted)}
+    if scorer_version is not None:
+        score_meta["scorer_version"] = scorer_version
+    if answer_format_ok is not None:
+        score_meta["answer_format_ok"] = answer_format_ok
     return EvalSample(
         id=probe_id, epoch=epoch, input=question, target=expected_answer or "",
         metadata={"conflict_type": conflict_type, "expected_behavior": expected_behavior,
                   "expected_answer": expected_answer, "expected_sources": list(expected_sources)},
         scores={scorer_name: Score(value=("C" if passed else "I"), answer=answer,
-                metadata={"passed": passed, "accuracy_ok": accuracy_ok,
-                          "provenance_ok": provenance_ok, "refusal_ok": refusal_ok,
-                          "consulted": list(consulted)})})
+                metadata=score_meta)})
 
 
 def _answer(probe_id, epoch, conflict_type, passed):
@@ -92,6 +98,32 @@ def test_probe_failures_carry_missing_sources():
 def test_full_probes_list_includes_passing_probes():
     d = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
     assert len(d["probes"]) == 1 and d["probes"][0]["failures"] == []
+
+
+def test_scorer_version_and_format_rate_surface_when_recorded():
+    # det-engine logs stamp scorer_version + answer_format_ok; the scorecard shows them
+    samples = [
+        _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer",
+                     passed=True, accuracy_ok=True, provenance_ok=True, refusal_ok=True,
+                     consulted=["c"], expected_sources=["c"], answer="ANSWER: 4 hours",
+                     scorer_version="det-4", answer_format_ok=True),
+        _eval_sample("q1", 2, conflict_type="none", expected_behavior="answer",
+                     passed=False, accuracy_ok=False, provenance_ok=True, refusal_ok=True,
+                     consulted=["c"], expected_sources=["c"], answer="four-ish hours",
+                     scorer_version="det-4", answer_format_ok=False),
+    ]
+    d = report_to_dict(_eval_log(samples, judge="deterministic", grader=None))
+    assert d["header"]["scorer_version"] == "det-4"
+    assert d["axes"]["answer_format_rate"] == 0.5
+    [probe] = d["probes"]
+    assert probe["failures"][0]["answer_format_ok"] is False
+
+
+def test_scorer_version_and_format_rate_null_on_old_logs():
+    # pre-det-2 logs (and llm-1 logs) never recorded either field — null, not fake values
+    d = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
+    assert d["header"]["scorer_version"] is None
+    assert d["axes"]["answer_format_rate"] is None
 
 
 def test_header_org_present_when_recorded_else_none():

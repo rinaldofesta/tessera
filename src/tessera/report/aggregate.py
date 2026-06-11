@@ -86,6 +86,7 @@ def summarize_axes(records: list[ProbeEpoch]) -> AxesSummary:
             return None
         return sum(1 for r in items if getattr(r, attr)) / len(items)
 
+    flagged = [r for r in records if r.answer_format_ok is not None]
     return AxesSummary(
         accuracy_rate=rate(answer, "accuracy_ok"),
         provenance_rate=(sum(1 for r in records if r.provenance_ok) / total) if total else 0.0,
@@ -93,4 +94,5 @@ def summarize_axes(records: list[ProbeEpoch]) -> AxesSummary:
         n_answer_epochs=len(answer),
         n_refuse_epochs=len(refuse),
         n_total_epochs=total,
+        answer_format_rate=rate(flagged, "answer_format_ok"),
     )
