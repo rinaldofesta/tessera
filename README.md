@@ -119,7 +119,6 @@ src/tessera/
     task.py             the runnable Inspect task (a react agent over MCP, pass^k epochs)
   report/               tessera-report: a pure scorecard over an .eval log (no model)
   api/                  FastAPI backend: logs / reports / blueprints / runs + SSE / trends (SQLite run store)
-  app/                  legacy Streamlit reference UI (superseded by web/)
 web/                    the product UI: React + Vite + TypeScript SPA (Dashboard, Datasets, Run, Results)
 blueprints/             datasets authored in the UI (JSON, gitignored, runnable by name)
 docs/                   interactive lessons (EN/IT), the scorecard field guide, ADRs (docs/adr/)
@@ -214,7 +213,6 @@ model); only a live run needs API keys. A dataset authored on the **Datasets** p
 immediately runnable — it appears in the Run picker and via `-T org=<name>`.
 
 > Frontend dev mode: `cd web && npm run dev` (Vite on :5173, proxies `/api` to :8000).
-> A legacy **Streamlit** reference UI also exists: `bash scripts/dev.sh` (API + Streamlit on :8501).
 
 **Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
 with one probe of each conflict type), describe your facts as **Claims** and your

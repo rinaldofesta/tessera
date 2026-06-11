@@ -41,8 +41,8 @@ _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
 
-# The canonical model list — the ONE source both UIs (React Run view, Streamlit)
-# read via GET /api/models, so the choices can never drift between them.
+# The canonical model list — the ONE source the UI (React Run view) reads via
+# GET /api/models, so the choices can never drift from the backend.
 _MODELS = [
     "anthropic/claude-sonnet-4-6",
     "openai/gpt-4o",
