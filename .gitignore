@@ -35,6 +35,9 @@ logs/
 # Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
 docs/superpowers/
 
+# Local agent config (Claude Code workspace files)
+.claude/
+
 # Secrets — API keys live here, never committed
 .env
 .env.*
