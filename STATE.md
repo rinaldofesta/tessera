@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico), T3 (contratto unico) e T4 (scoring det-2) (branch `main`, sincronizzato con origin).
-> Verificato: suite test **173 passed** (key-free, offline) · build SPA ok · smoke sui log pinnati · CI attiva (test + build + drift contratto).
+> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica), T2 (k parametrico), T3 (contratto unico), T4 (scoring det-2) e T5 (refusal det-3 + ADR) (branch `main`, **3 commit avanti** su origin — push da fare).
+> Verificato: suite test **175 passed** (key-free, offline) · build SPA ok · smoke sui log pinnati · CI attiva (test + build + drift contratto).
 
 ---
 
@@ -24,7 +24,8 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 - `src/tessera/api/` — FastAPI: CRUD+validate+preview blueprint, run con SSE/polling, store SQLite (`runs.db`), trends, `/api/models`; ogni endpoint JSON ha un response model (`responses.py`) — l'OpenAPI che ne esce è IL contratto; serve anche la SPA buildata da `web/dist`
 - `src/tessera/app/` — UI Streamlit **legacy** (stesso API; sostituita da `web/`, ancora lanciata da `scripts/dev.sh`)
 - `web/` — la UI prodotto: SPA React+Vite+TS, 4 viste (Dashboard, Datasets, Run, Results), stile terminale monocromo su shadcn/Tailwind v4
-- `tests/` — 159 test key-free (motori scorer stubbati, log inspect fabbricati in memoria; nessuna API key richiesta)
+- `tests/` — 175 test key-free (motori scorer stubbati, log inspect fabbricati in memoria; nessuna API key richiesta)
+- `docs/adr/` — gli Architecture Decision Records pubblici (0001 k nel task, 0002 response model = contratto, 0003 risposta committed), un record per decisione, chiusura settimanale
 
 ## 3. Stato
 
@@ -46,11 +47,11 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 - Ciclo completo nel browser: authoring blueprint → validate → compile-preview → save → **run live** → progresso SSE → scorecard → confronto fra run. Provato con l'org `initech`: probe `authority_wins` 3/3.
 - `inspect eval` da CLI + `tessera-report` su qualunque log `.eval`.
-- 159 test in 0.74s, build SPA pulita.
+- 175 test in ~1s, build SPA pulita.
 
 ### Cosa è incompleto o rotto
 
-- **Fallback accuratezza det-2**: senza riga `ANSWER:` le negazioni «X, non Y» e le parentetiche finali sono ancora fraintese (documentato in scoring.py); le parafrasi di date/numeri non matchano — tenere `expected_answer` nella formulazione dell'org.
+- **Fallback senza riga `ANSWER:` (det-3)**: le negazioni «X, non Y» e le parentetiche finali sono ancora fraintese, e il rifiuto torna alla scansione keyword (documentato in scoring.py); le parafrasi di date/numeri non matchano — tenere `expected_answer` nella formulazione dell'org. `answer_format_ok` nei log misura quanto spesso il fallback scatta davvero.
 - Warning di build: chunk JS da 794 kB (>500 kB) — nessun code-splitting.
 - I pin del job CI `contract` (fastapi 0.136.3 / pydantic 2.13.4) vanno aggiornati insieme a ogni bump di quelle dipendenze (rigenerare il contratto nello stesso commit).
 
@@ -58,13 +59,13 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 - **Branch**: solo `main` (nessun branch di feature aperto). **Issue/PR GitHub**: nessuna aperta.
 - **TODO/FIXME/xfail nel codice**: zero — né in `src/`, né in `web/src/`, né in `tests/`.
-- **Working tree pulito** dopo la bonifica T1: HEAD rappresenta l'app reale, CI fa da gate (pytest + build SPA). Push verso origin da fare.
+- **Working tree pulito**: HEAD rappresenta l'app reale, CI fa da gate (pytest + build SPA + drift contratto). `main` è 3 commit avanti su origin (det-3, ADR, sync docs) — push da fare.
 
 ## 5. Piano 14 settimane
 
-**Nel repo non esiste un piano a 14 settimane.** Nessuna cartella `adr/`; la roadmap nel README (§ "Status and roadmap") è a checkbox, senza settimane né date. Se il piano vive altrove, andrebbe linkato qui.
+**Nel repo non esiste un piano a 14 settimane.** La roadmap nel README (§ "Status and roadmap") è a checkbox, senza settimane né date. Se il piano vive altrove, andrebbe linkato qui.
 
-Il ruolo degli ADR è svolto dai design doc in `docs/superpowers/` (**privati**: gitignored, local-only — solo titoli qui):
+Da T5 esiste **`docs/adr/`** (pubblico): un record per decisione, la settimana chiude con i suoi ADR — 0001 (k nel task), 0002 (response model = contratto), 0003 (risposta committed, det-2/det-3), tutti del 2026-06-11. I design doc estesi restano in `docs/superpowers/` (**privati**: gitignored, local-only — solo titoli qui):
 
 | Data | Titolo | Tipo |
 |------|--------|------|
@@ -78,15 +79,15 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (scoring det-2 + k parametrico + contratto unico). Punti per l'ADR: perché k vive nel task; perché i response model sono il contratto; perché l'estrazione committed batte l'esclusione cieca dei distractor; e la correzione fattuale: **First Contact NON dipendeva dal substring** (era motore llm — la comparabilità regge; det-1→det-2 tocca solo le run deterministiche, marcate da `scorer_version` nei log).
-2. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design), org pubblica (design), nota su reliability under delegation.
-3. **Opzionale dopo det-2**: una run deterministica live (`-T judge=deterministic`) per misurare il nuovo motore sul toy org e popolare la Dashboard con un punto det-2.
+1. **Push verso origin** dei 3 commit di T5 (det-3, ADR, sync docs) — CI farà da verifica.
+2. **Settimana 3** (22–25/6): ritiro Streamlit (decidere e farlo), provenance per-campo (design — l'ADR sarebbe lo 0004), org pubblica (design), nota su reliability under delegation.
+3. **Opzionale**: una run deterministica live (`-T judge=deterministic`) per misurare det-3 sul toy org e popolare la Dashboard con un punto deterministico; guardare `answer_format_ok` per vedere quanto spesso i modelli saltano la riga `ANSWER:`.
 
 ## 7. Domande aperte
 
 - **Ritiro di Streamlit**: due UI sullo stesso API; la legacy (`src/tessera/app/`) non ha test e `scripts/dev.sh` lancia ancora quella. Si rimuove, o resta come reference?
 - **Scoring accuratezza**: il match a substring sovra-accredita (la risposta giusta dentro una frase sbagliata passa). Estrazione strutturata, judge-only, o exact-match normalizzato?
-- **Refusal deterministico**: oggi è keyword-based — quanto irrobustirlo prima del dataset pubblico?
+- **Refusal deterministico** *(risposto da det-3)*: la riga `ANSWER:` committed decide anche il rifiuto; resta aperto solo il fallback keyword quando l'agente salta la riga — `answer_format_ok` dirà se è un caso raro o frequente.
 - **Provenance CRM**: il credito è per record intero, non per campo/subject — serve granularità maggiore per org realistiche?
 - **Dataset pubblico + leaderboard** (roadmap README): quale org di riferimento? `toy` (4 probe) è dichiaratamente minima; `initech` è nata come esercizio. Va progettata l'org "pubblica".
 - **Distribuzione del prodotto**: FastAPI serve la SPA da `web/dist` — Tessera resta locale-first ("inspector" da lanciare in repo) o diventa un servizio ospitato?
@@ -102,3 +103,4 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 - **2026-06-11 (T3, contratto unico)** — ogni endpoint JSON ora dichiara un response model (`api/responses.py`): FastAPI valida ogni risposta, quindi i 166 test key-free sono anche contract test (la rete ha subito beccato una fixture che mentiva sulla forma del report). `web/src/types.ts` non dichiara più nulla a mano: alias dei tipi GENERATI (`api-types.gen.ts`, da openapi-typescript 7.13.0 su `openapi.json` committato; `bash scripts/gen-types.sh`); il drift trovato dall'audit (LogMeta senza `path`) è morto con la generazione. Job CI `contract` fallisce su drift (fastapi/pydantic pinnati lì). Lista modelli unificata: `GET /api/models` alimenta Run.tsx e Streamlit (fallback offline in entrambi); `judge` ora è Literal (typo → 422). Prossimo: T4 (scoring accuratezza).
 - **2026-06-11 (push + rebase)** — origin era stato riscritto (purge dalla history dei 3 call-doc, incluso demo-runbook, + un commit README col vero report First Contact): rebase dei 13 commit locali sulla base riscritta, runbook tenuto cancellato per onorare il purge, push fast-forward. Prima run CI su GitHub.
 - **2026-06-11 (T4, scoring det-2)** — prima la rete: smoke test sui log pinnati (`tests/test_pinned_examples.py`, numeri headline + testo «$1.5M»). Poi il fix: l'accuratezza deterministica valuta la **risposta committed** — ultima riga `ANSWER:` (il prompt ora la richiede), match con guardie sui confini («24 hours» non colpisce più «4 hours», «115%» ≠ «15%»); senza riga, fallback distractor-aware a ultima-menzione-vince — i distractor derivano meccanicamente dai claim in conflitto del blueprint (`dataset._distractor_values`: solo gruppi (subject,predicate) con valori diversi — «Gold» non diventa mai distractor). `Score.metadata` porta `scorer_version` (det-2/llm-1) e `answer_format_ok`. Scoperta chiave dal recon: **First Contact era motore llm — il substring non c'entrava**; la sua comparabilità non è toccata. 173 test; smoke mockllm end-to-end ok. Prossimo: T5 (ADR).
+- **2026-06-11 (T5, refusal det-3 + ADR)** — il contratto det-2 esteso al secondo asse: quando c'è la riga `ANSWER:`, **è lei a decidere anche il rifiuto** («ANSWER: cannot determine» rifiuta; un valore committed sotto ragionamento «coperto» NO — l'astieniti-e-poi-allucina ora viene beccato anche dal motore deterministico, il fallimento First Contact per eccellenza); la scansione keyword resta solo come fallback senza riga. Il recon aveva confermato il buco: nessun test combinava marker di rifiuto + riga ANSWER — ora 2 test lo pinnano. `scorer_version` → det-3. Nato **`docs/adr/`**: 0001 k nel task, 0002 response model = contratto, 0003 risposta committed (con la correzione First Contact a verbale). Docs sincronizzati (README, scorecard guide, lezioni EN/IT — la card «refusal keywords» flippata a shipped). 175 test. Prossimo: push, poi Settimana 3.

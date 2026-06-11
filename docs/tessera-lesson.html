@@ -343,7 +343,7 @@ const QUIZZES = {
      answer:1, explain:"Tessera resolves an independent grader and refuses to run if it equals the model under test."},
     {stem:"Which axis is ALWAYS mechanical (never judged by an AI)?",
      options:["Accuracy","Refusal","Provenance","All of them"],
-     answer:2, explain:"Provenance is always deterministic. Accuracy and refusal switch between deterministic heuristics (keyword refusal, committed-answer matching) and independent LLM judges."}
+     answer:2, explain:"Provenance is always deterministic. Accuracy and refusal switch between the deterministic engine (the committed ANSWER: line decides both, heuristic fallbacks without it) and independent LLM judges."}
   ],
   m9:[
     {stem:"In the First Contact run, which category failed — and how often?",
@@ -356,7 +356,7 @@ const QUIZZES = {
   m10:[
     {stem:"Which of these is a real, known limitation of the deterministic engine?",
      options:["It needs an API key","If the agent skips the ANSWER: line, the fallback can still mis-read 'X, not Y' negations","It cannot run offline","It only works in Italian"],
-     answer:1, explain:"det-2 scores the committed ANSWER: line (boundary-guarded); without that line a distractor-aware, last-mention-wins fallback applies — which still mis-reads negations. The LLM engine stays the semantic cross-check."},
+     answer:1, explain:"det-3 scores the committed ANSWER: line (boundary-guarded, and it decides refusal too); without that line a distractor-aware, last-mention-wins fallback applies — which still mis-reads negations. The LLM engine stays the semantic cross-check."},
     {stem:"You want authority_wins to decide a conflict. What must carry the authority signal?",
      options:["The authority number on the claim","The document's wording — the number is never compiled into the world","The manifest","The resolution_rule field alone"],
      answer:1, explain:"The initech run proved the rule works — but only because the doc SAYS 'per the signed master agreement'. The authority int is inert annotation: it never appears in any compiled artifact or tool result."}
@@ -559,7 +559,7 @@ const MODULES = [
   <div class="grid c3">
     <div class="card"><span class="pill green">accuracy</span><br><span class="muted">Does the answer match the expected one? Substring check (deterministic) or an independent LLM judge (semantic).</span></div>
     <div class="card"><span class="pill blue">provenance</span><br><span class="muted">Did the recorded tool calls cover every claim in <code>expected_sources</code>? Always mechanical — module 9.</span></div>
-    <div class="card"><span class="pill amber">refusal</span><br><span class="muted">Did it decline to commit to a value? Keyword markers (deterministic) or an LLM judge with a hard line: a hedged answer is still an answer.</span></div>
+    <div class="card"><span class="pill amber">refusal</span><br><span class="muted">Did it decline to commit to a value? The committed ANSWER: line (deterministic; keyword markers only without it) or an LLM judge — both with a hard line: a hedged answer is still an answer.</span></div>
   </div>
   <div class="quiz" data-quiz-id="m6"></div>` },
 
@@ -620,7 +620,7 @@ const MODULES = [
   only <code>docs_get_file</code> on the exact file counts; a search hit alone earns nothing.</p>
   <h3>Two engines for grading the answer itself</h3>
   <div class="grid c2">
-    <div class="card"><b>⚙️ Deterministic</b> <span class="pill">key-free</span><br><span class="muted">Refusal = keyword markers; accuracy = the committed ‘ANSWER:’ line, boundary-guarded, with a distractor-aware fallback (det-2). Free, instant, runs air-gapped. Can miss paraphrases — keep expected answers in the org’s wording.</span></div>
+    <div class="card"><b>⚙️ Deterministic</b> <span class="pill">key-free</span><br><span class="muted">Accuracy AND refusal = the committed ‘ANSWER:’ line — boundary-guarded matching, ‘cannot determine’ refuses; distractor-aware / keyword fallbacks without it (det-3). Free, instant, runs air-gapped. Can miss paraphrases — keep expected answers in the org’s wording.</span></div>
     <div class="card"><b>🧑‍⚖️ LLM judge</b> <span class="pill purple">independent</span><br><span class="muted">Two temperature-0 judges read the question and the agent's <i>final answer</i>: one asks "did it commit to a value?", one asks "is the answer semantically correct?". They never see the tool calls — that stays provenance's mechanical job. Tolerant of wording; costs API calls.</span></div>
   </div>
   <div class="callout"><b>The self-grading guard.</b> In LLM mode Tessera resolves a separate
@@ -870,7 +870,7 @@ const IMP_CORE = [
   {tag:"amber", tagtxt:"medium", tt:"Substring accuracy can over-credit",
    bd:"The deterministic engine USED TO check whether the expected answer appeared anywhere in the response — quoting both values ('it's either $1.2M or $1.5M') got credit. <b>Fix — shipped ✓ (det-2):</b> the agent now commits on a final 'ANSWER: <value>' line and only that line is matched, boundary-guarded ('24 hours' no longer hits '4 hours'); without the line, a fallback rejects answers whose LAST mention is a known conflicting value — the blueprint ships the wrong values as distractors. Residual gaps ('X, not Y' in the fallback) are documented in scoring.py."},
   {tag:"amber", tagtxt:"medium", tt:"Refusal keywords miss 'abstain-then-hallucinate'",
-   bd:"Deterministic refusal detection is a keyword list. An agent that says 'I cannot be certain, but the value is probably $1.5M' can read as a refusal while still committing. The LLM judge already handles this (hedged commitment = commitment). <b>Fix:</b> port that hard line into the heuristic — e.g. refusal markers must NOT be followed by a concrete value from the claim set."},
+   bd:"Deterministic refusal detection USED TO be a keyword list over the whole transcript — an agent saying 'I cannot be certain, but the value is probably $1.5M' could read as a refusal while still committing. <b>Fix — shipped ✓ (det-3):</b> the committed ANSWER: line now decides refusal — 'ANSWER: cannot determine' refuses, a committed value does not — the LLM judge's hard line (hedged commitment = commitment), ported. The keyword scan survives only when the agent skips the line."},
   {tag:"red", tagtxt:"hard", tt:"CRM provenance is subject-granular — in both engines",
    bd:"One crm_lookup('Globex Inc') credits EVERY CRM claim about Globex, because the tool returns whole records. An agent could get provenance credit for a field it never actually used. Docs are already file-exact. <b>Fix:</b> finer locators in the manifest (per-field), or score which fields the answer actually relied on. Hard, but it's the moat — worth it."},
   {tag:"green", tagtxt:"quick win", tt:"4 probes is a demo, not a measurement",
