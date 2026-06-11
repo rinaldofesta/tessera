@@ -11,6 +11,8 @@ def test_crm_server_module_exposes_a_fastmcp_app(tmp_path, monkeypatch):
     importlib.reload(mod)
     assert "Gold" in mod.crm_lookup("Acme Corp")
     assert mod.crm_lookup("Beta Corp") == "NOT_FOUND"
+    filtered = mod.crm_lookup("Acme Corp", fields=["tier"])
+    assert "Gold" in filtered and "renewal_date" not in filtered
     assert mod.mcp.name  # a FastMCP instance is present
 
 

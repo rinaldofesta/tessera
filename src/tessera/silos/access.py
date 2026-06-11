@@ -10,13 +10,21 @@ from typing import Any
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
-def crm_lookup_record(out_dir: str | Path, account_name: str) -> dict[str, Any] | None:
-    """Return the flattened CRM record for an account, or None if absent."""
+def crm_lookup_record(out_dir: str | Path, account_name: str,
+                      fields: list[str] | None = None) -> dict[str, Any] | None:
+    """Return the flattened CRM record for an account, or None if absent.
+
+    `fields` narrows the record to the named fields (unknown names are simply
+    absent) — provenance credit follows what is actually returned (det-4)."""
     db_path = Path(out_dir) / "crm" / "db.json"
     if not db_path.exists():
         return None
     db = json.loads(db_path.read_text())
-    return db.get(account_name)
+    record = db.get(account_name)
+    if record is None or fields is None:
+        return record
+    requested = set(fields)
+    return {k: v for k, v in record.items() if k in requested}
 
 
 def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:

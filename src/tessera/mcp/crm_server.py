@@ -14,9 +14,11 @@ mcp = FastMCP("tessera-crm")
 
 
 @mcp.tool()
-def crm_lookup(account_name: str) -> str:
-    """Look up a CRM account by exact name; returns its fields as JSON, or 'NOT_FOUND'."""
-    record = crm_lookup_record(_OUT, account_name)
+def crm_lookup(account_name: str, fields: list[str] | None = None) -> str:
+    """Look up a CRM account by exact name; returns its fields as JSON, or 'NOT_FOUND'.
+
+    Pass `fields` to fetch only the named fields — request just what you need."""
+    record = crm_lookup_record(_OUT, account_name, fields)
     return json.dumps(record) if record is not None else "NOT_FOUND"
 
 
