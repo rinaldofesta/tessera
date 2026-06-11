@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-10** (branch `main`, HEAD `9a9e637`).
-> Verificato: suite test **159 passed in 0.74s** (key-free, offline) · build SPA ok (1.23s).
+> Fotografia del repo al **2026-06-11**, dopo la bonifica T1 (branch `main`).
+> Verificato: suite test **159 passed** (key-free, offline) · build SPA ok · working tree pulito · CI attiva.
 
 ---
 
@@ -28,7 +28,9 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ## 3. Stato
 
-### Ultimi 20 commit, per tema
+### Ultimi commit, per tema
+
+**T1 — bonifica (2026-06-11)** — `262ff4c` STATE.md àncora · `8e012f3` fix author→run (store blueprint assoluto) · `1debe58` rework SPA terminale monocromo · `d04fc52` lezione: modulo authoring + parità IT · `a16f407` sync docs + v0 dichiarato + roadmap · `90b4295` pulizia root, `.claude/` ignorato · `b9a8921` CI (pytest + build SPA)
 
 **Posizionamento & First Contact** — `c45fd73` risultato First Contact nel README (Sonnet 4.6, pass^3 75%) · `628c755` vision riframata sul collo di bottiglia della verifica · `fdef701` log demo cross-graded pinnati come fixture
 
@@ -48,19 +50,17 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ### Cosa è incompleto o rotto
 
-- **A HEAD il loop author→run sulle blueprint salvate è rotto**: inspect_ai cambia cwd alla dir del task e lo store relativo `blueprints/` non si risolve ("unknown org"). Il fix (`_job_env()` in `runner.py` + 2 test TDD) esiste **solo nel working tree, non committato**.
-- **Enorme WIP non committato**: 20 file, +7383/−1911 — rework SPA (shadcn, Tailwind v4, componenti nuovi), fix runner, lezioni EN/IT aggiornate. L'ultimo commit non rappresenta l'app attuale.
-- **k è hardcoded a 3** in `src/tessera/evals/task.py:52` (`Epochs(3, [pass_k(3), "mean"])`): il selettore epochs della UI funziona solo per k=3; con k<3 il reducer `pass_k_3` dà errore.
-- **`web/src/types.ts` è scritto a mano** (specchio manuale del contratto FastAPI; il file stesso rimanda la generazione da OpenAPI).
-- **File spuri a root, non ignorati**: `hello.py`, `coinflip.py` (task tutorial inspect_ai), `scorecard.md` (output generato), `__pycache__/` derivato, più `.claude/` non tracciato.
+- **k è hardcoded a 3** in `src/tessera/evals/task.py:52` (`Epochs(3, [pass_k(3), "mean"])`): il selettore epochs della UI funziona solo per k=3; con k<3 il reducer `pass_k_3` dà errore. → T2
+- **`web/src/types.ts` è scritto a mano** (specchio manuale del contratto FastAPI; il file stesso rimanda la generazione da OpenAPI). → T3
+- **Scoring accuratezza a substring**: sovra-accredita (la risposta giusta dentro una frase sbagliata passa). → T4
 - Warning di build: chunk JS da 794 kB (>500 kB) — nessun code-splitting.
-- Liste modelli duplicate a mano in due UI (`app/streamlit_app.py` e `web/src/views/Run.tsx`): drifteranno.
+- Liste modelli duplicate a mano in due UI (`app/streamlit_app.py` e `web/src/views/Run.tsx`): drifteranno. → T3
 
 ## 4. Lavori in corso
 
 - **Branch**: solo `main` (nessun branch di feature aperto). **Issue/PR GitHub**: nessuna aperta.
 - **TODO/FIXME/xfail nel codice**: zero — né in `src/`, né in `web/src/`, né in `tests/`.
-- Il vero lavoro in corso è il **working tree non committato** descritto sopra: rework SPA + fix runner + lezioni. Va spezzato in commit tematici (il fix runner per primo: a HEAD c'è un bug noto).
+- **Working tree pulito** dopo la bonifica T1: HEAD rappresenta l'app reale, CI fa da gate (pytest + build SPA). Push verso origin da fare.
 
 ## 5. Piano 14 settimane
 
@@ -80,9 +80,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **Committare il working tree** in commit tematici, partendo dal fix `_job_env()` + test (a HEAD il loop author→run è rotto: è l'unico bug noto in produzione locale); poi rework SPA, poi lezioni. Nello stesso giro: cancellare `hello.py`/`coinflip.py`/`scorecard.md` o ignorarli, e aggiungere `.claude/` al `.gitignore`.
-2. **Rendere k parametrico**: derivare il reducer da `epochs` richiesto (oggi `pass_k(3)` fisso in `task.py`) così il selettore k della UI è onesto per k≠3 e il report non deve "indovinare" k dal log.
-3. **Generare `web/src/types.ts` dall'OpenAPI di FastAPI** (il file stesso lo dichiara come passo futuro): elimina il drift silenzioso fra schemi Python e SPA. Subito dopo, in ordine di valore: smoke test sui log pinnati `examples/*.eval` e fix del substring over-credit nello scorer di accuratezza.
+1. **T2 — k parametrico** (lun 15/6): derivare il reducer da `epochs` richiesto (oggi `pass_k(3)` fisso in `task.py`) così il selettore k della UI è onesto per k≠3 e il report non deve "indovinare" k dal log. Studio abbinato: epochs/reducers in inspect_ai.
+2. **T3 — contratto unico** (mar 16/6): generare `web/src/types.ts` dall'OpenAPI di FastAPI con check anti-drift in CI; unificare la lista modelli duplicata (Streamlit / Run.tsx) in un'unica fonte.
+3. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
 
 ## 7. Domande aperte
 
@@ -93,3 +93,10 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 - **Dataset pubblico + leaderboard** (roadmap README): quale org di riferimento? `toy` (4 probe) è dichiaratamente minima; `initech` è nata come esercizio. Va progettata l'org "pubblica".
 - **Distribuzione del prodotto**: FastAPI serve la SPA da `web/dist` — Tessera resta locale-first ("inspector" da lanciare in repo) o diventa un servizio ospitato?
 - **Reliability under delegation** (agente-che-consuma-agente, in roadmap): quando parte e con quale design? È il track nuovo senza alcun doc di design.
+
+---
+
+## Diario
+
+- **2026-06-10** — creato STATE.md; audit completo dei docs.
+- **2026-06-11 (T1, bonifica)** — working tree (+7383/−1911) spezzato in 7 commit tematici: fix author→run in salvo per primo, poi SPA, lezioni, sync docs (v0 dichiarato, roadmap aggiornata, call-doc rimossi), pulizia root, CI minima. HEAD verde che rappresenta l'app reale. Prossimo: T2 (k parametrico).
