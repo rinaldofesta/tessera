@@ -13,3 +13,4 @@ The cadence: each working week closes with the ADRs for the decisions it made.
 | [0003](0003-score-the-committed-answer.md) | 2026-06-11 | The deterministic engine scores the committed answer | Accepted |
 | [0004](0004-retire-the-streamlit-ui.md) | 2026-06-11 | Retire the legacy Streamlit UI | Accepted |
 | [0005](0005-per-field-crm-provenance.md) | 2026-06-11 | Per-field CRM provenance: credit what the agent actually received | Accepted |
+| [0006](0006-meridian-and-the-leaderboard-protocol.md) | 2026-06-11 | Meridian ships as the public reference org; the leaderboard protocol | Accepted |

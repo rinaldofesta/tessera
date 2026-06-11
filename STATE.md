@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1–T5 e la **Settimana 3 anticipata** (ritiro Streamlit, code-splitting, prime run det-3 live, design provenance/org pubblica/delega) (branch `main`, sincronizzato con origin, CI verde).
-> Verificato: suite test **175 passed** (key-free, offline) · build SPA code-split (entry ~199 kB, niente warning) · smoke sui log pinnati · CI attiva · **prima misura live det-3: pass^3 75%** sul toy org.
+> Fotografia del repo al **2026-06-11**, dopo T1–T5, la Settimana 3 anticipata e il **batch «completa tutto»** (det-4 provenance per-campo, scorecard con `scorer_version`/format rate, **org pubblica meridian** con gate avversari + baseline live, ADR 0005-0006) (branch `main`).
+> Verificato: suite test **189 passed** (key-free, offline) · build SPA code-split ok · CI attiva · **baseline meridian (Sonnet 4.6, k=3, det-4): pass^3 86,4% / mean 90,9%** — unica categoria che fallisce: `unresolvable` (2/5, flaky) · cross-check llm-2 (grader gpt-4o): 72,7%/84,9%, stesso profilo per categoria.
 
 ---
 
@@ -20,11 +20,11 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 - `src/tessera/silos/` + `src/tessera/mcp/` — layer di lettura puro + due server MCP stdio (`crm_lookup`; `docs_search`/`docs_get_file`)
 - `src/tessera/evals/` — il task inspect_ai: react agent + scorer a 3 assi, doppio motore (deterministico / LLM-judge con guardia anti-self-grading), `Epochs(k, [pass_k(k), "mean"])` con `-T k=N`
 - `src/tessera/report/` — log `.eval` → scorecard: CLI `tessera-report` (Markdown) e `report_to_dict` (JSON per l'API)
-- `src/tessera/examples/` — registry delle org nominate (`toy`, `your`) con fallback, protetto da path traversal, sui JSON salvati in `blueprints/`
+- `src/tessera/examples/` — registry delle org nominate (`toy` didattica, **`meridian` il benchmark pubblico** — 22 probe ≥5 per tipo, ADR-0006 —, `your` starter) con fallback, protetto da path traversal, sui JSON salvati in `blueprints/`
 - `src/tessera/api/` — FastAPI: CRUD+validate+preview blueprint, run con SSE/polling, store SQLite (`runs.db`), trends, `/api/models`; ogni endpoint JSON ha un response model (`responses.py`) — l'OpenAPI che ne esce è IL contratto; serve anche la SPA buildata da `web/dist`
 - `web/` — la UI prodotto: SPA React+Vite+TS, 4 viste (Dashboard, Datasets, Run, Results), stile terminale monocromo su shadcn/Tailwind v4, code-split per vista (recharts vive nel chunk Dashboard). La UI Streamlit legacy è stata **ritirata** (ADR-0004, 2026-06-11)
-- `tests/` — 175 test key-free (motori scorer stubbati, log inspect fabbricati in memoria; nessuna API key richiesta)
-- `docs/adr/` — gli Architecture Decision Records pubblici (0001 k nel task, 0002 response model = contratto, 0003 risposta committed), un record per decisione, chiusura settimanale
+- `tests/` — 189 test key-free (motori scorer stubbati, log inspect fabbricati in memoria; nessuna API key richiesta), inclusi i gate offline di meridian
+- `docs/adr/` — gli ADR pubblici, un record per decisione: 0001 k nel task · 0002 response model = contratto · 0003 risposta committed · 0004 ritiro Streamlit · 0005 provenance per-campo (det-4) · 0006 meridian + protocollo leaderboard
 
 ## 3. Stato
 
@@ -44,15 +44,17 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ### Cosa funziona end-to-end oggi (working tree, verificato)
 
-- Ciclo completo nel browser: authoring blueprint → validate → compile-preview → save → **run live** → progresso SSE → scorecard → confronto fra run. Provato con l'org `initech`: probe `authority_wins` 3/3.
-- `inspect eval` da CLI + `tessera-report` su qualunque log `.eval`.
-- 175 test in ~1s, build SPA pulita.
+- Ciclo completo nel browser: authoring blueprint → validate → compile-preview → save → **run live** → progresso SSE → scorecard → confronto fra run.
+- `inspect eval` da CLI + `tessera-report` su qualunque log `.eval` (la scorecard ora mostra `scorer_version` e il tasso di compliance `ANSWER:`).
+- **Benchmark live verificato**: meridian via API, det-4 e llm-2, 66 epoch ciascuna — i numeri in testa a questo file; la Dashboard ha entrambe le run.
+- 189 test in ~1s, build SPA pulita.
 
 ### Cosa è incompleto o rotto
 
-- **Fallback senza riga `ANSWER:` (det-3)**: le negazioni «X, non Y» e le parentetiche finali sono ancora fraintese, e il rifiuto torna alla scansione keyword (documentato in scoring.py). Misurato live: col contratto sul submit tool la compliance è 12/12, quindi il fallback è davvero il caso raro — ma resta il punto debole.
-- `answer_format_ok` e `scorer_version` vivono solo nei metadata grezzi del log: non sono esposti da `report_to_dict`/scorecard/UI (candidato per la prossima iterazione del report).
-- I pin del job CI `contract` (fastapi 0.136.3 / pydantic 2.13.4) vanno aggiornati insieme a ogni bump di quelle dipendenze (rigenerare il contratto nello stesso commit).
+- **Fallback senza riga `ANSWER:`**: negazioni e parentetiche restano fraintese lì (documentato in scoring.py) — ma misurato live su meridian la compliance è 65-66/66, quindi è davvero il caso raro.
+- **Parafrasi soldi/date**: scelta di design confermata dai gate (accuratezza det 1.0 con wording esatto), ma resta il limite documentato — `$425,000` non matcherebbe `$425k`.
+- **Contaminazione**: il blueprint meridian è pubblico = è la chiave di risposta. Posizione dichiarata in ADR-0006 (onestà + data-stamp); le varianti seeded sono il primo lavoro vero della scenario-factory.
+- I pin del job CI `contract` (fastapi 0.136.3 / pydantic 2.13.4) si aggiornano insieme a ogni rigenerazione del contratto (stesso commit).
 
 ## 4. Lavori in corso
 
@@ -78,18 +80,17 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **Rivedere ADR-0005** (provenance per-campo, status Proposed): accettarlo o emendarlo → implementare **det-4**. Rivedere anche i due design privati (org pubblica, nota delega) in `docs/superpowers/specs/` e decidere se l'org pubblica v1 aspetta det-4.
-2. **Org pubblica — implementazione** dopo la review del design: ~10 subject, ~20 probe (≥5 per tipo di conflitto), valori anti-prior, gate di accettazione (nessuna probe degenere, accordo det/llm), baseline run.
-3. **Settimana 4** (29/6–2/7): decisione locale-first vs hosted. Opzionale prima: esporre `answer_format_ok`/`scorer_version` nella scorecard (oggi solo nei metadata grezzi del log).
+1. **Leaderboard**: girare meridian su più modelli frontiera (det-4, k=3, protocollo ADR-0006) e pubblicare la tabella per categoria — il primo numero che nessun altro misura: il tasso di fabbricazione sul pareggio irrisolvibile.
+2. **Delegation MVP**: ora sbloccato (la nota privata prevedeva di partire dopo l'org pubblica) — producer/consumer a 2 stadi su meridian; la fabbricazione del producer si genera da sola ~1 epoch su 3 sul tie.
+3. **Settimana 4** (29/6–2/7): decisione locale-first vs hosted (l'unico item senza groundwork — sessione brainstorm-first). Più in là: companion write-up (i numeri di meridian sono la sua spina dorsale) e scenario-factory per le varianti seeded.
 
 ## 7. Domande aperte
 
 - ~~**Ritiro di Streamlit**~~ *(risolto: rimossa — ADR-0004, 2026-06-11)*.
-- ~~**Scoring accuratezza**~~ *(risolto: det-2 estrazione committed, T4)* · ~~**Refusal deterministico**~~ *(risolto: det-3 + contratto sul submit tool — compliance 12/12 misurata live)*.
-- **Provenance CRM per-campo**: design proposto in **ADR-0005** (attribuzione dalla risposta + param `fields`, → det-4) — da accettare/emendare, poi implementare.
-- **Dataset pubblico + leaderboard**: design draft in `docs/superpowers/specs/2026-06-11-tessera-public-org-design.md` (~20 probe ≥5 per tipo, valori anti-prior, gate di accettazione, protocollo det+k=3; gaming: pubblicare il blueprint v1, factory per le varianti). Decidere se v1 aspetta det-4.
+- ~~**Scoring accuratezza**~~ *(det-2, T4)* · ~~**Refusal deterministico**~~ *(det-3)* · ~~**Provenance CRM per-campo**~~ *(det-4, ADR-0005 — il gate live ha anche scoperto e corretto l'ambiguità `{}` sui nomi di campo sbagliati)* · ~~**Dataset pubblico**~~ *(meridian, ADR-0006)*.
+- **Leaderboard**: con quali modelli partire, e dove pubblicare la tabella (README? pagina dedicata?).
 - **Distribuzione del prodotto**: FastAPI serve la SPA da `web/dist` — Tessera resta locale-first ("inspector" da lanciare in repo) o diventa un servizio ospitato? (Piano: decisione in Settimana 4.)
-- **Reliability under delegation**: prima nota scritta (`docs/superpowers/specs/2026-06-11-tessera-delegation-note.md`): tassonomia del salto (conflitto «riciclato», flag ignorato, provenance laundering), MVP a 2 stadi via handoff sullo stesso org. Parte dopo l'org pubblica.
+- **Reliability under delegation**: prima nota scritta (`docs/superpowers/specs/2026-06-11-tessera-delegation-note.md`): tassonomia del salto (conflitto «riciclato», flag ignorato, provenance laundering), MVP a 2 stadi via handoff. **Ora sbloccato**: l'org pubblica esiste e il producer fabbrica sul tie ~1/3 delle epoch.
 
 ---
 
@@ -103,3 +104,4 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 - **2026-06-11 (T4, scoring det-2)** — prima la rete: smoke test sui log pinnati (`tests/test_pinned_examples.py`, numeri headline + testo «$1.5M»). Poi il fix: l'accuratezza deterministica valuta la **risposta committed** — ultima riga `ANSWER:` (il prompt ora la richiede), match con guardie sui confini («24 hours» non colpisce più «4 hours», «115%» ≠ «15%»); senza riga, fallback distractor-aware a ultima-menzione-vince — i distractor derivano meccanicamente dai claim in conflitto del blueprint (`dataset._distractor_values`: solo gruppi (subject,predicate) con valori diversi — «Gold» non diventa mai distractor). `Score.metadata` porta `scorer_version` (det-2/llm-1) e `answer_format_ok`. Scoperta chiave dal recon: **First Contact era motore llm — il substring non c'entrava**; la sua comparabilità non è toccata. 173 test; smoke mockllm end-to-end ok. Prossimo: T5 (ADR).
 - **2026-06-11 (T5, refusal det-3 + ADR)** — il contratto det-2 esteso al secondo asse: quando c'è la riga `ANSWER:`, **è lei a decidere anche il rifiuto** («ANSWER: cannot determine» rifiuta; un valore committed sotto ragionamento «coperto» NO — l'astieniti-e-poi-allucina ora viene beccato anche dal motore deterministico, il fallimento First Contact per eccellenza); la scansione keyword resta solo come fallback senza riga. Il recon aveva confermato il buco: nessun test combinava marker di rifiuto + riga ANSWER — ora 2 test lo pinnano. `scorer_version` → det-3. Nato **`docs/adr/`**: 0001 k nel task, 0002 response model = contratto, 0003 risposta committed (con la correzione First Contact a verbale). Docs sincronizzati (README, scorecard guide, lezioni EN/IT — la card «refusal keywords» flippata a shipped). 175 test. Prossimo: push, poi Settimana 3.
 - **2026-06-11 (Settimana 3 anticipata)** — (1) **Streamlit ritirata** (ADR-0004): `src/tessera/app/`, `.streamlit/`, `scripts/dev.sh`, entry point e dep rimossi — audit pulito, nulla fuori dal package la importava. (2) **Code-splitting**: React.lazy per vista, recharts confinato nel chunk Dashboard — monolite 794 kB → entry 199 kB, warning sparito. (3) **Prime run det-3 live** (sonnet-4-6, k=3, toy, via API → Dashboard): scoperta chiave — `answer_format_ok` **0/12**, il contratto ANSWER nel prompt non sopravvive al protocollo submit del react agent → tutte le epoch sul fallback, che ha mis-valutato 3/3 risposte resolvable giuste (parentetica in coda + parafrasi date). Fix in 2 passi: prompt riformulato sul testo SUBMITTED (6/12) + contratto nella description del submit tool via `AgentSubmit` (**12/12**, valori esatti). Terza run: **pass^3 75%, mean 92%** — unresolvable 0%/67% flaky: il modello inventa la regola «deal desk più autorevole» 1 volta su 3 e det-3 la becca (`ANSWER: $1.5M` = commitment). Stessa storia di First Contact, ora misurata key-free. «Quote exactly» tolto dal prompt dopo un `ANSWER: 4` senza unità. (4) **ADR-0005 proposto** (provenance per-campo: attribuzione dalla risposta + param fields → det-4; fix anche dell'over-credit su NOT_FOUND). (5) **Design privati**: org pubblica + nota delega in `docs/superpowers/specs/`. 175 test. Prossimo: push, review ADR-0005 e design, poi org pubblica.
+- **2026-06-11 (batch «completa tutto»)** — su `/goal` esplicito, chiusi tutti i pezzi rimasti. (1) **det-4** (ADR-0005 → Accepted): `consulted_claims` accoppia ogni tool call al suo risultato via `tool_call_id` e accredita un claim CRM solo se il suo predicato è tornato nella RISPOSTA — NOT_FOUND/errori/chiamate senza risposta non accreditano nulla; `crm_lookup` guadagna `fields`; prompt aggiornato (anche: l'autorevolezza dichiarata batte la recency); versioni det-4/llm-2. (2) **Scorecard**: `scorer_version` nell'header, `answer_format_ok` per epoch, `answer_format_rate` negli assi — tutto nullable, contratto rigenerato nello stesso commit. (3) **Meridian**: 10 account, 47 claims, 22 probe (6/6/5/5), authority che inverte la recency, valori anti-prior; 7 gate offline nel suite. (4) **Review avversaria** (3 audit paralleli): zero blocker; fix — piano «Larkspur» (il vecchio nome echeggiava la sua risposta), 110 minuti fuori dalla griglia SLA, prompt genericizzato, rifiuto ancorato sulla riga committed («ANSWER: $425k (no record…)» è un impegno), estrazione ANSWER tollerante al markdown. (5) **Gate live**: la PRIMA baseline ha beccato un difetto del harness — l'agente indovinava il nome campo (`fields=["seats"]`), riceveva `{}` ambiguo e concludeva che il CRM era vuoto; ora `crm_lookup` risponde `_unknown_fields`+`_available_fields` (lo scorer ignora le chiavi di feedback). Baseline rifatta: **pass^3 86,4% / mean 90,9%** (Sonnet 4.6, k=3, det-4) — none/resolvable/void 100%, provenance 1.0, format 65/66, **unica categoria che fallisce: unresolvable 2/5 flaky** (fabbrica precedenze sul pareggio). Cross-check llm-2 (gpt-4o): 72,7%/84,9%, stesso profilo. **ADR-0006**: meridian = benchmark, blueprint pubblico (onestà su purezza), leaderboard det+k=3 con scorer_version pubblicato. Docs sincronizzati (README, scorecard guide, lezioni EN/IT — card provenance e «4 probe» flippate a shipped). 189 test. Prossimo: leaderboard multi-modello, delegation MVP, Settimana 4 (hosting).

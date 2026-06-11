@@ -38,7 +38,9 @@ The `⚠ flaky` marker fires precisely when `mean > pass^k` — the capable-but-
 The most dangerous enterprise failure is the agent that returns the correct value *without
 doing the work to verify it*. A user-facing benchmark scores only the output string, so it
 rewards that luck. Tessera reads which sources the agent actually consulted — straight from
-its real MCP tool calls — and checks them against the compiled `manifest.json`.
+its real MCP tool traffic, per-field for the CRM: a claim is credited only when its field
+actually came back in the response (`det-4`) — and checks them against the compiled
+`manifest.json`.
 
 **Diagnostic — `accuracy_ok=True · provenance_ok=False`:** the agent produced the right
 answer but never performed the mandated cross-silo check (e.g. it early-stopped on a stale

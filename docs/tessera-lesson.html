@@ -615,9 +615,11 @@ const MODULES = [
   <div class="analogy"><b>Analogy.</b> Instead of asking a student "did you read the textbook?",
   Tessera checks the library's <b>security-camera footage</b> of which books they took off the
   shelf. Facts, not claims.</div>
-  <p>One honest subtlety: granularity differs by silo. A single <code>crm_lookup("Globex Inc")</code>
-  returns the whole record, so it credits <i>every</i> CRM claim about Globex. Docs are stricter —
-  only <code>docs_get_file</code> on the exact file counts; a search hit alone earns nothing.</p>
+  <p>One honest subtlety: credit follows the <b>response</b>, per field (det-4). A
+  <code>crm_lookup</code> credits only the fields its reply actually carried — a failed or
+  filtered lookup credits nothing, and the <code>fields</code> argument lets the agent fetch
+  narrowly. Docs are file-exact — only <code>docs_get_file</code> on the exact file counts; a
+  search hit alone earns nothing.</p>
   <h3>Two engines for grading the answer itself</h3>
   <div class="grid c2">
     <div class="card"><b>⚙️ Deterministic</b> <span class="pill">key-free</span><br><span class="muted">Accuracy AND refusal = the committed ‘ANSWER:’ line — boundary-guarded matching, ‘cannot determine’ refuses; distractor-aware / keyword fallbacks without it (det-3). Free, instant, runs air-gapped. Can miss paraphrases — keep expected answers in the org’s wording.</span></div>
@@ -747,7 +749,7 @@ const ANAT = {
       {k:"claim_id", v:'"initech.discount.contract"',
        d:"<b>claim_id</b> — the unique handle. Probes point at claims by this id (in references and expected_sources). Must be unique across the whole blueprint; pick something readable, you'll see it in failure drill-downs."},
       {k:"subject", v:'"Initech"',
-       d:"<b>subject</b> — the entity. For CRM claims this is the record key: crm_lookup(\"Initech\") returns ALL crm claims with this subject — and that is also the granularity of CRM provenance credit (one lookup credits every CRM claim about the subject)."},
+       d:"<b>subject</b> — the entity. For CRM claims this is the record key: crm_lookup(\"Initech\") returns the claims for this subject — and since det-4, provenance credit is per-field: a lookup credits only the fields its response actually carried."},
       {k:"predicate", v:'"max_discount"',
        d:"<b>predicate</b> — the field name. A (subject, predicate) pair may appear at most once PER SILO; the compiler rejects intra-silo duplicates, which is exactly what forces contradictions to be cross-silo."},
       {k:"value", v:'"15%"',
@@ -872,9 +874,9 @@ const IMP_CORE = [
   {tag:"amber", tagtxt:"medium", tt:"Refusal keywords miss 'abstain-then-hallucinate'",
    bd:"Deterministic refusal detection USED TO be a keyword list over the whole transcript — an agent saying 'I cannot be certain, but the value is probably $1.5M' could read as a refusal while still committing. <b>Fix — shipped ✓ (det-3):</b> the committed ANSWER: line now decides refusal — 'ANSWER: cannot determine' refuses, a committed value does not — the LLM judge's hard line (hedged commitment = commitment), ported. The keyword scan survives only when the agent skips the line."},
   {tag:"red", tagtxt:"hard", tt:"CRM provenance is subject-granular — in both engines",
-   bd:"One crm_lookup('Globex Inc') credits EVERY CRM claim about Globex, because the tool returns whole records. An agent could get provenance credit for a field it never actually used. Docs are already file-exact. <b>Fix:</b> finer locators in the manifest (per-field), or score which fields the answer actually relied on. Hard, but it's the moat — worth it."},
+   bd:"One crm_lookup('Globex Inc') USED TO credit every CRM claim about Globex, because the tool returned whole records — credit for fields the agent never used. <b>Fix — shipped ✓ (det-4):</b> credit now follows the tool RESPONSE, per field: a claim counts only when its field actually came back (NOT_FOUND credits nothing), crm_lookup takes a fields argument so agents fetch narrowly, and a wrong field-name guess gets the schema named back instead of a misleading '{}'. It was the moat — and it was worth it."},
   {tag:"green", tagtxt:"quick win", tt:"4 probes is a demo, not a measurement",
-   bd:"One probe per conflict type proves the machinery; it can't give confidence intervals. A single flaky probe swings overall pass^3 by 25 points. <b>Fix:</b> grow the toy org to 5–10 probes per type (the Datasets UI makes this fast now), and treat per-type pass^k as the headline only once each cell has real n."},
+   bd:"One probe per conflict type proves the machinery; it can't give confidence intervals. A single flaky probe swings overall pass^3 by 25 points. <b>Fix — shipped ✓ (meridian):</b> the public reference org ships 22 probes (≥5 per conflict type, both resolution rules, anti-prior values), gated by adversarial review and live baselines — Sonnet 4.6 at det-4 pass^3 86.4%, with the ONLY failing category the unresolvable tie. The toy org stays the teaching artifact."},
   {tag:"amber", tagtxt:"medium", tt:"k is fixed at 3 in the task definition",
    bd:"Three epochs catches stable failures (like First Contact's) but is weak against flakiness — a 90%-flaky probe passes pass^3 about 73% of the time. Worse, discovered empirically: the task hardcoded the pass_k(3) reducer, and inspect refused to run with fewer epochs ('Reducer pass_k_3 requires 3 epochs') — the UI's k=1–2 options errored. <b>Fix — shipped ✓:</b> the task now takes <code>-T k=N</code> and builds <code>pass_k(k)</code> itself, so count and reducer can never diverge: any k≥1 runs, and k sweeps are unblocked (see module 12)."}
 ];
