@@ -3,6 +3,12 @@
 A field guide for the engineer who owns an internal agent and just got a `scorecard.md`. It
 translates the metrics into the language of production incidents and postmortems.
 
+To generate one from any Inspect log:
+
+```bash
+.venv/bin/python -m tessera.report ./logs/<run>.eval        # or: tessera-report <log> -o report.md
+```
+
 Every probe is scored on three axes — not just accuracy — and repeated under `pass^k`,
 because a stochastic model has to be tested more than once. The scorecard reports each axis
 with honest denominators and a trail to every failed trace.
@@ -11,7 +17,7 @@ with honest denominators and a trail to every failed trace.
 
 Two numbers sit side by side, and the gap between them *is* the signal:
 
-- **`mean`** (capability) — the average success rate across all repetitions. *"What can the agent do when the dice land well?"*
+- **`mean`** (capability) — each probe's pass fraction across its `k` repetitions, averaged over probes. *"What can the agent do when the dice land well?"*
 - **`pass^k`** (reliability) — strict: a probe scores only if it passed **every** one of its `k` repetitions. *"Will it do this safely every single time?"*
 
 A 75% `mean` looks encouraging in a sandbox. In production it means roughly one transaction
@@ -60,7 +66,10 @@ too hard to be useful and fabricates a guess rather than holding the line.
 ```text
 epoch 1: "The two systems give opposing values with identical timestamps; flagging for review."  (correct)
 epoch 2: "Let me reconcile these — it's probably $1.5M."                                          (bleed)
-result:  pass^3 = 0%   mean = 33%   ⚠ flaky
+
+…and how it lands on the by-conflict-type row of the Reliability table:
+
+  unresolvable  ░░░░░░░░░░   0%            33%  ⚠ flaky
 ```
 
 Refusal is judged on **commitment, not keywords**. An agent that asserts a specific value —
@@ -75,16 +84,17 @@ Each failed probe in the appendix shows, per epoch, which axes broke and the exa
 
 ```text
 ### ✗ q_acme_renewal · resolvable · pass^3 0% (2/3 epochs)
+**Q:** When is Acme Corp's renewal date?
 - epoch 2 FAIL — accuracy✓ provenance✗ refusal✓
-  - answer: "2026-03-01 (per CRM)"
-  - consulted: acme.renewal.crm · missing: acme.renewal.note
+  - answer: "2026-03-01"
+  - consulted: acme.renewal.crm · **missing: acme.renewal.note**
   - locate: sample `q_acme_renewal`, epoch 2
 ```
 
 Read it as: *right answer, but it never opened the newer note — luck, not diligence — and only
 on 1 of 3 runs, so this is a flaky retrieval bug, not a capability gap.* Open the exact trace
-with `read_eval_log_sample("<log>", "q_acme_renewal", epoch=2)`, or browse it in
-`inspect view --log-dir logs`.
+with `read_eval_log_sample("<log>", "q_acme_renewal", epoch=2)`, or browse it with the
+exact `inspect view --log-dir …` command printed in the scorecard's footer.
 
 ---
 
