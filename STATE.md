@@ -1,6 +1,6 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo T1–T5 e la **Settimana 3 anticipata** (ritiro Streamlit, code-splitting, prime run det-3 live, design provenance/org pubblica/delega) (branch `main`, **4 commit avanti** su origin — push da fare).
+> Fotografia del repo al **2026-06-11**, dopo T1–T5 e la **Settimana 3 anticipata** (ritiro Streamlit, code-splitting, prime run det-3 live, design provenance/org pubblica/delega) (branch `main`, sincronizzato con origin, CI verde).
 > Verificato: suite test **175 passed** (key-free, offline) · build SPA code-split (entry ~199 kB, niente warning) · smoke sui log pinnati · CI attiva · **prima misura live det-3: pass^3 75%** sul toy org.
 
 ---
@@ -78,9 +78,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **Push verso origin** dei 4 commit (ritiro Streamlit, ADR-0005 proposto, code-splitting, contratto ANSWER sul submit tool) — CI farà da verifica.
-2. **Rivedere ADR-0005** (provenance per-campo, status Proposed): accettarlo o emendarlo, poi implementare det-4. Rivedere anche i due design privati (org pubblica, nota delega) in `docs/superpowers/specs/`.
-3. **Org pubblica — implementazione** dopo la review del design: ~10 subject, ~20 probe (≥5 per tipo di conflitto), valori anti-prior, gate di accettazione (nessuna probe degenere, accordo det/llm). Opzionale: esporre `answer_format_ok`/`scorer_version` nella scorecard.
+1. **Rivedere ADR-0005** (provenance per-campo, status Proposed): accettarlo o emendarlo → implementare **det-4**. Rivedere anche i due design privati (org pubblica, nota delega) in `docs/superpowers/specs/` e decidere se l'org pubblica v1 aspetta det-4.
+2. **Org pubblica — implementazione** dopo la review del design: ~10 subject, ~20 probe (≥5 per tipo di conflitto), valori anti-prior, gate di accettazione (nessuna probe degenere, accordo det/llm), baseline run.
+3. **Settimana 4** (29/6–2/7): decisione locale-first vs hosted. Opzionale prima: esporre `answer_format_ok`/`scorer_version` nella scorecard (oggi solo nei metadata grezzi del log).
 
 ## 7. Domande aperte
 
