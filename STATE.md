@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
-> Fotografia del repo al **2026-06-11**, dopo la bonifica T1 (branch `main`).
-> Verificato: suite test **159 passed** (key-free, offline) · build SPA ok · working tree pulito · CI attiva.
+> Fotografia del repo al **2026-06-11**, dopo T1 (bonifica) e T2 (k parametrico) (branch `main`).
+> Verificato: suite test **163 passed** (key-free, offline) · build SPA ok · smoke end-to-end k=2 via mockllm · CI attiva.
 
 ---
 
@@ -18,7 +18,7 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 - `src/tessera/models.py` — modelli Pydantic (Blueprint, Claim, Probe) con i validatori di coerenza (refuse⇒answer null, resolvable⇒resolution_rule, void⇒no references, ecc.)
 - `src/tessera/compiler.py` — Blueprint → `crm/db.json` + `docs/*.md` + `manifest.json`, deterministico e puro (`build_artifacts` alimenta anche il preview dell'API)
 - `src/tessera/silos/` + `src/tessera/mcp/` — layer di lettura puro + due server MCP stdio (`crm_lookup`; `docs_search`/`docs_get_file`)
-- `src/tessera/evals/` — il task inspect_ai: react agent + scorer a 3 assi, doppio motore (deterministico / LLM-judge con guardia anti-self-grading), `Epochs(3, [pass_k(3), "mean"])`
+- `src/tessera/evals/` — il task inspect_ai: react agent + scorer a 3 assi, doppio motore (deterministico / LLM-judge con guardia anti-self-grading), `Epochs(k, [pass_k(k), "mean"])` con `-T k=N`
 - `src/tessera/report/` — log `.eval` → scorecard: CLI `tessera-report` (Markdown) e `report_to_dict` (JSON per l'API)
 - `src/tessera/examples/` — registry delle org nominate (`toy`, `your`) con fallback, protetto da path traversal, sui JSON salvati in `blueprints/`
 - `src/tessera/api/` — FastAPI: CRUD+validate+preview blueprint, run con SSE/polling, store SQLite (`runs.db`), trends; serve anche la SPA buildata da `web/dist`
@@ -50,7 +50,6 @@ Oggi intorno all'eval c'è un prodotto locale: API FastAPI + SPA React per autor
 
 ### Cosa è incompleto o rotto
 
-- **k è hardcoded a 3** in `src/tessera/evals/task.py:52` (`Epochs(3, [pass_k(3), "mean"])`): il selettore epochs della UI funziona solo per k=3; con k<3 il reducer `pass_k_3` dà errore. → T2
 - **`web/src/types.ts` è scritto a mano** (specchio manuale del contratto FastAPI; il file stesso rimanda la generazione da OpenAPI). → T3
 - **Scoring accuratezza a substring**: sovra-accredita (la risposta giusta dentro una frase sbagliata passa). → T4
 - Warning di build: chunk JS da 794 kB (>500 kB) — nessun code-splitting.
@@ -80,9 +79,9 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## 6. Prossimi 3 step (proposta, in ordine di priorità)
 
-1. **T2 — k parametrico** (lun 15/6): derivare il reducer da `epochs` richiesto (oggi `pass_k(3)` fisso in `task.py`) così il selettore k della UI è onesto per k≠3 e il report non deve "indovinare" k dal log. Studio abbinato: epochs/reducers in inspect_ai.
-2. **T3 — contratto unico** (mar 16/6): generare `web/src/types.ts` dall'OpenAPI di FastAPI con check anti-drift in CI; unificare la lista modelli duplicata (Streamlit / Run.tsx) in un'unica fonte.
-3. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
+1. **T3 — contratto unico** (mar 16/6): generare `web/src/types.ts` dall'OpenAPI di FastAPI con check anti-drift in CI; unificare la lista modelli duplicata (Streamlit / Run.tsx) in un'unica fonte.
+2. **T4 — scoring accuratezza** (mer 17/6): prima lo smoke test sui log pinnati `examples/*.eval` (rete di sicurezza), poi la mattina di design: estrazione strutturata vs exact-match normalizzato vs judge-only, guardando gli scorer di inspect_evals. Nota: cambiare lo scorer invalida la comparabilità col First Contact (pass^3 75% era a substring) — versionare lo scorer e re-misurare, da mettere nell'ADR di giovedì.
+3. **T5 — hardening + ADR** (gio 18/6): valutazione del refusal keyword-based; ADR della settimana (decisione scoring + k parametrico — incluso il perché k vive nel task: un override eval-level cambia il conteggio ma non il reducer).
 
 ## 7. Domande aperte
 
@@ -100,3 +99,4 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 - **2026-06-10** — creato STATE.md; audit completo dei docs.
 - **2026-06-11 (T1, bonifica)** — working tree (+7383/−1911) spezzato in 7 commit tematici: fix author→run in salvo per primo, poi SPA, lezioni, sync docs (v0 dichiarato, roadmap aggiornata, call-doc rimossi), pulizia root, CI minima. HEAD verde che rappresenta l'app reale. Prossimo: T2 (k parametrico).
+- **2026-06-11 (T2, k parametrico)** — il task ora possiede conteggio E reducer: `tessera_probes(k=N)` costruisce `Epochs(k, [pass_k(k), "mean"])`; il runner passa `task_args["k"]` e NON più l'override eval-level (che cambia il conteggio ma tiene il reducer — la causa del bug). `RunRequest.epochs` validato 1..10. Studio verificato su inspect_ai 0.3.235 installato (merge in `_eval/run.py`: epochs e reducer mergiati indipendentemente). Smoke key-free: eval con mockllm a k=2 → log `pass_k_2` → scorecard «pass^2 (strict), 4 × 2 epochs». 163 test. Prossimo: T3 (contratto unico).
