@@ -164,6 +164,64 @@ Both tables reproduce [`docs/delegation.md`](delegation.md), which carries the e
 
 ## 6. Limitations
 
+Five limitations bound what the measurements above license. None retracts a finding; each states what the finding does not cover.
+
+**One org.** Every published row measures `meridian`: one blueprint, 10 accounts, 47 claims, 22 probes. With five unresolvable probes, the headline column moves in 20-point steps under strict pass^3 — claude-sonnet-4-6's 40% is two ties of five, arithmetic granularity rather than a fine-grained rate. Breadth is the generator's job, and the generator is built; but breadth is not yet measured, and the published rows characterize a single org.
+
+**The public blueprint is the answer key.** §3.4 chose honesty over purity: anyone can reproduce a row with no grader key, and for the same reason `meridian`'s contents can enter training corpora. Date-stamped rows and the planned seeded value-rotation variants are a mitigation, not a solution; contamination becomes likelier over time, and a future row's improvement may partly be memorization.
+
+**Fallback strictness.** 5 of qwen3.5's 12 failed probes are the documented fallback (§3.3) grading format-noncompliant but substantively correct answers (§4): on that row, part of the strict–mean gap is set by the scorer's strictness rather than the model's behavior. The `det-5` hardening is a recorded candidate; per §3.3 and ADR-0006, shipping it bumps `scorer_version` and re-runs the whole protocol — every row, same scorer version — which is why the change is deliberate rather than already made.
+
+**The delegation study is small.** One model, one hop, a tool-less consumer, 30 refuse-probe epochs, 3 laundering events. The 3/3 laundering and 0/12 dropped-refusal counts are exact for this run and directional beyond it; they motivate the follow-ups in §7, they do not establish a rate.
+
+**Policy execution, not discovery.** The scope statement of §1, restated as a limitation: every probe hands the agent the reconciliation policy. These results say nothing about whether an agent can infer a sensible policy from a fragmented org unaided — a separate and harder problem.
+
 ## 7. Future work
 
+Four lines of work follow from the limitations.
+
+**Seeded blueprint variants** — the contamination answer: compile seeded value-rotations of `meridian`, so a row can be reproduced against an answer key that postdates any training cutoff, per the mitigation planned in §3.4.
+
+**Delegation follow-ups.** The §5 baseline makes three questions askable: a weaker or cross-model consumer — does laundering worsen when the consumer cannot evaluate the brief?; a tool-using consumer — does independent re-verification catch laundered fabrications?; and chains deeper than one hop.
+
+**Fallback hardening (`det-5`).** The recorded candidate of §4, under the constraint stated in §6.
+
+**Growing the leaderboard.** More models under the frozen protocol; community rows — a `meridian` run on an unmeasured model, adjudicated before it ships — follow the procedure in [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## References
+
+### External work
+
+- **τ-bench** — arXiv 2024 — <https://arxiv.org/abs/2406.12045>
+- **τ²-bench** — arXiv 2025 — <https://arxiv.org/abs/2506.07982>
+- **BFCL (Berkeley Function-Calling Leaderboard)** — ICML 2025 (PMLR 267) — <https://proceedings.mlr.press/v267/patil25a.html>
+- **AgentBench** — ICLR 2024 — <https://arxiv.org/abs/2308.03688>
+- **GAIA** — arXiv 2023 — <https://arxiv.org/abs/2311.12983>
+- **WebArena** — arXiv 2023 — <https://arxiv.org/abs/2307.13854>
+- **ToolEmu** — ICLR 2024 — <https://arxiv.org/abs/2309.15817>
+- **AgentHarm** — ICLR 2025 — <https://arxiv.org/abs/2410.09024>
+- **CRMArena** — NAACL 2025 — <https://arxiv.org/abs/2411.02305>
+- **CRMArena-Pro** — arXiv 2025 — <https://arxiv.org/abs/2505.18878>
+- **WorkBench** — arXiv 2024 — <https://arxiv.org/abs/2405.00823>
+- **TheAgentCompany** — arXiv 2024 — <https://arxiv.org/abs/2412.14161>
+- **SQuAD 2.0** — ACL 2018 — <https://arxiv.org/abs/1806.03822>
+- **SelfAware** — ACL 2023 Findings — <https://arxiv.org/abs/2305.18153>
+- **AbstentionBench** — arXiv 2025 — <https://arxiv.org/abs/2506.09038>
+- **HaluEval** — EMNLP 2023 — <https://arxiv.org/abs/2305.11747>
+- **Longpre et al. (Entity-Based Knowledge Conflicts in QA)** — EMNLP 2021 — <https://arxiv.org/abs/2109.05052>
+- **ConflictQA** — ICLR 2024 — <https://arxiv.org/abs/2305.13300>
+- **WikiContradict** — arXiv 2024 — <https://arxiv.org/abs/2406.13805>
+- **ConflictBank** — arXiv 2024 — <https://arxiv.org/abs/2408.12076>
+- **Inspect (inspect_ai)** — GitHub, UK AI Security Institute — <https://github.com/UKGovernmentBEIS/inspect_ai>
+- **HELM** — arXiv 2022; TMLR 2023 — <https://arxiv.org/abs/2211.09110>
+
+### Internal artifacts
+
+- **ADR-0001 — the epoch count and the pass^k reducer live together in the task** — [adr/0001-k-lives-in-the-task.md](adr/0001-k-lives-in-the-task.md)
+- **ADR-0003 — the deterministic engine scores the committed answer** — [adr/0003-score-the-committed-answer.md](adr/0003-score-the-committed-answer.md)
+- **ADR-0005 — per-field CRM provenance** — [adr/0005-per-field-crm-provenance.md](adr/0005-per-field-crm-provenance.md)
+- **ADR-0006 — meridian as the public reference org; the leaderboard protocol** — [adr/0006-meridian-and-the-leaderboard-protocol.md](adr/0006-meridian-and-the-leaderboard-protocol.md)
+- **ADR-0007 — reliability under delegation: a two-stage chain, not `handoff()`** — [adr/0007-delegation-mvp.md](adr/0007-delegation-mvp.md)
+- **Leaderboard** — published rows and the commands that regenerate them — [leaderboard.md](leaderboard.md)
+- **Delegation study** — the delegated pair and the hop-flag table — [delegation.md](delegation.md)
+- **Contributing guide** — the community leaderboard-row protocol — [CONTRIBUTING.md](../CONTRIBUTING.md)
