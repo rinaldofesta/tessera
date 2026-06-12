@@ -253,10 +253,10 @@ GET    /api/trends                pass^k/mean series for the Dashboard
 - [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
 - [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
-- [ ] **The public reference org:** the dataset is ✓ shipped — **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (Sonnet 4.6, k=3, det-4: pass^3 86.4%, the only failing category the unresolvable tie — ADR-0006). Next: the leaderboard of frontier models run against it.
+- [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model fabricates tie-breaks on the unresolvable column.
 - [ ] Companion write-up on measuring enterprise-agent reliability.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
-- [ ] **Reliability under delegation:** agent-consuming-agent suites — when one agent's output is another's input, does an unresolved tie *propagate* down the chain, or get caught? The reliability question for the pyramid-of-agents org.
+- [x] **Reliability under delegation:** the MVP is measured — a producer researches, a tool-less consumer commits ([docs/delegation.md](docs/delegation.md), ADR-0007). Finding: the hop is a *faithful conduit* — it never dropped a correct refusal (0/12) and never challenged a fabrication (3/3 laundered, one explicitly rationalized). Next: weaker consumers, tool-using consumers, deeper chains.
 
 ## First Contact
 
