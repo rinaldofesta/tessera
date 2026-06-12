@@ -94,6 +94,38 @@ Comparability is the protocol's product, and its rules are executable or gated, 
 
 ## 4. Experiment 1: a five-model leaderboard
 
+The first experiment is the instrument applied as intended: one org, one frozen protocol, five models, every number traceable to a logged run.
+
+**Setup.** The benchmark instance is the `meridian` org of §3.1 — 22 probes over 10 accounts and 47 claims, split 6 `none`, 6 `resolvable`, 5 `unresolvable`, 5 `void`. Every row was produced under the protocol of §3.4: the `det-4` engine, the full probe set, strict pass^3 at k=3 with mean accuracy alongside. The five models span three serving regimes — two Anthropic API models (claude-sonnet-4-6, claude-haiku-4-5), two OpenAI API models (gpt-4o, gpt-4o-mini), and one open-weights model, qwen3.5 at 9.7B parameters and Q4_K_M quantization, run locally via Ollama. Run dates are stamped per row: claude-sonnet-4-6 on 2026-06-11, the other four on 2026-06-12.
+
+| # | Model | pass^3 | mean | none | resolvable | unresolvable | void | ANSWER fmt | scorer | run date |
+|--:|---|--:|--:|--:|--:|--:|--:|--:|---|---|
+| 1 | anthropic/claude-sonnet-4-6 | **86.4%** | 90.9% | 100% | 100% | 40% | 100% | 98.5% | det-4 | 2026-06-11 |
+| 2 | anthropic/claude-haiku-4-5 | **54.5%** | 68.2% | 66.7% | 66.7% | 0% | 80% | 3% | det-4 | 2026-06-12 |
+| 3 | ollama/qwen3.5:latest | **45.5%** | 71.2% | 83.3% | 33.3% | 0% | 60% | 43.9% | det-4 | 2026-06-12 |
+| 4 | openai/gpt-4o | **45.5%** | 54.5% | 0% | 83.3% | 0% | 100% | 22.7% | det-4 | 2026-06-12 |
+| 5 | openai/gpt-4o-mini | **27.3%** | 40.9% | 0% | 16.7% | 0% | 100% | 92.4% | det-4 | 2026-06-12 |
+
+*The table reproduces [`docs/leaderboard.md`](leaderboard.md); the published `notes` column is carried into the prose below.*
+
+**The headline is the `unresolvable` column, and it reads 40/0/0/0/0.** Each of the five unresolvable probes is a symmetric tie: two systems of record disagree with equal authority, nothing in the stated policy disambiguates, and the policy's own instruction is to refuse. By construction (§3.1), any committed value on these probes is wrong. Under strict pass^3, the best model refuses reliably on two of the five ties (40%); the other four models refuse reliably on none of them. Transcript adjudication identifies the dominant failure: a fabricated tie-break committed as fact — the failure mode §1 named as the one that looks like success.
+
+The per-model profiles, each carrying its published note:
+
+**claude-sonnet-4-6** (strict 86.4%, mean 90.9%) is perfect on `none`, `resolvable`, and `void`; its entire distance from a perfect row is the `unresolvable` column at 40%. Contract compliance is near-total (ANSWER fmt 98.5%), so the tie failures are behavioral, not clerical.
+
+**claude-haiku-4-5** (54.5% / 68.2%) ignores the committed-answer contract — ANSWER fmt 3% — so its grades ride the documented fallback path of §3.3 rather than the committed line. Behaviorally, it fabricates a tie-break on all five symmetric ties; the remaining categories sit at 66.7% (`none`, `resolvable`) and 80% (`void`) — partial reliability everywhere, none on the ties.
+
+**qwen3.5** (45.5% / 71.2%) is the table's most diligent reader — provenance 98% — and its least stable: a mean of 71.2% against a strict 45.5% is capability that does not survive repetition. Of its 12 failed probes, 5 are fallback strictness on format-noncompliant but substantively reasonable answers (ANSWER fmt 43.9%) — the case behind the det-5 candidate below.
+
+**gpt-4o** (45.5% / 54.5%) posts the table's most legible signature: `none` at 0% against `void` at 100%. Adjudication traces it to the cross-silo joins: the model skips the CRM leg of the join and does not adapt when a wrong field-name guess draws the `_available_fields` feedback the CRM returns precisely for that case — 8 of its 12 failed probes.
+
+**gpt-4o-mini** (27.3% / 40.9%) fails both the joins (`none` 0%, `resolvable` 16.7%) and all five ties (`unresolvable` 0%) while honoring the answer contract at 92.4% — format discipline without reliability, and the row that shows most plainly why the two are separate columns.
+
+**Adjudication disclosure.** Per the gate of §3.4, every probe that failed all three epochs in every row was adjudicated from its transcript before publication: 38 verdicts across the three API-model rows run on 2026-06-12 — 36 behavioral failures and 2 grades-on-wording under the documented contract — plus 12 on qwen3.5 (claude-sonnet-4-6's row had passed the same gate at its 2026-06-11 baseline), of which 5 are the documented fallback grading format-noncompliant but substantively correct answers. The decision on record is to publish with structural disclosure — the ANSWER fmt column in every row — rather than bend the scorer per model. A hardening of the fallback, `det-5`, is a recorded candidate (§6, §7); under it, qwen3.5's strict score would read approximately 68.2%.
+
+Every row above is reproducible with a single `inspect eval` invocation plus `tessera-leaderboard` over the resulting logs; the exact commands live in [`docs/leaderboard.md`](leaderboard.md).
+
 ## 5. Experiment 2: reliability under delegation
 
 ## 6. Limitations
