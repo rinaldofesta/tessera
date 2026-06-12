@@ -10,7 +10,7 @@
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](LICENSE-DATA.md)
 [![leaderboard](https://img.shields.io/badge/leaderboard-5_models-orange)](docs/leaderboard.md)
 
-> ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. A first model has been measured on the 4-probe reference org (see [First Contact](#first-contact)) — that is not a leaderboard, and I will not pretend it is one. Open issues, tell me where I am wrong.
+> ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. Five models measured on the 22-probe meridian org, strict pass^3: see the [leaderboard](docs/leaderboard.md). Open issues, tell me where I am wrong.
 
 ---
 
