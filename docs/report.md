@@ -46,11 +46,51 @@ Tessera inherits from six families of prior work; we take each in turn, closing 
 
 ### 3.1 Blueprint: claims, probes, and a conflict taxonomy
 
+The method has one organizing principle: every design decision exists because a concrete failure — observed in this project's own history — would otherwise be mis-scored. Each subsection below states the decision, names the failure, and cites the ADR where the decision is on record. The first decision is the data shape itself.
+
+A benchmark instance is a Blueprint: a declarative description of a fragmented organization, made of claims and probes. A claim is an atomic fact — subject, predicate, value — that lives in exactly one silo, optionally timestamped and optionally carrying declared authority; a rendering directive materializes it either as a structured CRM field or as a sentence in a markdown document. A probe is a question over those claims that declares its conflict type, its expected behavior (answer or refuse), the expected answer where one exists, and the claims an agent must consult to earn provenance credit.
+
+Conflicts come in exactly four kinds. `none`: the silos agree, or only one speaks. `resolvable`: the silos disagree but a stated rule decides — the most recent assertion wins, or a source with declared binding authority does. `unresolvable`: the silos disagree with symmetric authority and nothing disambiguates; the correct behavior is committed refusal. `void`: no record exists anywhere; the correct behavior is again refusal. This taxonomy is what lets §4 report refusal as a per-category measurement rather than an impression: an unresolvable probe is constructed so that any committed answer is a fabrication.
+
+Model validators enforce coherence at load time (`src/tessera/models.py`): a refuse-probe must carry no expected answer and an answer-probe must carry one; a resolvable probe must name its resolution rule; a void probe must expect refusal and reference no claims; every reference and expected source must resolve to an existing claim, and claim ids must be unique. The failure these validators catch is the quiet one in hand-authored datasets: a probe whose metadata grades contradictory expectations — labeled refuse while carrying an answer to match, or labeled void while pointing at records that exist. Such a blueprint does not produce a subtly wrong score; it fails validation and never runs.
+
+The public benchmark instance is the `meridian` org: 10 accounts, 47 claims, 22 probes, designed so that each conflict category is measured by several probes rather than one. §4 gives the per-category split.
+
 ### 3.2 Deterministic compilation into a fragmented environment
+
+A compiler turns the org definition into the environment the agent actually touches: a CRM `db.json` mapping subject → {predicate → {value, asserted_at}}, one markdown document per prose claim, and a `manifest.json` mapping every claim id to its silo, artifact, and field-level locator — the bridge the scorer later uses to resolve a recorded tool call back to a specific claim. Two MCP stdio servers expose the result: a CRM lookup tool (`crm_lookup`) and a docs reader (`docs_search`, `docs_get_file`). The servers are deliberately dumb file servers; the compiler is the only component that understands fracture semantics — it even rejects intra-silo collisions, so every contradiction is cross-silo, placed by the blueprint and never improvised by the harness.
+
+Compilation is deterministic and pure, and both properties are pinned by tests (`tests/test_compiler.py`): the same blueprint always yields byte-identical structured artifacts (the CRM database and the manifest), and artifact construction performs no I/O. The failure this catches is environment drift — two runs of the "same" benchmark facing subtly different orgs, which would silently invalidate every cross-run comparison §3.4 depends on. With a deterministic compiler, a published row's environment is a function of the blueprint and nothing else.
+
+One line restates the scope from §1, because this is where it is materialized: the task prompt states the reconciliation policy — a source that declares itself binding overrides the others; otherwise the most recent wins; refuse when neither rule disambiguates or no record exists. Tessera scores policy execution, not policy discovery.
 
 ### 3.3 Scoring the committed answer (`det-4`)
 
+The deterministic engine scores three axes — accuracy, provenance, committed refusal — on the answer the agent commits to, and every rule in it exists because an earlier rule mis-scored a real transcript.
+
+**The committed line decides accuracy and refusal** ([ADR-0003](adr/0003-score-the-committed-answer.md)). The task prompt, and the submit tool's own description, mandate a final `ANSWER: <value>` line, with `ANSWER: cannot determine` as the abstention form; the last such line wins, since models self-correct. When the line exists, only it is graded — on both axes. The failure this catches is abstain-then-hallucinate: under the first engine's whole-transcript keyword scan, a cautious hedge followed by a fabricated committed value was credited as a refusal — the exact fabricate-instead-of-refuse failure Tessera exists to surface, scored as its opposite. Under `det-4`, `ANSWER: cannot determine` refuses (only when the line leads with the abstention — a justification tail after a committed value is a commitment); a committed value beneath hedged reasoning does not. Symmetrically, transparent hedging above a correct committed answer is never penalized.
+
+**Accuracy matching is boundary-guarded.** Raw substring matching — the first engine's actual behavior — credited "4 hours" inside "24 hours" and "15%" inside "115%". The `det-4` pattern rejects adjacent alphanumerics, and digit-leading values also reject a preceding dot.
+
+**Provenance is per-field and response-based** ([ADR-0005](adr/0005-per-field-crm-provenance.md)). Each recorded tool call is paired with its result via `tool_call_id`, and a CRM claim is credited only when its predicate is a key of the record the lookup actually returned; `NOT_FOUND`, errored, and unanswered calls credit nothing. The failure: the earlier scorer credited the call, not the response — an agent earned provenance for a lookup that returned nothing, and a single lookup on a subject credited every CRM claim about it. Credit now means the field's data demonstrably reached the agent's context. Docs credit stays call-based: one file per prose claim, the path is the address.
+
+**Without an `ANSWER:` line, a documented fallback applies**: the expected value must appear in the response, and no distractor value may appear after its last mention — last-mention-wins, so the ideal transparent answer (cite the stale value, then commit to the right one) passes, while committing to the stale value does not. Distractors are derived mechanically from the blueprint's conflicting (subject, predicate) claim groups, never hand-listed. The fallback is harsher on transparent prose: it grades the whole response under an ordering constraint rather than one committed line, and its residual gaps ("X, not Y" negations, date-format paraphrases) are documented in `scoring.py` — so contract compliance is itself part of what is measured: `answer_format_ok` is stamped into every score and published per row as `ANSWER fmt`.
+
+**Scoring semantics are versioned.** Every score records its `scorer_version` — `det-4` today — and any semantic change bumps the version and re-partitions trend comparisons, because rule changes move rates for reasons unrelated to the models. An LLM-judged engine (`llm-2`), which shares the deterministic provenance signal and refuses to run with a grader equal to the model under test, exists as an independent cross-check; every published leaderboard row is scored by `det-4`.
+
 ### 3.4 The comparability protocol
+
+Comparability is the protocol's product, and its rules are executable or gated, not editorial.
+
+**k lives in the task** ([ADR-0001](adr/0001-k-lives-in-the-task.md)). The task definition owns both the epoch count and the strict `pass_k` reducer through a single parameter, so the two cannot diverge. The failure on record: inspect_ai merges them independently, and an eval-level epochs override — forwarded by this project's own product UI — changed the count while silently keeping the task's pinned reducer. The published number would have been pass^3 computed over a different number of repetitions: a metric whose name no longer means what it says.
+
+**The headline is strict pass^k at k=3**: a probe counts only if all k repetitions pass. Mean accuracy is published alongside, as capability — never as the headline (§1).
+
+**Every row is frozen to the same protocol**: the deterministic engine and the full probe set ([ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)); the task prompt is a single shared constant, so per-model prompt tuning has no mechanism to exist. The freeze is enforced by code, not convention: the `tessera-leaderboard` generator refuses to mix rows with differing `scorer_version`, org, or k, aborting with a hard error — one leaderboard, one protocol — rather than emitting a table with a footnote.
+
+**The blueprint is public — honesty over purity** ([ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)). `meridian` is the answer key by design: anyone can reproduce a row with no grader key, and for the same reason training-data contamination becomes likelier over time. Rows are date-stamped, the risk is stated rather than silent, and seeded value-rotation variants are the planned mitigation once contamination becomes measurable.
+
+**Adjudication gates publication.** Every probe that fails all k repetitions in a published row is adjudicated from its transcript before the row ships, so a consistent failure is diagnosed, not merely counted. The gate has teeth: adjudication of the first `meridian` baseline surfaced a harness flaw — an agent's wrong field-name guess came back as an ambiguous empty record — so the tool was fixed to name unknown and available fields the way a real API would, and the run was redone. Numbers are accepted only after that gate.
 
 ## 4. Experiment 1: a five-model leaderboard
 
