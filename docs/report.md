@@ -5,7 +5,7 @@ Repository: <https://github.com/rinaldofesta/tessera> · Protocol: [ADR-0006](ad
 
 ## Abstract
 
-*(written last — Task 10)*
+Enterprise knowledge fragments across systems of record and contradicts itself: a CRM and a documentation wiki carry different values for the same field, with nothing that gives either precedence. Agents asked questions over this substrate commit confident answers anyway, and the fabricated resolution is the failure that looks like success. We present Tessera, an open benchmark generator: a declarative Blueprint of claims and probes is compiled deterministically into a fragmented synthetic organization, served to the agent under test over MCP — the access surface a production agent actually uses. A deterministic scorer grades the committed answer on three axes — accuracy, per-field provenance read from the agent's real MCP traffic, and committed refusal — under versioned rules (det-4), and a frozen comparability protocol keeps published rows comparable: strict pass^k as the headline, executable guards that abort non-comparable configurations, and transcript adjudication of every consistently failing probe. On the public meridian org, none of the five evaluated models reliably refuses the symmetric tie: the unresolvable column reads 40/0/0/0/0 at k=3, and the dominant failure is a fabricated tie-break committed as fact. A producer→consumer delegation hop is a faithful conduit: it destroyed no correct refusal (0/12) and relayed every upstream fabrication downstream as settled fact (3/3). Code, blueprints, logs, and the leaderboard are open; every published row's consistent failures are adjudicated from transcripts before publication.
 
 ## 1. Introduction
 
