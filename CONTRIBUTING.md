@@ -77,8 +77,8 @@ Read the index before changing anything load-bearing.
 ## Adding an org / dataset
 
 An org is a **Blueprint**: claims (atomic facts, one per silo) + probes (questions
-with expected behavior). Start from `blueprints/your.json` or
-`src/tessera/examples/meridian_org.py` (the gold standard: ≥5 probes per conflict
+with expected behavior). Start from `src/tessera/examples/your_org.py` (the starter
+template) or `src/tessera/examples/meridian_org.py` (the gold standard: ≥5 probes per conflict
 type, both resolution rules, authority probes where the binding doc is *older* than
 the CRM row, anti-prior values, no template shortcuts). Offline gates in
 `tests/test_meridian_org.py` show what a benchmark-grade org must pin. Validators
@@ -107,5 +107,6 @@ resolution_rule, void ⇒ no references).
 ## License of contributions
 
 Code contributions are accepted under [Apache-2.0](LICENSE); dataset contributions
-under [CC-BY-4.0](LICENSE-DATA.md). Submitting a PR states you have the right to
-license your contribution under those terms (no CLA).
+under [CC-BY-4.0](LICENSE-DATA.md). By submitting a PR you license your
+contribution under those terms and represent that you have the right to do so
+(no CLA).

@@ -7,8 +7,10 @@ authors:
     given-names: Rinaldo
 repository-code: "https://github.com/rinaldofesta/tessera"
 url: "https://github.com/rinaldofesta/tessera"
-license: Apache-2.0
-year-of-publication: 2026
+license:
+  - Apache-2.0
+  - CC-BY-4.0
+date-released: "2026-06-12"
 keywords:
   - ai-agents
   - evals
