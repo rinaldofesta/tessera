@@ -128,6 +128,40 @@ Every row above is reproducible with a single `inspect eval` invocation plus `te
 
 ## 5. Experiment 2: reliability under delegation
 
+Enterprise agents increasingly hand work to other agents: one researches, another acts on the findings. The second experiment asks whether the reliability §4 measured survives that handoff — not as an abstract degradation rate, but as two specific failure modes at the producer→consumer boundary. The hop can destroy a correct refusal: a producer's committed abstention overridden by a downstream agent that commits anyway. Or it can launder a fabrication: an upstream invented value relayed downstream as settled fact, arriving stripped of whatever might have marked it as a guess.
+
+**Design.** A producer agent with the MCP tools researches the org and submits a brief; a tool-less consumer agent receives only the question plus the producer's submitted answer, and commits the final answer. Same model on both stages (claude-sonnet-4-6), same prompt contract — the consumer carries the producer's reconciliation policy and `ANSWER:` line obligations — and the same `det-4` scorer; the only variable is the hop. The two stages' transcripts are merged into one, which is what lets `det-4` apply unchanged: provenance reads the producer's real MCP traffic (1.0 across all 66 epochs of the delegated run), while accuracy and refusal read the consumer's committed line. Two hop flags recorded per refuse-probe epoch classify the boundary: `flag_dropped` — the producer refused, the consumer committed anyway — and `conflict_laundered` — the producer fabricated, the consumer relayed it.
+
+**Why not the framework's native `handoff()`** ([ADR-0007](adr/0007-delegation-mvp.md)). Verified against the installed version of inspect_ai, `handoff()` cannot satisfy the experiment's two invariants at once. Its default content-only output filter converts the sub-agent's tool calls to plain text and its tool messages to user messages, so the producer's traffic would not survive as structured tool events and provenance would always score zero. Disabling the filter restores the tool events, but handoff shares one conversation between the stages, so the restored events reach the consumer too: the scorer's view and the consumer's view cannot diverge, and once the raw tool results leak to the consumer, nothing has actually been delegated. The implementation is therefore a custom two-stage chain composed through the framework's agent-composition API — two `react()` agents sequenced via `inspect_ai.agent.run()` — with the producer's submitted brief carried to the consumer, and to the scorer, through the per-sample store. The producer is exactly the direct task's agent, so §4's claude-sonnet-4-6 row is the clean counterfactual.
+
+The pair, under the same comparability guard as §4:
+
+| # | Run | pass^3 | mean | none | resolvable | unresolvable | void | scorer | run date |
+|--:|---|--:|--:|--:|--:|--:|--:|---|---|
+| 1 | claude-sonnet-4-6 (delegated) | **90.9%** | 95.5% | 100% | 100% | 60% | 100% | det-4 | 2026-06-12 |
+| 2 | claude-sonnet-4-6 (direct) | **86.4%** | 90.9% | 100% | 100% | 40% | 100% | det-4 | 2026-06-11 |
+
+And the hop flags, over the 30 refuse-probe epochs of the delegated run:
+
+| Outcome | Count | Reading |
+|---|--:|---|
+| producer refused → consumer refused | 27 | the flag survived the hop |
+| producer refused → consumer committed (`flag_dropped`) | **0** | the hop never destroyed a correct abstention |
+| producer fabricated → consumer relayed (`conflict_laundered`) | **3** | every upstream fabrication arrived downstream as settled fact |
+| producer fabricated → consumer refused (rescue) | 0 | the hop never repaired one either |
+
+Four findings:
+
+1. **The hop is a faithful conduit — and that is the risk.** The consumer never overrode a correct refusal (`flag_dropped` 0/12 opportunities) and never challenged a fabrication (`conflict_laundered` 3/3). Delegation neither degraded nor improved the decision; it inherited it. A fabricated tie-break laundered at stage one arrives at stage two wearing a tie.
+
+2. **The laundering is articulate.** On `q_quill_renewal` the consumer did not just relay the producer's invented precedence — it rationalized it: "the analyst applied a tiebreaker by favoring the dedicated renewal tracker … which is a reasonable judgment call." The further the answer travels from the evidence, the more confident the prose gets.
+
+3. **The headline delta is producer-side sampling noise, not a hop effect.** The delegated 90.9% over the direct 86.4% does not mean delegation improved reliability. The producer is the direct task's exact agent; in this run it fabricated in 3/15 unresolvable epochs against 5/15 in the baseline, and a 5-probe category at k=3 swings by that much. The hop-flag table, not the topline, is the result.
+
+4. **Scope.** One hop, a tool-less consumer, the same model on both stages — the explicit non-goals of ADR-0007 bound the claim. The questions this baseline makes askable — a weaker consumer, a tool-using consumer, deeper chains — are taken up in §7.
+
+Both tables reproduce [`docs/delegation.md`](delegation.md), which carries the exact `inspect eval` and `tessera-leaderboard` commands to regenerate the pair.
+
 ## 6. Limitations
 
 ## 7. Future work
