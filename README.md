@@ -4,9 +4,11 @@
 
 > *tessera* (n.): a single tile of a mosaic. No tile is the picture. The picture is how they fit.
 
+[![ci](https://github.com/rinaldofesta/tessera/actions/workflows/ci.yml/badge.svg)](https://github.com/rinaldofesta/tessera/actions/workflows/ci.yml)
 [![status](https://img.shields.io/badge/status-v0-brightgreen)](#status-and-roadmap)
-[![license](https://img.shields.io/badge/code-Apache--2.0-blue)](#license)
-[![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](#license)
+[![license](https://img.shields.io/badge/code-Apache--2.0-blue)](LICENSE)
+[![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](LICENSE-DATA.md)
+[![leaderboard](https://img.shields.io/badge/leaderboard-5_models-orange)](docs/leaderboard.md)
 
 > ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. A first model has been measured on the 4-probe reference org (see [First Contact](#first-contact)) — that is not a leaderboard, and I will not pretend it is one. Open issues, tell me where I am wrong.
 
@@ -247,6 +249,8 @@ GET    /api/trends                pass^k/mean series for the Dashboard
 
 > **Key-free by design.** The entire test suite runs offline with no API key. Model-graded paths are exercised with injected stub judges, and Inspect logs are fabricated in-memory with `write_eval_log`. A live `inspect eval` is the only thing that needs a key.
 
+Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR process), and how to add an org: **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
 ## Status and roadmap
 
 - [x] **v0 (shipped mid-2026)** generator, MCP harness, one core task suite, the scorer, a runnable quickstart.
@@ -281,11 +285,11 @@ Honesty is what makes an eval citable.
 
 ## Contributing
 
-Early and open. The most useful contributions now: a real enterprise reasoning task where good agents should refuse but do not, critiques of the metric definitions (especially provenance and refusal scoring), and realistic fragmentation patterns the generator should model. Open an issue before a large PR.
+Early and open — **[CONTRIBUTING.md](CONTRIBUTING.md)** has the full guide (setup is two commands; the whole suite runs key-free in ~1s). The most useful contributions now: a real enterprise reasoning task where good agents should refuse but do not (*new org proposal* template), critiques of the metric definitions — a **scoring dispute with a transcript is a first-class contribution** (dedicated issue template), realistic fragmentation patterns the generator should model, and leaderboard rows for unmeasured models under the [ADR-0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md) protocol. Open an issue before a large PR. Community standards: [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md).
 
 ## Citation
 
-If you use Tessera, please cite it. A companion write-up is in progress; until then:
+If you use Tessera, please cite it ([CITATION.cff](CITATION.cff) — GitHub's "Cite this repository" button works). A companion write-up is in progress; until then:
 
 ```bibtex
 @software{festa_tessera_2026,
@@ -302,5 +306,5 @@ Built by **Rinaldo Festa**. I build AI agents for enterprises, then I build the 
 
 ## License
 
-- **Code:** Apache-2.0
-- **Synthetic dataset:** CC-BY-4.0
+- **Code:** [Apache-2.0](LICENSE)
+- **Synthetic datasets** (blueprints, example orgs, compiled artifacts, pinned logs): [CC-BY-4.0](LICENSE-DATA.md)

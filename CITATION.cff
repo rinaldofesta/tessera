@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use Tessera, please cite it as below."
+title: "Tessera: an open methodology and generator for enterprise AI-agent reliability evals"
+type: software
+authors:
+  - family-names: Festa
+    given-names: Rinaldo
+repository-code: "https://github.com/rinaldofesta/tessera"
+url: "https://github.com/rinaldofesta/tessera"
+license: Apache-2.0
+year-of-publication: 2026
+keywords:
+  - ai-agents
+  - evals
+  - reliability
+  - benchmark
+  - mcp
+  - provenance
+  - refusal
+  - inspect-ai

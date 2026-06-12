@@ -1,0 +1,7 @@
+# Default owner for everything — review requests route here automatically.
+* @rinaldofesta
+
+# The scorer and the benchmark protocol are the published numbers' foundation.
+/src/tessera/evals/ @rinaldofesta
+/docs/adr/ @rinaldofesta
+/blueprints/ @rinaldofesta
