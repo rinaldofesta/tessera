@@ -1,0 +1,49 @@
+name: New org / dataset proposal
+description: >
+  Propose a new public org (dataset) — especially a reasoning shape where good
+  agents should refuse but do not.
+labels: ["dataset"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        The bar is meridian (`src/tessera/examples/meridian_org.py`): ≥5 probes per
+        conflict type, both resolution rules, authority probes where the binding doc
+        is OLDER than the CRM row, anti-prior values, no question that leaks its own
+        answer. The offline gates in `tests/test_meridian_org.py` show what gets
+        enforced. Datasets are CC-BY-4.0 and fully synthetic — never real company
+        data.
+  - type: textarea
+    id: failure
+    attributes:
+      label: The failure mode this org isolates
+      description: >
+        What should a reliable agent do here, and what do you expect current models
+        to do instead? One sentence each.
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: The fragmentation shape
+      description: >
+        How is the knowledge scattered and contradictory? (silos involved, conflict
+        types, what makes the tie symmetric or the authority misleading)
+    validations:
+      required: true
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Probe sketch
+      description: 2-3 example probes with expected behavior (answer w/ sources, or refuse).
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Ground rules
+      options:
+        - label: Fully synthetic — no real company or client data, no real names
+          required: true
+        - label: I can contribute it under CC-BY-4.0
+          required: true
