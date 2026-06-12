@@ -1,0 +1,33 @@
+name: Bug report
+description: Something is broken in the harness, the API, the report layer, or the UI.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >
+        Exact commands. If a test can show it, even better — the suite is key-free,
+        so a failing test is the gold-standard report.
+      render: bash
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit / environment
+      placeholder: "main @ <sha>, Python 3.12, macOS"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: Trim to the relevant part. Never paste API keys or .env contents.

@@ -1,0 +1,51 @@
+name: Scoring dispute / adjudication request
+description: >
+  You believe the scorer graded a probe wrong — a right answer failed, a wrong one
+  passed, or a refusal was misread. This is a first-class contribution.
+labels: ["scoring-dispute"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Every published 0/3 probe was adjudicated from its transcript before its
+        row shipped — disputes get the same treatment. The documented limitations
+        live at the bottom of `src/tessera/evals/scoring.py`; a dispute that shows
+        a limitation biting real behavior is exactly how the scorer gets hardened
+        (det-5 candidates start here).
+  - type: input
+    id: probe
+    attributes:
+      label: Probe and run
+      placeholder: "q_veltrix_seats, epoch 3, meridian, det-4, <model>"
+    validations:
+      required: true
+  - type: textarea
+    id: grade
+    attributes:
+      label: The grade you dispute
+      description: Which axis (accuracy / provenance / refusal) and what the scorer said.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Transcript evidence
+      description: >
+        The decisive part of the transcript. Pull it with:
+        `read_eval_log_sample("<log>.eval", "<probe_id>", epoch=N)` — or attach the
+        .eval log.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: claim
+    attributes:
+      label: Your claim
+      options:
+        - The answer was semantically correct and committed, but graded wrong
+        - Provenance was under- or over-credited vs the recorded tool traffic
+        - A refusal (or commitment) was misread
+        - The probe/dataset itself is wrong (answer key, conflict design, leakage)
+        - Other
+    validations:
+      required: true
