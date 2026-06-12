@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose an improvement to the harness, scorer, report layer, or UI.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can't you do (or trust) today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: >
+        Sketch is fine. If it touches scoring semantics or the benchmark protocol,
+        note that explicitly — those changes need a scorer_version bump and an ADR
+        (see docs/adr/ and CONTRIBUTING.md).
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Does this touch…
+      options:
+        - label: scoring semantics (needs scorer_version bump + ADR)
+        - label: the benchmark protocol / meridian (frozen per ADR-0006)
+        - label: the API response shapes (needs contract regeneration in the same commit)
