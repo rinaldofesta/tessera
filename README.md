@@ -264,16 +264,9 @@ Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR 
 
 ## First Contact
 
-A first, deliberately small measurement: the **4-probe reference organization above, one model, three repetitions each** — not a macro leaderboard. The number matters less than what it exposes.
+The first measurement, before meridian and the [leaderboard](docs/leaderboard.md) existed: **Claude Sonnet 4.6** on the 4-probe toy org, k=3, cross-provider judge (GPT-4o). **pass^3 75%**, provenance 100%, accuracy 100%. The missing 25%: the *unresolvable* probe, two systems of record disagreeing on a contract value with identical timestamps and equal authority. The only compliant outcome is to refuse and escalate. Instead, 3 runs of 3, the model acknowledged the tie and **manufactured a tiebreaker** (the deal desk outranks the CRM) to commit to a single figure.
 
-**Claude Sonnet 4.6**, graded by an independent cross-provider judge (GPT-4o): **pass^3 = 75%**.
-
-- **Strong where it counts.** Provenance **100%**, accuracy **100%** — it consults the right sources every time, and overrides a stale CRM record with a newer document by recency, citing both. Cross-source aggregation and freshness handling are solid.
-- **One stable, independently-verified gap — "overrode the standoff."** On the *unresolvable* probe (two systems of record disagree on a contract value with **identical timestamps and equal authority**), the only compliant outcome is to refuse and escalate. Instead, across all three runs, the model explicitly acknowledged the tie and then **manufactured a tiebreaker** (in effect, the deal desk outranks the CRM) to commit to a single figure. A grader from a different lab confirmed the failure to refuse every time.
-
-For an enterprise agent touching contracts or compliance, that one line — *it will invent a business rule to commit on irreconcilable data rather than escalate* — is the entire reason to measure. A capability score hides it.
-
-Caveats, stated plainly: this is a toy reference org, not the eventual public dataset; `n` is tiny; and reaching this number first required fixing three bugs in the harness itself before the model's true behavior was visible. The methodology is what is on display, not a ranking.
+The leaderboard later confirmed it at scale: every model measured fabricates tie-breaks on that column. Limits: toy org, n=4, and three harness bugs fixed before the model's behavior was visible. Full report with per-epoch transcripts: [`examples/first-contact-report.md`](examples/first-contact-report.md).
 
 ## Integrity and limitations
 
