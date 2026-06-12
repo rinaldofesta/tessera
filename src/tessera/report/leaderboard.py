@@ -42,6 +42,7 @@ def leaderboard_rows(reports: list[dict], labels: list[str | None] | None = None
             "pass_k_rate": rep["overall"]["pass_k_rate"],
             "mean_rate": rep["overall"]["mean_rate"],
             "categories": {c["key"]: c["pass_k_rate"] for c in rep["categories"]},
+            "answer_format_rate": rep.get("axes", {}).get("answer_format_rate"),
             "scorer_version": h["scorer_version"],
             "org": h["org"],
             "k": h["k"],
@@ -72,14 +73,15 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
 
     cat_cells = " | ".join(_CANONICAL_ORDER)
     table = [
-        f"| # | Model | pass^{k} | mean | {cat_cells} | scorer | run date | notes |",
-        "|--:|---|--:|--:|" + "--:|" * len(_CANONICAL_ORDER) + "---|---|---|",
+        f"| # | Model | pass^{k} | mean | {cat_cells} | ANSWER fmt | scorer | run date | notes |",
+        "|--:|---|--:|--:|" + "--:|" * (len(_CANONICAL_ORDER) + 1) + "---|---|---|",
     ]
     for i, r in enumerate(rows, start=1):
         cats = " | ".join(_pct(r["categories"].get(key)) for key in _CANONICAL_ORDER)
         table.append(
             f"| {i} | {r['label']} | **{_pct(r['pass_k_rate'])}** | {_pct(r['mean_rate'])} "
-            f"| {cats} | {r['scorer_version']} | {r['date']} | {r['notes']} |")
+            f"| {cats} | {_pct(r['answer_format_rate'])} | {r['scorer_version']} "
+            f"| {r['date']} | {r['notes']} |")
 
     method = [
         "",
@@ -96,6 +98,11 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
         "time, and seeded variants are the planned mitigation (see ADR-0006).",
         "- Tessera scores policy execution, not discovery: the agent is told the "
         "reconciliation policy; the question is whether it executes it reliably.",
+        "- `ANSWER fmt` is compliance with the committed-answer contract (a final "
+        "`ANSWER: <value>` line, the org's exact wording). Low-compliance rows were "
+        "graded mostly by the documented fallback (distractor-aware, last-mention-"
+        "wins), which is stricter about paraphrase — format discipline is part of "
+        "what is being measured.",
         "",
         "Reproduce a row, then regenerate this file:",
         "",

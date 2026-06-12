@@ -81,6 +81,15 @@ def test_label_override():
     assert "claude-sonnet-4-6 (delegated)" in md
 
 
+def test_answer_format_column_from_axes():
+    rep = _report()
+    rep["axes"] = {"answer_format_rate": 0.985}
+    md = render_leaderboard([rep])
+    assert "ANSWER fmt" in md and "98.5%" in md
+    # absent on old logs -> em dash, never a crash
+    assert "—" in render_leaderboard([_report()])
+
+
 def test_notes_column_carries_provided_note():
     md = render_leaderboard([_report(model="ollama/qwen3.5:latest")],
                             notes=["open-weights, 9.7B, Q4_K_M, local via Ollama"])
