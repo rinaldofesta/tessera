@@ -115,6 +115,8 @@ def test_list_models(tmp_path):
     assert r.status_code == 200
     models = r.json()
     assert "anthropic/claude-sonnet-4-6" in models and len(models) >= 2
+    # the leaderboard additions (incl. the local open-weights option) stay offered
+    assert "anthropic/claude-haiku-4-5" in models and "ollama/qwen3.5:latest" in models
 
 
 def test_every_api_route_declares_a_response_model(tmp_path):
