@@ -1,7 +1,7 @@
 # STATE.md — Tessera
 
 > Fotografia del repo al **2026-06-12**, dopo la sessione **leaderboard + delegation MVP** (branch `leaderboard-and-delegation`): `tessera-leaderboard` (generatore ADR-0006), **leaderboard a 5 modelli pubblicata** (`docs/leaderboard.md`), **delegation MVP misurato** (`tessera_probes_delegated`, ADR-0007, `docs/delegation.md`).
-> Verificato: suite test **210 passed** (key-free, offline) · build SPA ok · **leaderboard meridian (det-4, k=3, ogni 0/3 aggiudicato da transcript)**: Sonnet 4.6 **86,4%** · Haiku 4.5 54,5% · qwen3.5-9.7B 45,5% · GPT-4o 45,5% · GPT-4o-mini 27,3% — colonna `unresolvable`: 40/0/0/0/0, **nessun modello regge il pareggio simmetrico**. Delegazione (Sonnet, 1 hop): `flag_dropped` 0/12, `conflict_laundered` 3/3 — il hop è un condotto fedele, anche per le fabbricazioni.
+> Verificato: suite test **210 passed** (key-free, offline) · build SPA ok · **leaderboard meridian (det-4, k=3, ogni 0/3 aggiudicato da transcript)**: Sonnet 4.6 **86,4%** · Haiku 4.5 54,5% · qwen3.5-9.7B 45,5% · GPT-4o 45,5% · GPT-4o-mini 27,3% — colonna `unresolvable`: 40/0/0/0/0, **nessun modello regge il pareggio simmetrico**. Delegazione (Sonnet, 1 hop): `flag_dropped` 0/27 (incl. i 12 sui pareggi irrisolvibili), `conflict_laundered` 3/3 — il hop è un condotto fedele, anche per le fabbricazioni.
 
 ---
 
