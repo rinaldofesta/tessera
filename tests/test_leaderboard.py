@@ -96,24 +96,37 @@ def test_notes_column_carries_provided_note():
     assert "open-weights, 9.7B, Q4_K_M, local via Ollama" in md
 
 
+def _fabricated_eval_log():
+    # Self-contained fabrication (same idiom as test_serialize.py): no model calls.
+    from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSample, EvalSpec
+    from inspect_ai.scorer import Score
+
+    samples = [
+        EvalSample(
+            id="q1", epoch=e, input="Q?", target="4 hours",
+            metadata={"conflict_type": "none", "expected_behavior": "answer",
+                      "expected_answer": "4 hours", "expected_sources": ["crm"]},
+            scores={"deterministic_reliability_scorer": Score(
+                value="C", answer="4 hours",
+                metadata={"passed": True, "accuracy_ok": True, "provenance_ok": True,
+                          "refusal_ok": True, "consulted": ["crm"],
+                          "scorer_version": "det-4"})})
+        for e in (1, 2, 3)
+    ]
+    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="tessera_probes",
+                    dataset=EvalDataset(), model="anthropic/claude-sonnet-4-6",
+                    config=EvalConfig(epochs=3),
+                    task_args={"judge": "deterministic", "org": "meridian", "k": 3})
+    return EvalLog(eval=spec, samples=samples, location="./logs/run.eval")
+
+
 def test_cli_writes_markdown_from_eval_logs(tmp_path):
     from inspect_ai.log import write_eval_log
 
     from tessera.report.cli import leaderboard_main
-    from tests.test_serialize import _eval_log, _eval_sample
 
-    samples = [
-        _eval_sample("q1", e, conflict_type="none", expected_behavior="answer",
-                     passed=True, accuracy_ok=True, provenance_ok=True, refusal_ok=True,
-                     consulted=["crm"], expected_sources=["crm"], answer="4 hours",
-                     scorer_name="deterministic_reliability_scorer", scorer_version="det-4")
-        for e in (1, 2, 3)
-    ]
-    log = _eval_log(samples, judge="deterministic", grader=None)
-    log.eval.task_args["org"] = "meridian"
-    log.eval.task_args["k"] = 3
     p = tmp_path / "run.eval"
-    write_eval_log(log, str(p))
+    write_eval_log(_fabricated_eval_log(), str(p))
 
     out = tmp_path / "leaderboard.md"
     rc = leaderboard_main([str(p), "--label", "sonnet-smoke", "-o", str(out)])
