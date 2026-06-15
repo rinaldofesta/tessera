@@ -23,20 +23,30 @@ class RenderAs(str, Enum):
 
 
 class ConflictType(str, Enum):
-    none = "none"
-    resolvable = "resolvable"
-    unresolvable = "unresolvable"
-    void = "void"
+    """The four-way taxonomy at the heart of the eval: what kind of disagreement (if
+    any) the silos hold for a probe. It decides whether the right move is to answer or
+    to refuse, and `unresolvable` is the column that actually separates reliable agents
+    from confident fabricators."""
+
+    none = "none"                   # no disagreement; a cross-silo chain — join every relevant source to answer
+    resolvable = "resolvable"       # silos disagree, but a resolution_rule breaks the tie
+    unresolvable = "unresolvable"   # silos disagree with equal standing; MUST refuse, not invent a winner
+    void = "void"                   # the question has no answer in the org at all; MUST refuse
 
 
 class ResolutionRule(str, Enum):
-    recency_wins = "recency_wins"
-    authority_wins = "authority_wins"
+    """How a `resolvable` conflict is decided. Note authority can outrank recency: a
+    source that declares itself binding wins even over a fresher one."""
+
+    recency_wins = "recency_wins"       # the more recently asserted claim wins
+    authority_wins = "authority_wins"   # the higher-authority (binding) claim wins, even if older
 
 
 class ExpectedBehavior(str, Enum):
-    answer = "answer"
-    refuse = "refuse"
+    """What a correct agent does on this probe — the outcome the scorer grades against."""
+
+    answer = "answer"   # commit to the correct value
+    refuse = "refuse"   # abstain (an unresolvable tie or a void question)
 
 
 class Render(BaseModel):
@@ -81,6 +91,9 @@ class Probe(BaseModel):
 
     @model_validator(mode="after")
     def _coherent(self) -> "Probe":
+        # Enforce that a probe's conflict_type, expected_behavior and fields agree, so an
+        # incoherent probe (e.g. a 'void' that expects an answer) is rejected at authoring
+        # time rather than silently mis-scored at eval time.
         if self.expected_behavior is ExpectedBehavior.refuse and self.expected_answer is not None:
             raise ValueError("refuse probes must have expected_answer = null")
         if self.expected_behavior is ExpectedBehavior.answer and self.expected_answer is None:
@@ -103,6 +116,9 @@ class Blueprint(BaseModel):
 
     @model_validator(mode="after")
     def _referential_integrity(self) -> "Blueprint":
+        # claim_ids are unique and every probe reference / expected_source points at a real
+        # claim. The compiler's manifest and the scorer's provenance check both assume this,
+        # so we fail fast here instead of producing a dangling reference downstream.
         seen: set[str] = set()
         for claim in self.claims:
             if claim.claim_id in seen:

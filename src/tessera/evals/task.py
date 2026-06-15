@@ -19,6 +19,9 @@ from tessera.evals.scoring import (
 )
 from tessera.examples import get_blueprint
 
+# The reconciliation policy the agent is GIVEN. Tessera scores policy execution, not
+# discovery: the rules for handling stale data and conflicts are stated here, so a probe
+# measures whether the model reliably applies them — not whether it can guess them.
 _PROMPT = (
     "You are an enterprise analyst answering from internal systems only. "
     "Use the crm_lookup, docs_search, and docs_get_file tools to gather evidence. "

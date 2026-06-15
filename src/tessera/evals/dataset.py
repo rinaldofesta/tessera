@@ -9,7 +9,10 @@ from tessera.models import Blueprint
 
 
 class ProbeMeta(BaseModel, frozen=True):
-    """Typed metadata attached to each Sample (frozen: required by metadata_as)."""
+    """The bridge that carries each probe's grading semantics from authoring time to the
+    scorer. It rides on the Sample as metadata and the scorer reads it back typed via
+    ``state.metadata_as(ProbeMeta)`` — so what a correct answer/refusal is for this probe
+    travels with the sample rather than being recomputed. Frozen: required by metadata_as."""
 
     probe_id: str
     conflict_type: str
