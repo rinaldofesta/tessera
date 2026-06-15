@@ -830,7 +830,8 @@
           "unresolvable",
           "void"
         ],
-        "title": "ConflictType"
+        "title": "ConflictType",
+        "description": "The four-way taxonomy at the heart of the eval: what kind of disagreement (if\nany) the silos hold for a probe. It decides whether the right move is to answer or\nto refuse, and `unresolvable` is the column that actually separates reliable agents\nfrom confident fabricators."
       },
       "DocFile": {
         "properties": {
@@ -856,7 +857,8 @@
           "answer",
           "refuse"
         ],
-        "title": "ExpectedBehavior"
+        "title": "ExpectedBehavior",
+        "description": "What a correct agent does on this probe \u2014 the outcome the scorer grades against."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1419,7 +1421,8 @@
           "recency_wins",
           "authority_wins"
         ],
-        "title": "ResolutionRule"
+        "title": "ResolutionRule",
+        "description": "How a `resolvable` conflict is decided. Note authority can outrank recency: a\nsource that declares itself binding wins even over a fresher one."
       },
       "RunRequest": {
         "properties": {
