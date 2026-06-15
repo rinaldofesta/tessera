@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# Canonical conflict-type order, mirroring the taxonomy in `tessera.models.ConflictType`.
+# Single source of truth: every renderer (scorecard, JSON serializer, leaderboard) orders
+# its category columns by this list, so the Markdown report and the API JSON never diverge.
+CANONICAL_ORDER = ["none", "resolvable", "unresolvable", "void"]
+
 
 class ReportError(Exception):
     """Expected, user-facing failure (bad/empty/foreign log). The CLI prints it and exits 2."""

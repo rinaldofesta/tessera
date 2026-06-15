@@ -11,9 +11,7 @@ from tessera.report.aggregate import (
     aggregate_by, overall_mean_rate, overall_pass_k_rate, reduce_by_probe, summarize_axes,
 )
 from tessera.report.log_adapter import eval_log_to_records
-from tessera.report.models import ProbeEpoch, ProbeReliability
-
-_CANONICAL_ORDER = ["none", "resolvable", "unresolvable", "void"]
+from tessera.report.models import CANONICAL_ORDER, ProbeEpoch, ProbeReliability
 
 
 def _epoch_to_dict(e: ProbeEpoch) -> dict:
@@ -53,7 +51,7 @@ def report_to_dict(log) -> dict:
     axes = summarize_axes(records)
 
     categories = []
-    for key in _CANONICAL_ORDER:
+    for key in CANONICAL_ORDER:
         c = by_key.get(key)
         if c is None:
             continue
@@ -65,7 +63,7 @@ def report_to_dict(log) -> dict:
             "flaky": c.mean_rate > c.pass_k_rate,
         })
 
-    order = {ct: i for i, ct in enumerate(_CANONICAL_ORDER)}
+    order = {ct: i for i, ct in enumerate(CANONICAL_ORDER)}
     probes_sorted = sorted(probes, key=lambda p: (order.get(p.conflict_type, 99), p.probe_id))
 
     return {
