@@ -12,6 +12,8 @@
 
 > ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. Five models measured on the 22-probe meridian org, strict pass^3: see the [leaderboard](docs/leaderboard.md). Open issues, tell me where I am wrong.
 
+**Technical report:** [docs/report.md](docs/report.md) — the benchmark, the protocol, and the first measured results (leaderboard + delegation).
+
 ---
 
 ## The problem
@@ -258,9 +260,9 @@ Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR 
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
 - [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
 - [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model fabricates tie-breaks on the unresolvable column.
-- [ ] Companion write-up on measuring enterprise-agent reliability.
+- [x] **Companion write-up:** the technical report on measuring enterprise-agent reliability ([docs/report.md](docs/report.md)) — the benchmark and the protocol as the contribution, the leaderboard + delegation measurements as the evidence.
 - [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
-- [x] **Reliability under delegation:** the MVP is measured — a producer researches, a tool-less consumer commits ([docs/delegation.md](docs/delegation.md), ADR-0007). Finding: the hop is a *faithful conduit* — it never dropped a correct refusal (0/12) and never challenged a fabrication (3/3 laundered, one explicitly rationalized). Next: weaker consumers, tool-using consumers, deeper chains.
+- [x] **Reliability under delegation:** the MVP is measured — a producer researches, a tool-less consumer commits ([docs/delegation.md](docs/delegation.md), ADR-0007). Finding: the hop is a *faithful conduit* — it never dropped a correct refusal (0/27 producer refusals, including all 12 on the unresolvable ties) and never challenged a fabrication (3/3 laundered, one explicitly rationalized). Next: weaker consumers, tool-using consumers, deeper chains.
 
 ## First Contact
 
@@ -282,7 +284,7 @@ Early and open — **[CONTRIBUTING.md](CONTRIBUTING.md)** has the full guide (se
 
 ## Citation
 
-If you use Tessera, please cite it ([CITATION.cff](CITATION.cff) — GitHub's "Cite this repository" button works). A companion write-up is in progress; until then:
+If you use Tessera, please cite it ([CITATION.cff](CITATION.cff) — GitHub's "Cite this repository" button works). The technical report lives at [docs/report.md](docs/report.md):
 
 ```bibtex
 @software{festa_tessera_2026,
