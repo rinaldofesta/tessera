@@ -47,6 +47,8 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
         haystack = f"{md.name}\n{body}".lower()
         score = sum(1 for t in terms if t in haystack)
         if score:
+            # Excerpt = the last line of the body (the rendered sentence that follows the
+            # frontmatter), capped at 200 chars; the 'or [""]' guards an empty body.
             excerpt = (body.strip().splitlines() or [""])[-1][:200]
             ranked.append((score, md.name, {"path": f"docs/{md.name}", "excerpt": excerpt}))
     ranked.sort(key=lambda r: (-r[0], r[1]))  # most terms first; filename breaks ties
@@ -55,6 +57,9 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
 
 def docs_get_file(out_dir: str | Path, path: str) -> str:
     """Return a Docs file's content. `path` is relative to out_dir (e.g. 'docs/x.md')."""
+    # Path-traversal guard: resolve() collapses any '..' segments, then we require the
+    # resolved target to live under docs_root. This blocks a malicious path like
+    # '../../etc/passwd' or a doc symlinking out of the org from being read.
     out = Path(out_dir).resolve()
     target = (out / path).resolve()
     docs_root = (out / "docs").resolve()

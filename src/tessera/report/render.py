@@ -5,10 +5,8 @@ from __future__ import annotations
 import os
 
 from tessera.report.models import (
-    AxesSummary, CategoryReliability, ProbeReliability, RunHeader,
+    CANONICAL_ORDER, AxesSummary, CategoryReliability, ProbeReliability, RunHeader,
 )
-
-_CANONICAL_ORDER = ["none", "resolvable", "unresolvable", "void"]
 
 
 def bar(rate: float, width: int = 10) -> str:
@@ -30,7 +28,7 @@ def render_scorecard(header: RunHeader, overall_pass_k: float, overall_mean: flo
         "",
         f"by conflict type        pass^{header.k}            mean",
     ]
-    for key in _CANONICAL_ORDER:
+    for key in CANONICAL_ORDER:
         c = by_key.get(key)
         if c is None:
             continue
@@ -70,7 +68,7 @@ def render_appendix(probes: list[ProbeReliability], header: RunHeader) -> str:
         lines.append(f"All {len(probes)} probes passed pass^{header.k} — no diagnostics.")
         return "\n".join(lines)
 
-    order = {ct: i for i, ct in enumerate(_CANONICAL_ORDER)}
+    order = {ct: i for i, ct in enumerate(CANONICAL_ORDER)}
     for p in sorted(failed, key=lambda p: (order.get(p.conflict_type, 99), p.probe_id)):
         lines.append("")
         lines.append(

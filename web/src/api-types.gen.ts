@@ -330,6 +330,10 @@ export interface components {
         };
         /**
          * ConflictType
+         * @description The four-way taxonomy at the heart of the eval: what kind of disagreement (if
+         *     any) the silos hold for a probe. It decides whether the right move is to answer or
+         *     to refuse, and `unresolvable` is the column that actually separates reliable agents
+         *     from confident fabricators.
          * @enum {string}
          */
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
@@ -342,6 +346,7 @@ export interface components {
         };
         /**
          * ExpectedBehavior
+         * @description What a correct agent does on this probe — the outcome the scorer grades against.
          * @enum {string}
          */
         ExpectedBehavior: "answer" | "refuse";
@@ -530,6 +535,8 @@ export interface components {
         };
         /**
          * ResolutionRule
+         * @description How a `resolvable` conflict is decided. Note authority can outrank recency: a
+         *     source that declares itself binding wins even over a fresher one.
          * @enum {string}
          */
         ResolutionRule: "recency_wins" | "authority_wins";

@@ -62,6 +62,10 @@ def delegated_pair(producer: Agent, consumer: Agent) -> Agent:
         consumed, _ = await run(consumer, consumer_brief(question, brief_answer),
                                 name="consumer",
                                 limits=[message_limit(_STAGE_MESSAGE_LIMIT)])
+        # The merge invariant: the scorer reads provenance from the producer's tool
+        # events AND accuracy/refusal from the consumer's committed output, so both
+        # transcripts go into state.messages but state.output stays the consumer's.
+        # The consumer itself only ever saw the brief — isolation is preserved.
         state.messages = list(produced.messages) + list(consumed.messages)
         state.output = consumed.output
         return state

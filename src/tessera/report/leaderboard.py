@@ -8,11 +8,14 @@ org, or k) are refused outright — the comparability rule is executable, not ed
 
 from __future__ import annotations
 
-_CANONICAL_ORDER = ["none", "resolvable", "unresolvable", "void"]
+from tessera.report.models import CANONICAL_ORDER
 
 _ADR = "adr/0006-meridian-and-the-leaderboard-protocol.md"
 
 
+# Note: this is NOT the same formatter as render._pct — it keeps one decimal (trimmed)
+# and renders None as an em dash, because the leaderboard reports finer-grained rates
+# across models. Kept separate on purpose; unifying them would change rendered output.
 def _pct(rate: float | None) -> str:
     if rate is None:
         return "—"
@@ -71,13 +74,13 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
         "",
     ]
 
-    cat_cells = " | ".join(_CANONICAL_ORDER)
+    cat_cells = " | ".join(CANONICAL_ORDER)
     table = [
         f"| # | Model | pass^{k} | mean | {cat_cells} | ANSWER fmt | scorer | run date | notes |",
-        "|--:|---|--:|--:|" + "--:|" * (len(_CANONICAL_ORDER) + 1) + "---|---|---|",
+        "|--:|---|--:|--:|" + "--:|" * (len(CANONICAL_ORDER) + 1) + "---|---|---|",
     ]
     for i, r in enumerate(rows, start=1):
-        cats = " | ".join(_pct(r["categories"].get(key)) for key in _CANONICAL_ORDER)
+        cats = " | ".join(_pct(r["categories"].get(key)) for key in CANONICAL_ORDER)
         table.append(
             f"| {i} | {r['label']} | **{_pct(r['pass_k_rate'])}** | {_pct(r['mean_rate'])} "
             f"| {cats} | {_pct(r['answer_format_rate'])} | {r['scorer_version']} "
