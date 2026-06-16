@@ -93,6 +93,14 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
                      submit=AgentSubmit(description=_SUBMIT_DESC)),
         scorer=scorer,
         epochs=Epochs(k, [pass_k(k), "mean"]),
+        # Per-sample guards: cap the react loop so a model that spirals on a
+        # hard (e.g. unresolvable) probe — common with slower local models —
+        # is cut and scored as a failure instead of hanging the whole run.
+        # message_limit bounds the conversation; time_limit is a wall-clock
+        # backstop that also catches a wedged streaming connection. Generous
+        # enough that well-behaved models never hit it (results stay comparable).
+        message_limit=40,
+        time_limit=600,
     )
 
 
@@ -110,4 +118,9 @@ def tessera_probes_delegated(org: str | None = None, k: int = 3):
                                 submit_desc=_SUBMIT_DESC),
         scorer=delegated_reliability_scorer(manifest),
         epochs=Epochs(k, [pass_k(k), "mean"]),
+        # Wall-clock backstop only. Messages are already bounded PER STAGE inside the
+        # chain (delegation._STAGE_MESSAGE_LIMIT); a Task-level message_limit would sit
+        # below that and cap the combined producer+consumer transcript, truncating a
+        # legitimate two-stage run. time_limit just stops a wedged/spinning stage.
+        time_limit=600,
     )
