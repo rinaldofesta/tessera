@@ -662,6 +662,13 @@ const MODULES = [
   Sonnet correctly applies the very rule it broke as the agent — committing on a genuine tie counts
   as failure. It <i>knows</i> the rule; it just doesn't <i>follow</i> it under pressure to be
   helpful. Knowing and doing are different skills; Tessera measures the doing.</div>
+  <div class="callout"><b>It generalized.</b> First Contact was one probe on the toy org. The same
+  failure now has a public, multi-model measurement: the <b>meridian</b> leaderboard (22 probes,
+  det-4, strict pass^3) across five models — Sonnet 4.6 <b>86.4%</b> · Haiku 4.5 54.5% ·
+  qwen3.5-9.7B 45.5% · GPT-4o 45.5% · GPT-4o-mini 27.3%. The <code>unresolvable</code> column reads
+  <b>40 / 0 / 0 / 0 / 0</b>: <b>no model reliably refuses the symmetric tie</b>, and the four
+  non-Sonnet models never do. The method, protocol, and full results are written up in
+  <code>docs/report.md</code>; the table lives in <code>docs/leaderboard.md</code>.</div>
   <div class="quiz" data-quiz-id="m9"></div>` },
 
 { title:"How to improve Tessera", html:`
@@ -883,12 +890,12 @@ const IMP_CORE = [
 const IMP_PROD = [
   {tag:"green", tagtxt:"quick win", tt:"Scratch logs leak into the product UI",
    bd:"The logs endpoint lists every .eval file in logs/, including unrelated experiments (hello-world and coinflip runs sit there right now). They show up in the Results picker and error out when opened — confusing in a demo. <b>Fix:</b> filter the glob to the tessera task name, or move scratch runs out of logs/."},
-  {tag:"green", tagtxt:"quick win", tt:"A smoke test for the pinned demo logs",
-   bd:"examples/first-contact.eval and examples/gpt-4o.eval are the project's public evidence, but no test ever loads them — an inspect_ai schema change could silently break the demo. <b>Fix:</b> one test that runs both pinned logs through the report pipeline and asserts the headline numbers (75%, unresolvable 0%)."},
+  {tag:"green", tagtxt:"shipped ✓", tt:"The pinned demo logs are smoke-tested",
+   bd:"examples/first-contact.eval and examples/gpt-4o.eval are public evidence, but USED TO have no test loading them — an inspect_ai schema change could silently break the demo. <b>Fix — shipped ✓:</b> <code>tests/test_pinned_examples.py</code> runs both pinned logs through the report pipeline and asserts the headline numbers, so a schema change breaks CI instead of the demo."},
   {tag:"amber", tagtxt:"medium", tt:"SSE stream can leave the UI hanging",
    bd:"The run-progress stream polls once per second with a ~10-minute ceiling, ending with no terminal event; the SPA closes on error with no retry. A dropped connection leaves 'Running…' forever while the run actually finishes. <b>Fix:</b> emit a terminal event at the ceiling, and fall back to plain polling in the client on stream error."},
-  {tag:"amber", tagtxt:"medium", tt:"Frontend types are hand-mirrored",
-   bd:"The SPA's TypeScript types duplicate the FastAPI contract by hand (the file says so itself). Every API change risks silent drift. <b>Fix:</b> generate types from the OpenAPI schema in the web build step — FastAPI already serves the schema for free."}
+  {tag:"green", tagtxt:"shipped ✓", tt:"Frontend types are generated from the contract",
+   bd:"The SPA's TypeScript types USED TO duplicate the FastAPI contract by hand. <b>Fix — shipped ✓:</b> every endpoint declares a response model, and the SPA's types are GENERATED from the committed <code>openapi.json</code> (<code>scripts/gen-types.sh</code> → <code>web/src/api-types.gen.ts</code>); a CI <code>contract</code> job fails on any drift, and the key-free test suite doubles as contract tests since FastAPI validates every response shape."}
 ];
 
 /* ===================== test-next checklist ===================== */
@@ -905,10 +912,10 @@ const NEXT = [
    cmd:".venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm --model anthropic/claude-sonnet-4-6 --model-role grader=anthropic/claude-haiku-4-5"},
   {tt:"Add distractor claims", why:"Stress provenance: claims about similar subjects (Globex Ltd vs Globex Inc) and near-miss predicates. Does the agent cite the RIGHT record when wrong-but-plausible ones exist?",
    cmd:"# blueprint: add Globex Ltd with a different contract_value — expected_sources unchanged"},
-  {tt:"Try a smaller / cheaper model", why:"Is invented-tiebreaker a frontier-model quirk or universal? A small model might refuse MORE (less helpfulness pressure) — which would be a genuinely interesting finding either way.",
-   cmd:".venv/bin/inspect eval src/tessera/evals/task.py -T judge=llm --model anthropic/claude-haiku-4-5 --model-role grader=openai/gpt-4o"},
-  {tt:"Prototype 'reliability under delegation'", why:"The roadmap's most ambitious idea: agent A consumes agent B's answer as a source. Does a confident-but-wrong upstream answer propagate, or does the downstream agent re-verify? Nobody measures this today.",
-   cmd:"# design first: B's answers become a third silo for A — conflicts now propagate"}
+  {tt:"Try a smaller / cheaper model ✓ (done — 5-model leaderboard)", why:"Answered: invented-tiebreaker is UNIVERSAL, not a frontier quirk. The public meridian leaderboard (det-4, k=3) ranks Sonnet 4.6 86.4% · Haiku 4.5 54.5% · qwen3.5-9.7B 45.5% · GPT-4o 45.5% · GPT-4o-mini 27.3%, and the unresolvable column reads <b>40 / 0 / 0 / 0 / 0</b> — only Sonnet ever refuses the symmetric tie, and even it just 2 of 5 times. Smaller models did NOT refuse more. See docs/leaderboard.md.",
+   cmd:".venv/bin/tessera-leaderboard logs/*.eval -o docs/leaderboard.md   # regenerate from comparable runs"},
+  {tt:"Prototype 'reliability under delegation' ✓ (done — ADR-0007)", why:"Measured: a producer agent researches with the tools and hands a brief to a tool-less consumer that commits the answer. The hop is a <b>faithful conduit</b> — across 30 refuse-probe epochs it dropped <b>0</b> correct refusals and laundered <b>3/3</b> fabrications downstream (one consumer even rationalized the invented tiebreaker as 'a reasonable judgment call'). Delegation inherited the decision — neither degrading nor repairing it. See docs/delegation.md. Open follow-ups: a weaker/cross-model consumer, a tool-using consumer that re-verifies, deeper chains.",
+   cmd:".venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes_delegated --model anthropic/claude-sonnet-4-6 -T org=meridian -T k=3"}
 ];
 
 /* ============================= ENGINE ============================= */
