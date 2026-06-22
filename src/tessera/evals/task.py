@@ -62,12 +62,13 @@ def _validated_k(k: int) -> int:
     return k
 
 
-def _compiled_org(org: str | None):
-    """Compile the named org and stand up its two MCP servers (shared by both tasks).
+def _compiled_org(org: str | None, seed: int = 0):
+    """Compile the named org (optionally a factory seed) and stand up its two MCP servers.
 
-    Org selection: explicit -T org=… wins, else $TESSERA_ORG, else "toy"."""
+    Org selection: explicit -T org=… wins, else $TESSERA_ORG, else "toy". A non-zero seed
+    selects a scenario-factory variant of meridian (holdout)."""
     org_name = org or os.environ.get("TESSERA_ORG", "toy")
-    blueprint = get_blueprint(org_name)
+    blueprint = get_blueprint(org_name, seed=seed)
     out = Path(os.environ.get("TESSERA_OUT", "/tmp/tessera/run")).resolve()
     manifest = compile_blueprint(blueprint, out)
 
@@ -80,9 +81,10 @@ def _compiled_org(org: str | None):
 
 
 @task
-def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int = 3):
+def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int = 3,
+                   seed: int = 0):
     k = _validated_k(k)
-    blueprint, manifest, crm, docs = _compiled_org(org)
+    blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
 
     scorer = (llm_reliability_scorer(manifest) if judge == "llm"
               else deterministic_reliability_scorer(manifest))
@@ -105,12 +107,12 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
 
 
 @task
-def tessera_probes_delegated(org: str | None = None, k: int = 3):
+def tessera_probes_delegated(org: str | None = None, k: int = 3, seed: int = 0):
     """The delegation MVP (deterministic engine only): the producer is EXACTLY the
     direct task's agent — same prompt, same tools, same submit contract — so a run of
     this task against the direct baseline isolates the hop (ADR-0007)."""
     k = _validated_k(k)
-    blueprint, manifest, crm, docs = _compiled_org(org)
+    blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
 
     return Task(
         dataset=blueprint_to_dataset(blueprint),
