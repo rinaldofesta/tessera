@@ -41,7 +41,7 @@ judge strictness on hedged refusals, as designed.
 2. **The blueprint is public** — honesty over purity. The blueprint *is* the
    answer key, so contamination is possible; v1 accepts that, states it in the
    methodology, and date-stamps results. Seeded value-rotation variants are the
-   scenario-factory's first real job when contamination becomes measurable.
+   scenario-factory's first real job when contamination becomes measurable. (Specified in ADR-0008.)
 3. **Leaderboard protocol**: deterministic engine (key-free, reproducible by
    anyone), k=3, strict pass^k headline with mean alongside, the per-category
    table mandatory, `scorer_version` published with every row. The llm engine is
