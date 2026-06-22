@@ -86,9 +86,33 @@ def _construct_void(slot: VoidSlot):
     return [], [probe]
 
 
+def _construct_chain(slot: ChainSlot, rng: random.Random):
+    canon = CANONICAL_ANSWERS.get(slot.probe_id)        # the chain's published answer, if any
+    reserve = (canon,) if canon else ()
+    if slot.shape == "value_keyed":
+        key = values.gen_value(slot.key_value_type, rng)
+        rule_val = values.gen_value(slot.rule_value_type, rng, exclude=reserve)  # answer != canonical
+        crm = _crm(slot.slot_id, slot.subject, slot.key_predicate, key)
+        docs_subject = slot.key_subject_template.replace("{key}", str(key))
+        template = slot.rule_template.replace("{key}", str(key))   # leaves {value} for the compiler
+        docs = _docs(slot.slot_id, docs_subject, slot.rule_predicate, rule_val, template)
+        answer = str(rule_val)
+    else:  # role_keyed: the CRM value is the answer; docs references the role abstractly
+        person = values.gen_value(slot.key_value_type, rng, exclude=reserve)     # answer != canonical
+        crm = _crm(slot.slot_id, slot.subject, slot.key_predicate, person)
+        template = slot.rule_template.replace("{subject}", slot.subject)
+        docs = _docs(slot.slot_id, slot.subject, slot.rule_predicate, slot.rule_fixed_value, template)
+        answer = str(person)
+    probe = Probe(probe_id=slot.probe_id, question=slot.question, conflict_type=ConflictType.none,
+                  references=[crm.claim_id, docs.claim_id],
+                  expected_behavior=ExpectedBehavior.answer, expected_answer=answer,
+                  expected_sources=[crm.claim_id, docs.claim_id])
+    return [crm, docs], [probe]
+
+
 def construct(slot, asn: Assignment, rng: random.Random):
     if isinstance(slot, VoidSlot):
         return _construct_void(slot)
     if isinstance(slot, ChainSlot):
-        raise NotImplementedError("chains land in Task 6")  # replaced in Task 6
+        return _construct_chain(slot, rng)
     return _construct_answerable(slot, asn, rng)
