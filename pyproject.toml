@@ -44,6 +44,7 @@ Changelog = "https://github.com/rinaldofesta/tessera/blob/main/docs/adr/README.m
 tessera-report = "tessera.report.cli:main"
 tessera-leaderboard = "tessera.report.cli:leaderboard_main"
 tessera-api = "tessera.api.app:main"
+tessera-variant = "tessera.factory.export:main"
 
 [build-system]
 requires = ["hatchling"]
