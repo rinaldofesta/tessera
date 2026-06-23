@@ -1332,6 +1332,17 @@
               }
             ],
             "title": "Scorer Version"
+          },
+          "inspect_ai_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspect Ai Version"
           }
         },
         "type": "object",

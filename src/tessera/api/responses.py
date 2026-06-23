@@ -30,6 +30,7 @@ class ReportHeader(BaseModel):
     created: str
     location: str
     scorer_version: str | None = None  # det-4/llm-2 etc.; null on pre-versioned logs
+    inspect_ai_version: str | None = None  # producing inspect_ai (from log packages); null if unrecorded
 
 
 class ReportOverall(BaseModel):
