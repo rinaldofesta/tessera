@@ -281,6 +281,17 @@ def test_blueprint_with_bad_prose_template_is_a_400_not_500(tmp_path):
     assert created.status_code == 400
 
 
+def test_resolve_rejects_unknown_source_empty_stem_and_traversal(tmp_path):
+    # the log resolver's guard branches (the blueprint-store twin is parametrised; this is
+    # its untested counterpart): unknown source, empty stem, and a traversal stem all -> None
+    from tessera.api.app import _resolve
+    log_dirs = {"results": tmp_path}
+    assert _resolve(log_dirs, "bogus:abc") is None          # unknown source
+    assert _resolve(log_dirs, "results:") is None           # empty stem
+    assert _resolve(log_dirs, "results") is None            # no ':' -> empty stem
+    assert _resolve(log_dirs, "results:../../../etc/passwd") is None   # no traversal
+
+
 def test_blueprint_preview_returns_artifacts(tmp_path):
     c = _client(tmp_path)
     bp = c.get("/api/blueprints/toy").json()

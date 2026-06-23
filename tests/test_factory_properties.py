@@ -56,15 +56,26 @@ def test_no_seed_in_a_wide_range_crashes_the_invariant_gates():
         generate_variant(seed)
 
 
+def test_same_seed_reproduces_an_identical_blueprint():
+    # the holdout reveal-and-reproduce guarantee rests on same-seed -> identical Blueprint
+    # for EVERY seed, not just the one the cross-machine test pins. A path stable at one
+    # seed but not others would slip past a single-seed assertion.
+    for seed in (1, 2, 7, 19, 42, 99):
+        assert (generate_variant(seed).model_dump_json()
+                == generate_variant(seed).model_dump_json()), seed
+
+
 def test_cross_machine_determinism_under_pythonhashseed():
     # hash randomization is per-process and must be set before interpreter start; a set/dict
-    # leaking into the rng path would make the output depend on PYTHONHASHSEED.
-    code = ("from tessera.factory.generate import generate_variant; "
-            "print(generate_variant(7).model_dump_json())")
-    outs = set()
-    for hs in ("0", "12345"):
-        result = subprocess.run([sys.executable, "-c", code], capture_output=True,
-                                text=True, env={**os.environ, "PYTHONHASHSEED": hs})
-        assert result.returncode == 0, result.stderr
-        outs.add(result.stdout)
-    assert len(outs) == 1            # identical regardless of hash seed
+    # leaking into the rng path would make the output depend on PYTHONHASHSEED. Checked over
+    # several seeds, not just one.
+    for seed in (1, 7, 42):
+        code = ("from tessera.factory.generate import generate_variant; "
+                f"print(generate_variant({seed}).model_dump_json())")
+        outs = set()
+        for hs in ("0", "12345"):
+            result = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                                    text=True, env={**os.environ, "PYTHONHASHSEED": hs})
+            assert result.returncode == 0, result.stderr
+            outs.add(result.stdout)
+        assert len(outs) == 1, seed            # identical regardless of hash seed

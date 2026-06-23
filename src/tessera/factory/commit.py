@@ -27,4 +27,9 @@ def commit(seed: int, factory_version: str) -> tuple[str, str]:
 
 
 def verify(commitment: str, seed: int, salt: str, factory_version: str) -> bool:
-    return _digest(seed, salt, factory_version) == commitment
+    # A non-hex / odd-length salt can't reproduce any commitment — fromhex would raise;
+    # a verifier handed a malformed reveal wants False, not an exception.
+    try:
+        return _digest(seed, salt, factory_version) == commitment
+    except ValueError:
+        return False
