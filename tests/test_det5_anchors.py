@@ -7,8 +7,10 @@ forcing whoever ships det-5 to revisit these anchors and the limitation prose th
 (evals/scoring.py "Known limitations" block; report.md §3.3 fallback strictness).
 
 These are the three failure modes named in the det-4 limitations as the det-5 target. The
-committed-line "X, not Y" / trailing-parenthetical cases are NOT here: review A1 already
-fixed those for the committed path, so they pass under det-4.
+committed-line "X, not Y" / trailing-parenthetical cases are NOT here: review A1 fixed those
+for the committed path via first-mention-wins over the probe's distractors (so they pass
+under det-4 whenever the leading value is a registered distractor). The fallback negation
+below has no ANSWER line, so it remains a genuine det-5 target.
 """
 
 import pytest

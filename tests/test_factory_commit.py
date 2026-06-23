@@ -27,3 +27,4 @@ def test_a_malformed_salt_returns_false_not_raises():
     assert verify(commitment, 7, "not-hex!!", FACTORY_VERSION) is False
     assert verify(commitment, 7, "abc", FACTORY_VERSION) is False     # odd-length hex
     assert verify(commitment, 7, "", FACTORY_VERSION) is False
+    assert verify(commitment, 7, None, FACTORY_VERSION) is False      # null field in a reveal

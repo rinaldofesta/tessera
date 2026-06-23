@@ -86,9 +86,12 @@ class Claim(BaseModel):
         if self.render.as_ is RenderAs.prose and self.render.template is not None:
             try:
                 self.render.template.format(value=self.value)
-            except (KeyError, IndexError, AttributeError, ValueError, TypeError) as exc:
+            except Exception as exc:  # noqa: BLE001 — str.format's failure surface is wide
+                # (KeyError/IndexError/AttributeError/ValueError/TypeError/OverflowError,
+                # plus locale/format-spec errors); any of them would be an uncaught 500 in
+                # the compiler, so any of them must be a structured authoring-time error.
                 raise ValueError(
-                    f"prose template must reference only {{value}}; "
+                    f"prose template must render with {{value}} only; "
                     f"rendering failed with {type(exc).__name__}: {exc}"
                 ) from exc
         return self
