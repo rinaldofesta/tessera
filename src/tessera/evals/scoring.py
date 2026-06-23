@@ -378,7 +378,10 @@ def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
 #   when its predicate came back in the lookup's recorded response — NOT_FOUND and
 #   errored calls credit nothing. The scorer therefore depends on crm_lookup
 #   responses being recorded as JSON text in the log; docs credit stays call-based
-#   (one claim-bundle per file, the path is the address).
+#   (one claim-bundle per file, the path is the address). The docs_search excerpt is
+#   the rendered claim sentence and so may surface the answer value, but credit still
+#   requires docs_get_file — answering from the excerpt alone earns no docs provenance.
+#   This is intentional ("consult the claim" = open its file), not a leak (review A5).
 # * Accuracy scores the COMMITTED value: with an 'ANSWER:' line, the head of that line
 #   before the first justification delimiter ('(', comma+space, ' not '), so committing
 #   to a distractor while quoting the right value in the tail ("$1.5M (CRM still shows
