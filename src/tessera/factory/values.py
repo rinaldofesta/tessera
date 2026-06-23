@@ -66,12 +66,25 @@ _PROC = {"money": _money, "percent": _percent, "date": _date,
          "duration": _duration, "count": _count}
 
 
+def _collides(candidate: str, excluded: set[str]) -> bool:
+    """True if `candidate` equals, contains, or is contained by any excluded value.
+
+    Inequality alone is not enough: '2.9%' and '12.9%' are distinct strings, but the
+    shorter is a substring of the longer, which empties the downstream substring-based
+    distractor filter (evals/dataset._distractor_values) and crashes the invariant
+    gates on a fraction of seeds. Rejecting sub/superstrings keeps a conflict pair
+    materializable as two genuinely separable values."""
+    c = candidate.lower()
+    return any(c == e or c in e or e in c for e in excluded)
+
+
 def gen_value(value_type: str, rng: random.Random, exclude=()):
-    """Draw one value of `value_type`, avoiding any in `exclude` (compared as strings)."""
-    excl = {str(e) for e in exclude}
+    """Draw one value of `value_type` that neither equals, contains, nor is contained by
+    any value in `exclude` (compared case-insensitively as strings)."""
+    excl = {str(e).lower() for e in exclude}
     for _ in range(50):
         v = _PROC[value_type](rng) if value_type in _PROC else rng.choice(_POOLS[value_type])
-        if str(v) not in excl:
+        if not _collides(str(v), excl):
             return v
     raise RuntimeError(f"could not draw a {value_type} value avoiding {excl}")
 
