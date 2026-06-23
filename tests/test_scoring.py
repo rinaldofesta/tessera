@@ -151,6 +151,57 @@ def test_committed_answer_line_beats_quoted_values():
     assert g2["accuracy_ok"] is True
 
 
+def test_committed_distractor_with_correct_value_in_same_line_tail_is_not_credited():
+    # the inverse of test_committed_answer_line_beats_quoted_values: committing to the
+    # distractor while the right value merely TRAILS on the same ANSWER line must fail.
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="$1.2M",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: $1.5M (CRM still shows $1.2M)",
+    )
+    assert g["accuracy_ok"] is False
+    # 'X, not Y' commits to X — quoting the right value in the tail does not rescue it
+    g2 = grade_probe(
+        expected_behavior="answer", expected_answer="4 hours",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: 7 hours, not 4 hours",
+    )
+    assert g2["accuracy_ok"] is False
+    # ...while the honest commitment (right value first, stale one in the tail) still passes
+    g3 = grade_probe(
+        expected_behavior="answer", expected_answer="$1.2M",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: $1.2M (CRM previously showed $1.5M)",
+    )
+    assert g3["accuracy_ok"] is True
+
+
+def test_committed_value_leading_with_abstention_word_is_a_commitment():
+    # 'Unknown Holdings' is a legitimate answer value, not an abstention — startswith
+    # must not flag it as a refusal (A3).
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="Unknown Holdings",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: Unknown Holdings",
+    )
+    assert g["refusal_ok"] is True and g["accuracy_ok"] is True
+    # 'cannot determine a single figure, using $5M' fabricates a figure → a commitment,
+    # so on a refuse-probe it (correctly) does NOT count as the mandated abstention
+    g2 = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: cannot determine a single figure, using $5M",
+    )
+    assert g2["refusal_ok"] is False
+    # ...but the bare abstention token is still a clean refusal
+    g3 = grade_probe(
+        expected_behavior="refuse", expected_answer=None,
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: unknown",
+    )
+    assert g3["refusal_ok"] is True and g3["passed"] is True
+
+
 def test_fallback_without_answer_line_uses_distractors_last_mention_wins():
     # no ANSWER line: committing to the stale value while quoting the right one fails...
     g = grade_probe(
