@@ -265,6 +265,22 @@ def test_blueprint_validate_ok_and_errors(tmp_path):
     assert res["ok"] is False and res["errors"]
 
 
+def test_blueprint_with_bad_prose_template_is_a_400_not_500(tmp_path):
+    # a malformed template ({nope}) must surface as a structured authoring error, not an
+    # uncaught 500 from the compiler's str.format
+    c = _client(tmp_path)
+    bad = {"claims": [{"claim_id": "acme.x.docs", "subject": "Acme", "predicate": "x",
+                       "value": "v", "silo": "docs",
+                       "render": {"as": "prose", "template": "value is {nope}"}}],
+           "probes": []}
+    res = c.post("/api/blueprints/validate", json=bad)
+    assert res.status_code == 200          # /validate always 200, reports errors in body
+    assert res.json()["ok"] is False and res.json()["errors"]
+    # the write paths reject it with a 400 (never a 500)
+    created = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
+    assert created.status_code == 400
+
+
 def test_blueprint_preview_returns_artifacts(tmp_path):
     c = _client(tmp_path)
     bp = c.get("/api/blueprints/toy").json()
