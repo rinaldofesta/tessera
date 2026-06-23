@@ -36,9 +36,16 @@ def org_names() -> list[str]:
     return sorted(ORGS)
 
 
-def get_blueprint(name: str) -> Blueprint:
+def get_blueprint(name: str, seed: int = 0) -> Blueprint:
     """Resolve an org name to a Blueprint: a built-in ORGS builder first, else a saved
-    JSON blueprint from the store (so datasets authored in the UI are runnable)."""
+    JSON blueprint from the store. `seed` selects a scenario-factory variant of the
+    meridian family (seed 0 = the canonical authored org); a non-zero seed is only valid
+    for `meridian`."""
+    if seed != 0:
+        if name != "meridian":
+            raise ValueError(f"seed addressing is only supported for 'meridian', not {name!r}")
+        from tessera.factory.generate import generate_variant
+        return generate_variant(seed)
     builder = ORGS.get(name)
     if builder is not None:
         return builder()
