@@ -32,7 +32,7 @@ Public agent benchmarks mostly measure tool-use mechanics or single-source QA. T
 
 ## What Tessera is, and is not
 
-Tessera is **not another public leaderboard.** It is a **methodology and a reproducible generator** (the `tessera-scenario-factory`). Point it at a company's fragmented, contradictory, siloed knowledge, reached only over MCP the way a real agent would, and it builds **that company's own reliability eval**.
+Tessera is **not another public leaderboard.** It is a **methodology and a reproducible generator** (`tessera.factory.generate_variant`, CLI `tessera-variant`). Point it at a company's fragmented, contradictory, siloed knowledge, reached only over MCP the way a real agent would, and it builds **that company's own reliability eval**.
 
 The public dataset and leaderboard are a **showcase, not the product.** The eval you build on your own data is the point. A public benchmark is the SAT score. Your own eval is the interview.
 
@@ -66,7 +66,7 @@ generator ──> synthetic fragmented org ──MCP──> agent under test ─
 Tessera is two layers, and only one of them is the contribution.
 
 - **The standard — human-owned, durable.** The conflict taxonomy (`none` / `resolvable` / `unresolvable` / `void`), the `Claims + Probes` blueprint, and the adversarial ground truth. This encodes a judgment call — *what counts as reliable enough, and how enterprise knowledge actually fails* — that does not commoditize when generating cases becomes cheap.
-- **The org — generated, renewable.** The synthetic company on disk (CRM, docs, `manifest.json`), compiled from the blueprint. This is the layer the `scenario-factory` will mass-produce, and the layer a model can already help write.
+- **The org — generated, renewable.** The synthetic company on disk (CRM, docs, `manifest.json`), compiled from the blueprint. This is the layer the scenario-factory mass-produces — `generate_variant(seed)` re-deals a `meridian`-family org per seed — and the layer a model can already help write.
 
 The bet is explicit: case *production* is automatable; the *standard* is not. Tessera's value lives in the tier that survives its own automation — the standard, the adversarial design, and the calibration of how much reliability a given risk actually demands.
 
@@ -90,13 +90,16 @@ Related work is consolidated in the companion thesis.
 
 ## Quickstart
 
-> A live `inspect eval` needs a model API key (e.g. `ANTHROPIC_API_KEY`). The test suite needs none.
+> Prerequisite: [`uv`](https://docs.astral.sh/uv/) (or use the stdlib `python -m venv`). A live `inspect eval` needs a model API key (e.g. `ANTHROPIC_API_KEY`). The test suite needs none.
 
 ```bash
-uv pip install -e .
+uv venv                  # create the .venv the commands below use (or: python -m venv .venv)
+uv pip install -e .      # ...then install Tessera into it
 .venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 --display plain
 .venv/bin/inspect view   # browse the log: per-sample tool calls, provenance, refusal
 ```
+
+For the exact environment that produced the leaderboard (pinned `inspect_ai` and all transitive deps), install from the committed lockfile instead: `uv pip install -r requirements.lock && uv pip install -e . --no-deps`. Each run also records its producing `inspect_ai` version in the report header.
 
 By default, scoring is deterministic (no grader): the committed `ANSWER:` line decides both accuracy and refusal, with heuristic fallbacks when the line is missing. For model-graded accuracy and refusal, select the LLM engine and bind an **independent** grader:
 
@@ -261,7 +264,8 @@ Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR 
 - [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
 - [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model fabricates tie-breaks on the unresolvable column.
 - [x] **Companion write-up:** the technical report on measuring enterprise-agent reliability ([docs/report.md](docs/report.md)) — the benchmark and the protocol as the contribution, the leaderboard + delegation measurements as the evidence.
-- [ ] `tessera-scenario-factory`: point it at your own knowledge and generate your own eval. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
+- [x] **The scenario factory + holdout protocol** (ADR-0008): `tessera.factory.generate_variant(seed)` (CLI `tessera-variant`) deterministically re-deals `meridian`'s conflict graph per seed and synthesizes fresh anti-prior values, holding the category counts fixed — `seed = 0` equals the authored meridian object-for-object, so the published baseline stays valid. A leaderboard's headline numbers run on a **withheld** seed, fixed in advance by a salted SHA-256 commitment and revealed afterward as `{seed, salt, factory_version}` so anyone can recompute the digest and reproduce the exact org. The family — not one fixed key — is what's published; this is the answer to the "public blueprint is the answer key" problem. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
+- [ ] **Live holdout leaderboard + your-own-data generation:** a published row produced on a withheld seed with `factory_version` stamped on it and the seed exposed on the API/UI (the ADR-0008 non-goals), and pointing the generator at arbitrary user knowledge beyond the `meridian` family.
 - [x] **Reliability under delegation:** the MVP is measured — a producer researches, a tool-less consumer commits ([docs/delegation.md](docs/delegation.md), ADR-0007). Finding: the hop is a *faithful conduit* — it never dropped a correct refusal (0/27 producer refusals, including all 12 on the unresolvable ties) and never challenged a fabrication (3/3 laundered, one explicitly rationalized). Next: weaker consumers, tool-using consumers, deeper chains.
 
 ## First Contact
@@ -275,6 +279,7 @@ The leaderboard later confirmed it at scale: every model measured fabricates tie
 Honesty is what makes an eval citable.
 
 - **Synthetic, public, reproducible.** No real client data ever enters the public dataset. Real data stays a private validation testbed.
+- **Contamination has a holdout answer.** The public `meridian` blueprint is the answer key, so a contaminated model can reproduce answers — and worse, memorize *which* probes to refuse (the `unresolvable` column, the headline finding). The scenario factory ([ADR-0008](docs/adr/0008-scenario-factory-and-holdout-protocol.md)) is the mitigation: leaderboard headline numbers run on a withheld seed, committed in advance via a salted SHA-256 hash and revealed afterward so anyone can recompute the digest and reproduce the exact org. The family — not one fixed key — is what is published.
 - **Documented bias.** The generator encodes assumptions about how organizations fragment knowledge. Those assumptions will be wrong in places, and they will be written down.
 - **A measure, not the territory.** A score is evidence under these conditions, not a guarantee in yours.
 
