@@ -1,11 +1,11 @@
 # Tessera: a deterministic benchmark for enterprise agent reliability
 
-**Rinaldo Festa** · June 12, 2026 · scorer `det-4` · results as of 2026-06-12
+**Rinaldo Festa** · June 28, 2026 · scorer `det-4` · leaderboard and delegation as of 2026-06-12, scaffold intervention as of 2026-06-28
 Repository: <https://github.com/rinaldofesta/tessera> · Protocol: [ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)
 
 ## Abstract
 
-Enterprise knowledge is fragmented across systems of record, and the fragments contradict one another: a CRM and a documentation wiki carry different values for the same field, with nothing that gives either precedence. Agents asked questions over this substrate commit confident answers anyway, and the fabricated resolution is the failure that looks like success. We present Tessera, an open benchmark generator: a declarative Blueprint of claims and probes is compiled deterministically into a fragmented synthetic organization, served to the agent under test over the Model Context Protocol (MCP) — the access surface a production agent would use. A deterministic scorer grades the committed answer on three axes — accuracy, per-field provenance read from the agent's real MCP traffic, and committed refusal — under versioned rules (`det-4`), and a frozen comparability protocol keeps published rows comparable: strict pass^k as the headline, executable guards that abort non-comparable configurations, and transcript adjudication of every failing probe. On the public `meridian` org, none of the five evaluated models reliably refuses the symmetric ties as a category: the unresolvable column reads 40/0/0/0/0 at k=3, and the dominant failure is a fabricated tie-break committed as fact. In a single-hop delegation study (same model as producer and consumer), the hop was a faithful conduit: it destroyed no correct refusal (0/27) and relayed every upstream fabrication downstream as settled fact (3/3). Code, blueprints, logs, and the leaderboard are open; every published row's failing probes are adjudicated from transcripts before publication.
+Enterprise knowledge is fragmented across systems of record, and the fragments contradict one another: a CRM and a documentation wiki carry different values for the same field, with nothing that gives either precedence. Agents asked questions over this substrate commit confident answers anyway, and the fabricated resolution is the failure that looks like success. We present Tessera, an open benchmark generator: a declarative Blueprint of claims and probes is compiled deterministically into a fragmented synthetic organization, served to the agent under test over the Model Context Protocol (MCP) — the access surface a production agent would use. A deterministic scorer grades the committed answer on three axes — accuracy, per-field provenance read from the agent's real MCP traffic, and committed refusal — under versioned rules (`det-4`), and a frozen comparability protocol keeps published rows comparable: strict pass^k as the headline, executable guards that abort non-comparable configurations, and transcript adjudication of every failing probe. On the public `meridian` org, none of the five evaluated models reliably refuses the symmetric ties as a category: the unresolvable column reads 40/0/0/0/0 at k=3, and the dominant failure is a fabricated tie-break committed as fact. In a single-hop delegation study (same model as producer and consumer), the hop was a faithful conduit: it destroyed no correct refusal (0/27) and relayed every upstream fabrication downstream as settled fact (3/3). A third experiment contrasts the fixed prompt with a refusal-aware scaffold across five factory instances and finds the intervention to be a capability amplifier rather than a substitute: it improves correct refusal significantly and without a significant answering loss for the models that can perceive the conflict (claude-sonnet-4-6 and gpt-4o, the unresolvable column rising 20→88% and 16→48%), while a weaker model pays for the gain in over-refusal and the weakest never reaches the tie. Code, blueprints, logs, and the leaderboard are open; every published row's failing probes are adjudicated from transcripts before publication.
 
 ## 1. Introduction
 
@@ -22,7 +22,7 @@ The thesis of this report is that the instrument is the contribution, and the me
 - **An open benchmark generator.** A Blueprint — declarative claims plus probes — is compiled deterministically into a fragmented synthetic organization, served to the agent under test over two MCP servers: the same access surface a production agent would use, with the fragmentation and the contradictions placed by design rather than by accident.
 - **A deterministic scorer of the committed answer**, on three axes: accuracy against the committed line, per-field provenance read from the agent's real MCP traffic, and committed refusal. The scorer is versioned (`det-4`), so every published result names the exact rules that produced it.
 - **A frozen comparability protocol**: strict pass^k with k owned by the task definition rather than the runner, executable comparability guards that abort non-comparable configurations instead of warning about them, and transcript adjudication of every probe the strict reducer fails — so a failure is diagnosed, not merely counted.
-- **Two measured findings.** First, no evaluated model reliably refuses the symmetric ties as a category: the leaderboard's unresolvable column reads 40/0/0/0/0 at k=3, and the dominant failure is a fabricated tie-break committed as fact. Second, in a one-hop producer→consumer study, the delegation hop was a faithful conduit: it laundered every upstream fabrication into downstream settled fact (3/3 relayed) while never destroying a correct refusal (0/27). The hop inherited the decision; it did not audit it.
+- **Three measured findings.** First, no evaluated model reliably refuses the symmetric ties as a category: the leaderboard's unresolvable column reads 40/0/0/0/0 at k=3, and the dominant failure is a fabricated tie-break committed as fact. Second, in a one-hop producer→consumer study, the delegation hop was a faithful conduit: it laundered every upstream fabrication into downstream settled fact (3/3 relayed) while never destroying a correct refusal (0/27). The hop inherited the decision; it did not audit it. Third, a refusal-aware scaffold — tested against the fixed prompt across five factory instances with a paired McNemar design — is a capability amplifier rather than a substitute: it converts detection of a tie into refusal, significantly and without a significant answering loss, for the models that can already detect it (claude-sonnet-4-6 p = 0.0001, gpt-4o p = 0.004), while it cannot manufacture the detection a weaker model lacks.
 
 The remainder of the report presents related work, the method and protocol, the experiments behind both findings, the limitations that bound what these measurements license, and the future work they motivate.
 
@@ -122,7 +122,7 @@ The per-model profiles, each carrying its published note:
 
 **gpt-4o-mini** (27.3% / 40.9%) fails both the joins (`none` 0%, `resolvable` 16.7%) and all five ties (`unresolvable` 0%) while honoring the answer contract at 92.4% — format discipline without reliability, and the row that shows most plainly why the two are separate columns.
 
-**Adjudication disclosure.** Per the gate of §3.4, every probe that failed strict pass^3 in every row was adjudicated from its transcript before publication: 38 verdicts across the three API-model rows run on 2026-06-12 — 36 behavioral failures and 2 grades-on-wording under the documented contract — plus 12 on qwen3.5, of which 5 are the documented fallback grading format-noncompliant but substantively correct answers. (claude-sonnet-4-6's row had already passed the same gate at its 2026-06-11 baseline.) The decision on record is to publish with structural disclosure — the ANSWER fmt column in every row — rather than bend the scorer per model. A hardening of the fallback, `det-5`, is a recorded candidate (§6, §7); under it, qwen3.5's strict score would read approximately 68.2%.
+**Adjudication disclosure.** Per the gate of §3.4, every probe that failed strict pass^3 in every row was adjudicated from its transcript before publication: 38 verdicts across the three API-model rows run on 2026-06-12 — 36 behavioral failures and 2 grades-on-wording under the documented contract — plus 12 on qwen3.5, of which 5 are the documented fallback grading format-noncompliant but substantively correct answers. (claude-sonnet-4-6's row had already passed the same gate at its 2026-06-11 baseline.) The decision on record is to publish with structural disclosure — the ANSWER fmt column in every row — rather than bend the scorer per model. A hardening of the fallback, `det-5`, is a recorded candidate (§7, §8); under it, qwen3.5's strict score would read approximately 68.2%.
 
 Every row above is reproducible with a single `inspect eval` invocation plus `tessera-leaderboard` over the resulting logs; the exact commands live in [`docs/leaderboard.md`](leaderboard.md).
 
@@ -154,15 +154,36 @@ Four findings:
 
 1. **The hop is a faithful conduit — and that is the risk.** The consumer never overrode a correct refusal (`flag_dropped` 0/27: no producer refusal was overridden, including the 12 on the unresolvable ties) and never challenged a fabrication (`conflict_laundered` 3/3). Delegation neither degraded nor improved the decision; it inherited it. A tie-break fabricated at stage one arrives at stage two dressed as a finding.
 
-2. **The laundering is articulate.** On `q_quill_renewal` the consumer did not just relay the producer's invented precedence — it rationalized it: "the analyst applied a tiebreaker by favoring the dedicated renewal tracker … which is a reasonable judgment call." In the quoted case, the answer grew more confident as it moved away from the evidence — whether that compounds over deeper chains is a §7 question.
+2. **The laundering is articulate.** On `q_quill_renewal` the consumer did not just relay the producer's invented precedence — it rationalized it: "the analyst applied a tiebreaker by favoring the dedicated renewal tracker … which is a reasonable judgment call." In the quoted case, the answer grew more confident as it moved away from the evidence — whether that compounds over deeper chains is a §8 question.
 
 3. **The headline delta is producer-side sampling noise, not a hop effect.** The delegated 90.9% over the direct 86.4% does not mean delegation improved reliability. The producer is the direct task's exact agent; in this run it fabricated in 3/15 unresolvable epochs against 5/15 in the baseline, and a 5-probe category at k=3 swings by that much. The hop-flag table, not the topline, is the result.
 
-4. **Scope.** One hop, a tool-less consumer, the same model on both stages — the explicit non-goals of ADR-0007 bound the claim. The questions this baseline makes askable — a weaker consumer, a tool-using consumer, deeper chains — are taken up in §7.
+4. **Scope.** One hop, a tool-less consumer, the same model on both stages — the explicit non-goals of ADR-0007 bound the claim. The questions this baseline makes askable — a weaker consumer, a tool-using consumer, deeper chains — are taken up in §8.
 
 Both tables reproduce [`docs/delegation.md`](delegation.md), which carries the exact `inspect eval` and `tessera-leaderboard` commands to regenerate the pair.
 
-## 6. Limitations
+## 6. Experiment 3: the refusal-aware scaffold
+
+Experiment 1 measured reliability under one fixed prompt and the unresolvable column read 40/0/0/0/0. The third experiment asks whether that failure is partly a property of the *scaffold* rather than only of the models, by contrasting two prompts that differ in exactly one block. The baseline scaffold (B0) is the Experiment 1 prompt, kept byte-identical: the reconciliation policy plus a single generic refusal nudge. The refusal-aware scaffold (R1) replaces that one sentence with an explicit procedure that turns the four-type taxonomy into an action rule — answer when the sources agree or only one speaks; resolve and state the rule when one source is binding or, absent authority, more recent; refuse and escalate, rather than invent a tie-break, when the sources disagree with equal authority and nothing breaks the tie; refuse the absent record. R1 names the procedure and the stakes of refusing, not which probes are ties — those the agent still discovers by reading the silos — so the experiment stays within the policy-execution scope of §3.2. Both prompts are reproduced verbatim in [ADR-0009](adr/0009-refusal-aware-scaffold-intervention.md).
+
+**Design.** A single org realises each conflict type with five probes, too few to test an intervention, so the contrast runs across five instances of the meridian family using the factory of §3.4 ([ADR-0008](adr/0008-scenario-factory-and-holdout-protocol.md)): the authored org (seed 0) and four variants (seeds 1–4), each re-dealing the conflict graph and synthesizing fresh values while holding the 6/6/5/5 category counts fixed. That is 110 probe-instances per model per arm, paired per (instance, probe) on strict pass^3 and compared with an exact McNemar test over the discordant pairs. H1₂'s claim is conjoint — a refusal gain on the unresolvable and void probes *without* a significant answering loss on the none and resolvable probes — so it is tested on the two disjoint subsets separately, which keeps a gain bought by over-refusal visible rather than netted away. Four API models were run; the open-weights qwen3.5 row was not re-run under both arms. The B0 arm reproduces the Experiment 1 leaderboard within the sampling noise of a five-probe category at k=3.
+
+| Model | arm | net pass^3 | none | resolvable | unresolvable | void | McNemar (helped/hurt) | exact p |
+|---|---|--:|--:|--:|--:|--:|:--:|--:|
+| claude-sonnet-4-6 | B0 | 75.5% | 90% | 86.7% | 20% | 100% | | |
+| claude-sonnet-4-6 | **R1** | **95.5%** | 93.3% | 100% | **88%** | 100% | 24 / 2 | **< 0.0001** |
+| gpt-4o | B0 | 44.5% | 0% | 73.3% | 16% | 92% | | |
+| gpt-4o | **R1** | **52.7%** | 0% | 73.3% | **48%** | 96% | 10 / 1 | **0.012** |
+| claude-haiku-4-5 | B0 | 52.7% | 53.3% | 63.3% | 4% | 88% | | |
+| claude-haiku-4-5 | R1 | 54.5% | 53.3% | 43.3% | 36% | 88% | 17 / 15 | 0.86 |
+| gpt-4o-mini | B0 | 32.7% | 0% | 36.7% | 0% | 100% | | |
+| gpt-4o-mini | R1 | 29.1% | 0% | 23.3% | 0% | 100% | 2 / 6 | 0.29 |
+
+**The scaffold is a capability amplifier, not a substitute.** For the two more capable models R1 is a large, significant gain. claude-sonnet-4-6 rises 75.5% → 95.5%: on the refusal subset it helps eighteen probe-instances and harms one (p = 0.0001), and on the answerable subset it harms none of consequence (six helped, one harmed, p = 0.125, a non-significant gain), so the conjoint claim of H1₂ holds in full. gpt-4o shows the same pattern more modestly: net 44.5% → 52.7%, refusal subset 9/0 (p = 0.004), answerable subset unchanged (p = 1.0). The mechanism is the unresolvable column — Sonnet 20% → 88%, gpt-4o 16% → 48% — exactly the column on which Experiment 1 found every model fabricating. For the weaker models the gain is paid for or unreachable. claude-haiku-4-5 improves significantly on the ties (refusal subset 9/1, p = 0.022; unresolvable 4% → 36%) but loses an almost equal amount on resolvable (63.3% → 43.3%, fourteen harmed against eight helped, not significant on its own at p = 0.29), so net behavior is unmoved and the overall paired test is indistinguishable from chance (p = 0.86). gpt-4o-mini fails the cross-silo joins upstream (none 0% under either arm), never reaches a recognizable tie (unresolvable 0% → 0%), and H0₂ is retained. Naming the taxonomy converts detection into refusal for a model that can already detect the conflict; it cannot manufacture the detection.
+
+**Holdout.** To rule out that the effect is tuned to instances seen while writing the scaffold, claude-sonnet-4-6 was re-run on a *withheld* factory seed under the ADR-0008 commitment. The commitment `df55a190…331ce82` (factory_version `fac-1`) was recorded before the run; the reveal `{seed = 31337, salt, fac-1}` recomputes it (`verify → True`) and regenerates the exact org and answer key. On that committed, previously unseen instance the effect replicates: net 86.4% → 95.5%, unresolvable 40% → 100%. The full tables, the McNemar decomposition, and the commitment/reveal are in [docs/scaffold.md](scaffold.md).
+
+## 7. Limitations
 
 Five limitations bound what the measurements above license. None retracts a finding; each states what the finding does not cover.
 
@@ -172,11 +193,13 @@ Five limitations bound what the measurements above license. None retracts a find
 
 **Fallback strictness.** 5 of qwen3.5's 12 failed probes are the documented fallback (§3.3) grading format-noncompliant but substantively correct answers (§4): on that row, part of the strict–mean gap is set by the scorer's strictness rather than the model's behavior. The `det-5` hardening is a recorded candidate; per §3.3 and ADR-0006, shipping it bumps `scorer_version` and re-runs the whole protocol — every row, same scorer version — which is why the change is deliberate rather than already made.
 
-**The delegation study is small.** One model, one hop, a tool-less consumer, 30 refuse-probe epochs, 3 laundering events. The 3/3 laundering and 0/27 dropped-refusal counts are exact for this run and directional beyond it; they motivate the follow-ups in §7; they do not establish a rate.
+**The delegation study is small.** One model, one hop, a tool-less consumer, 30 refuse-probe epochs, 3 laundering events. The 3/3 laundering and 0/27 dropped-refusal counts are exact for this run and directional beyond it; they motivate the follow-ups in §8; they do not establish a rate.
+
+**The intervention is established on a small panel.** Four API models, one org family (five instances), the deterministic engine only; the open-weights row is not re-run under both scaffolds. The capability-amplifier reading is consistent across every model tested but rests on four points, and the over-refusal cost on the middle of the range shows the refusal-aware scaffold is not strictly dominant — on a low-capability model it can trade silent error for over-refusal without improving net behavior.
 
 **Policy execution, not discovery.** The scope statement of §1, restated as a limitation: every probe hands the agent the reconciliation policy. These results say nothing about whether an agent can infer a sensible policy from a fragmented org unaided — a separate and harder problem.
 
-## 7. Future work
+## 8. Future work
 
 Four lines of work follow from the limitations.
 
@@ -184,7 +207,9 @@ Four lines of work follow from the limitations.
 
 **Delegation follow-ups.** The §5 baseline makes three questions askable: a weaker or cross-model consumer (does laundering worsen when the consumer cannot evaluate the brief?); a tool-using consumer (does independent re-verification catch laundered fabrications?); and chains deeper than one hop.
 
-**Fallback hardening (`det-5`).** The recorded candidate of §4, under the constraint stated in §6.
+**Scaffold refinement.** The §6 over-refusal cost — the refusal-aware scaffold's gain on the unresolvable ties bleeding into the resolvable probes on weaker models — motivates a scaffold that keeps the refusal gain without depressing correct answering, perhaps by separating the instruction to *detect* a conflict from the instruction to *refuse* it, plus broader coverage (the open-weights row under both arms and org families beyond meridian).
+
+**Fallback hardening (`det-5`).** The recorded candidate of §4, under the constraint stated in §7.
 
 **Growing the leaderboard.** More models under the frozen protocol; community rows — a `meridian` run on an unmeasured model, adjudicated before it ships — follow the procedure in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
@@ -222,6 +247,9 @@ Four lines of work follow from the limitations.
 - **ADR-0005 — per-field CRM provenance** — [adr/0005-per-field-crm-provenance.md](adr/0005-per-field-crm-provenance.md)
 - **ADR-0006 — meridian as the public reference org; the leaderboard protocol** — [adr/0006-meridian-and-the-leaderboard-protocol.md](adr/0006-meridian-and-the-leaderboard-protocol.md)
 - **ADR-0007 — reliability under delegation: a two-stage chain, not `handoff()`** — [adr/0007-delegation-mvp.md](adr/0007-delegation-mvp.md)
+- **ADR-0008 — the scenario factory and the holdout protocol** — [adr/0008-scenario-factory-and-holdout-protocol.md](adr/0008-scenario-factory-and-holdout-protocol.md)
+- **ADR-0009 — the refusal-aware scaffold intervention** — [adr/0009-refusal-aware-scaffold-intervention.md](adr/0009-refusal-aware-scaffold-intervention.md)
 - **Leaderboard** — published rows and the commands that regenerate them — [leaderboard.md](leaderboard.md)
 - **Delegation study** — the delegated pair and the hop-flag table — [delegation.md](delegation.md)
+- **Scaffold intervention** — B0 vs R1, the paired McNemar tables, and the holdout reveal — [scaffold.md](scaffold.md)
 - **Contributing guide** — the community leaderboard-row protocol — [CONTRIBUTING.md](../CONTRIBUTING.md)
