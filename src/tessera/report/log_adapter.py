@@ -82,5 +82,6 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         grader=(_grader_id(spec.model_roles) if engine == "llm" else None),
         org=(str(args["org"]) if "org" in args else None),
         scorer_version=(str(scorer_version) if scorer_version else None),
+        inspect_ai_version=(spec.packages or {}).get("inspect_ai"),
     )
     return header, records

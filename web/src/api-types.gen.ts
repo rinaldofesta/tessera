@@ -506,6 +506,8 @@ export interface components {
             location: string;
             /** Scorer Version */
             scorer_version?: string | null;
+            /** Inspect Ai Version */
+            inspect_ai_version?: string | null;
         };
         /** ReportOverall */
         ReportOverall: {

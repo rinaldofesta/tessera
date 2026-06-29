@@ -48,6 +48,26 @@ def test_prose_claim_requires_a_template():
         )
 
 
+def test_prose_template_referencing_anything_but_value_is_rejected():
+    # the template is rendered with str.format(value=...); a name/index that cannot be
+    # filled ({nope}, positional {0}) would raise at compile time, so reject it here
+    for bad in ("Renewal is {nope}.", "Renewal is {0}."):
+        with pytest.raises(ValidationError):
+            _field_claim(value="2026-03-01",
+                         render={"as": "prose", "template": bad})
+    # a subscript invalid for the actual value is rejected too (an int has no [0])
+    with pytest.raises(ValidationError):
+        _field_claim(value=7, render={"as": "prose", "template": "Seats: {value[0]}."})
+    # a format spec that fails for the actual value ({value:c} out of unicode range)
+    # raises OverflowError in str.format — must be a structured error, not an uncaught 500
+    with pytest.raises(ValidationError):
+        _field_claim(value=1114112, render={"as": "prose", "template": "Char: {value:c}"})
+    # a well-formed {value} template still constructs
+    ok = _field_claim(value="2026-03-01",
+                      render={"as": "prose", "template": "Renewal is {value}."})
+    assert ok.render.template == "Renewal is {value}."
+
+
 def test_refuse_probe_must_not_carry_an_answer():
     with pytest.raises(ValidationError):
         Probe(

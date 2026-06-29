@@ -44,6 +44,10 @@ class RunHeader:
     grader: str | None
     org: str | None = None            # which blueprint was evaluated (if recorded)
     scorer_version: str | None = None # det-4/llm-2 etc.; None on pre-versioned logs
+    inspect_ai_version: str | None = None  # the inspect_ai that produced the run (from
+    #                                        the log's eval.packages); None if unrecorded.
+    #                                        Load-bearing for reproducibility — react/submit
+    #                                        semantics move answer_format_ok across versions.
 
 
 @dataclass(frozen=True)

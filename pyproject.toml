@@ -1,6 +1,6 @@
 [project]
 name = "tessera"
-version = "0.0.0"
+version = "0.1.0"
 description = "Open methodology and generator for enterprise AI-agent reliability evals, built on inspect_ai."
 readme = "README.md"
 requires-python = ">=3.10"

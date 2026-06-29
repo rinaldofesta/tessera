@@ -151,6 +151,74 @@ def test_committed_answer_line_beats_quoted_values():
     assert g2["accuracy_ok"] is True
 
 
+def test_committed_distractor_leading_with_correct_value_trailing_is_not_credited():
+    # the inverse of test_committed_answer_line_beats_quoted_values: when the DISTRACTOR
+    # leads on the committed line and the right value merely trails, it must fail
+    # (first-mention-wins, via the probe's distractor values).
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="$1.2M",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: $1.5M (CRM still shows $1.2M)",
+        distractor_values=["$1.5M"],
+    )
+    assert g["accuracy_ok"] is False
+    # 'X, not Y' leads with the distractor X — quoting the right value after does not rescue it
+    g2 = grade_probe(
+        expected_behavior="answer", expected_answer="4 hours",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: 7 hours, not 4 hours",
+        distractor_values=["7 hours"],
+    )
+    assert g2["accuracy_ok"] is False
+    # ...while the honest commitment (right value first, stale one trailing) still passes
+    g3 = grade_probe(
+        expected_behavior="answer", expected_answer="$1.2M",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: $1.2M (CRM previously showed $1.5M)",
+        distractor_values=["$1.5M"],
+    )
+    assert g3["accuracy_ok"] is True
+
+
+def test_committed_value_trailing_non_value_prose_is_credited():
+    # regression (adversarial review): a legitimate value trailing non-value prose or
+    # punctuation, with NO distractor leading before it, must still be credited — the
+    # earlier delimiter-truncation flipped real published answers to FAIL.
+    for completion in ("ANSWER: the account manager, Dana Okafor",
+                       "ANSWER: the account manager (Dana Okafor)",
+                       "ANSWER: the SLA first-response window is 7 hours"):
+        exp = "Dana Okafor" if "Dana" in completion else "7 hours"
+        g = grade_probe(
+            expected_behavior="answer", expected_answer=exp,
+            expected_sources=[], consulted=set(), completion=completion,
+            distractor_values=["Marta Villas", "4 hours"],   # neither appears on the line
+        )
+        assert g["accuracy_ok"] is True, completion
+
+
+def test_committed_refusal_distinguishes_tokens_from_values_and_catches_phrases():
+    # 'Unknown Holdings' is a legitimate value, not an abstention — it must commit (A3 fix)
+    g = grade_probe(
+        expected_behavior="answer", expected_answer="Unknown Holdings",
+        expected_sources=[], consulted=set(),
+        completion="ANSWER: Unknown Holdings",
+    )
+    assert g["refusal_ok"] is True and g["accuracy_ok"] is True
+    # the ambiguous single tokens refuse only as the whole value (+ a parenthetical/comma
+    # justification): 'unknown', 'unknown (no record)', 'n/a'
+    for c in ("ANSWER: unknown", "ANSWER: unknown (no record)", "ANSWER: n/a"):
+        r = grade_probe(expected_behavior="refuse", expected_answer=None,
+                        expected_sources=[], consulted=set(), completion=c)
+        assert r["refusal_ok"] is True, c
+    # multi-word abstention phrases refuse even with a trailing clause — they never begin a
+    # real value (regression: exact-match wrongly missed 'cannot determine the renewal date')
+    for c in ("ANSWER: cannot determine", "ANSWER: cannot determine the renewal date",
+              "ANSWER: I don't know the exact figure", "ANSWER: no answer available"):
+        r = grade_probe(expected_behavior="refuse", expected_answer=None,
+                        expected_sources=[], consulted=set(), completion=c)
+        assert r["refusal_ok"] is True, c
+
+
 def test_fallback_without_answer_line_uses_distractors_last_mention_wins():
     # no ANSWER line: committing to the stale value while quoting the right one fails...
     g = grade_probe(

@@ -76,6 +76,26 @@ class Claim(BaseModel):
     authority: int | None = None
     render: Render
 
+    @model_validator(mode="after")
+    def _prose_template_renders(self) -> "Claim":
+        # The prose template is user-controlled and compiled with str.format(value=...).
+        # A template referencing anything other than {value} ({nope}, {0}, {value[0]})
+        # raises KeyError/IndexError/etc. in the compiler — an uncaught 500. Trial-render
+        # it here with the real value so a bad template is a structured authoring-time
+        # error (a 400 on every API write path) instead.
+        if self.render.as_ is RenderAs.prose and self.render.template is not None:
+            try:
+                self.render.template.format(value=self.value)
+            except Exception as exc:  # noqa: BLE001 — str.format's failure surface is wide
+                # (KeyError/IndexError/AttributeError/ValueError/TypeError/OverflowError,
+                # plus locale/format-spec errors); any of them would be an uncaught 500 in
+                # the compiler, so any of them must be a structured authoring-time error.
+                raise ValueError(
+                    f"prose template must render with {{value}} only; "
+                    f"rendering failed with {type(exc).__name__}: {exc}"
+                ) from exc
+        return self
+
 
 class Probe(BaseModel):
     """A question that references claims and declares expected behavior."""

@@ -46,15 +46,36 @@ def test_generated_path_matches_canonical_shape():
                 assert silos == ["crm", "docs"], (seed, p.probe_id)
 
 
+def test_no_seed_in_a_wide_range_crashes_the_invariant_gates():
+    # generate_variant runs assert_variant_invariants. A resolvable slot whose loser is a
+    # substring of the winner ('2.9%'/'12.9%', '96'/'196') used to empty the distractor
+    # set and raise VariantInvariantError on ~0.34% of seeds (218, 1742, 1771, 1846,
+    # 1974, ...), silently breaking the holdout reveal guarantee — a coordinator could
+    # commit to a seed that cannot be revealed. Every seed in a wide band must generate.
+    for seed in range(1, 2000):
+        generate_variant(seed)
+
+
+def test_same_seed_reproduces_an_identical_blueprint():
+    # the holdout reveal-and-reproduce guarantee rests on same-seed -> identical Blueprint
+    # for EVERY seed, not just the one the cross-machine test pins. A path stable at one
+    # seed but not others would slip past a single-seed assertion.
+    for seed in (1, 2, 7, 19, 42, 99):
+        assert (generate_variant(seed).model_dump_json()
+                == generate_variant(seed).model_dump_json()), seed
+
+
 def test_cross_machine_determinism_under_pythonhashseed():
     # hash randomization is per-process and must be set before interpreter start; a set/dict
-    # leaking into the rng path would make the output depend on PYTHONHASHSEED.
-    code = ("from tessera.factory.generate import generate_variant; "
-            "print(generate_variant(7).model_dump_json())")
-    outs = set()
-    for hs in ("0", "12345"):
-        result = subprocess.run([sys.executable, "-c", code], capture_output=True,
-                                text=True, env={**os.environ, "PYTHONHASHSEED": hs})
-        assert result.returncode == 0, result.stderr
-        outs.add(result.stdout)
-    assert len(outs) == 1            # identical regardless of hash seed
+    # leaking into the rng path would make the output depend on PYTHONHASHSEED. Checked over
+    # several seeds, not just one.
+    for seed in (1, 7, 42):
+        code = ("from tessera.factory.generate import generate_variant; "
+                f"print(generate_variant({seed}).model_dump_json())")
+        outs = set()
+        for hs in ("0", "12345"):
+            result = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                                    text=True, env={**os.environ, "PYTHONHASHSEED": hs})
+            assert result.returncode == 0, result.stderr
+            outs.add(result.stdout)
+        assert len(outs) == 1, seed            # identical regardless of hash seed

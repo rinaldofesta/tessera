@@ -76,6 +76,7 @@ def report_to_dict(log) -> dict:
             "created": header.created,
             "location": header.location,
             "scorer_version": header.scorer_version,
+            "inspect_ai_version": header.inspect_ai_version,
         },
         "overall": {
             "pass_k_rate": overall_pass_k_rate(probes),

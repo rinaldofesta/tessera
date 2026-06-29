@@ -93,17 +93,26 @@ _SCORER_VERSION_LLM = "llm-2"
 # commitments still route to the strong committed-line path, not the weaker fallback.
 _ANSWER_LINE = re.compile(r"(?im)^[\s>*#-]*(?:final\s+)?answer\**\s*:\s*\**\s*(.+?)[\s*]*$")
 
-# A committed line refuses only when it LEADS with the abstention — a justification
-# tail ('$425k (no record of a later amendment)') is a commitment, not a refusal.
-_COMMITTED_REFUSALS = (
-    "cannot determine", "can't determine", "unknown",
-    "i don't know", "i do not know", "no answer", "n/a",
-)
+# A committed line refuses when its value is an abstention. Multi-word phrases
+# ('cannot determine ...') never begin a real answer value, so a LEADING match counts —
+# 'cannot determine the renewal date' refuses. The two ambiguous single tokens must be
+# the whole value, modulo a trailing parenthetical / comma justification: 'unknown' and
+# 'unknown (no record)' refuse, but 'Unknown Holdings' is a legitimate answer that commits.
+# Latent (pre-existing, inherited from the original startswith scorer): a value that
+# genuinely begins with a phrase — a firm literally named 'Cannot Determine Inc' — would
+# mis-flag; _norm lowercases away the proper-noun signal, no org carries such a value, and
+# the llm engine is the cross-check.
+_REFUSAL_PHRASES = ("cannot determine", "can't determine",
+                    "i don't know", "i do not know", "no answer")
+_REFUSAL_TOKENS = frozenset(("unknown", "n/a"))
 
 
 def _committed_refusal(line: str) -> bool:
     norm = _norm(line).strip(".,;:!? ")
-    return norm.startswith(_COMMITTED_REFUSALS)
+    if norm.startswith(_REFUSAL_PHRASES):
+        return True
+    head = re.split(r"\s*[(,;]", norm, maxsplit=1)[0].strip()
+    return head in _REFUSAL_TOKENS
 
 
 def extract_final_answer(completion: str) -> str | None:
@@ -149,6 +158,29 @@ def _matches_with_distractors(completion: str, expected: str,
             continue
         last_d = max((m.end() for m in _value_pattern(d).finditer(norm)), default=-1)
         if last_d > last_expected:
+            return False
+    return True
+
+
+def _committed_correct(line: str, expected: str,
+                       distractors: list[str] | tuple[str, ...] = ()) -> bool:
+    """Accuracy for a committed ANSWER line: the expected value must appear AND no
+    distractor may appear BEFORE its first mention. First-mention-wins is the committed
+    mirror of the no-line fallback's last-mention-wins: on the committed line the value
+    the agent leads with is the commitment, so committing to a distractor and quoting the
+    right one after it ('$1.5M (CRM still shows $1.2M)') earns no credit, while a value
+    that merely trails non-value prose ('the account manager, Dana Okafor') still does."""
+    norm = _norm(line)
+    first_expected = min((m.start() for m in _value_pattern(expected).finditer(norm)),
+                         default=None)
+    if first_expected is None:
+        return False
+    for d in distractors:
+        d = (d or "").strip()
+        if not d:
+            continue
+        first_d = min((m.start() for m in _value_pattern(d).finditer(norm)), default=None)
+        if first_d is not None and first_d < first_expected:
             return False
     return True
 
@@ -201,8 +233,12 @@ def grade_probe(
         if not expected_answer:
             raise ValueError("answer probes require a non-empty expected_answer")
         if final is not None:
-            # the committed line is the answer; reasoning above it is never penalized
-            answered_correctly = match_answer(final, expected_answer)
+            # accuracy reads the committed line: the expected value must appear and no
+            # distractor may lead before it (first-mention-wins) — committing to a
+            # distractor and quoting the right value after it earns no credit, while a
+            # value trailing non-value prose still does. Reasoning ABOVE the line is
+            # never penalized.
+            answered_correctly = _committed_correct(final, expected_answer, distractor_values)
         else:
             answered_correctly = _matches_with_distractors(
                 completion, expected_answer, distractor_values)
@@ -363,15 +399,23 @@ def llm_reliability_scorer(manifest: dict[str, dict], *, grader_model=None,
 #   when its predicate came back in the lookup's recorded response — NOT_FOUND and
 #   errored calls credit nothing. The scorer therefore depends on crm_lookup
 #   responses being recorded as JSON text in the log; docs credit stays call-based
-#   (one claim-bundle per file, the path is the address).
-# * Accuracy scores the COMMITTED answer: the last 'ANSWER:' line when present
-#   (transparent reasoning above it is never penalized), else a boundary-guarded
-#   match over the whole completion with distractor-exclusion (last-mention-wins).
-#   The fallback still mis-scores "X, not Y" negations and trailing parentheticals
-#   ("X (CRM still shows Y)"); date/number paraphrases ("March 1, 2026" for
-#   "2026-03-01") are not matched — keep expected_answer in the wording the org
-#   materializes. Score.metadata records scorer_version + answer_format_ok.
-# * Refusal is also decided by the committed line when present ('ANSWER: cannot
+#   (one claim-bundle per file, the path is the address). The docs_search excerpt is
+#   the rendered claim sentence and so may surface the answer value, but credit still
+#   requires docs_get_file — answering from the excerpt alone earns no docs provenance.
+#   This is intentional ("consult the claim" = open its file), not a leak (review A5).
+# * Accuracy reads the COMMITTED answer: with an 'ANSWER:' line, the expected value must
+#   appear on it AND no distractor may lead before the value's first mention
+#   (first-mention-wins) — so committing to a distractor and quoting the right value after
+#   it ("$1.5M (CRM still shows $1.2M)") earns no credit, while a value that trails
+#   non-value prose ("the account manager, Dana Okafor") does; reasoning ABOVE the line is
+#   never penalized. Without an ANSWER line, a boundary-guarded whole-completion match with
+#   distractor-exclusion (last-mention-wins) applies, which still mis-scores "X, not Y"
+#   negations. Date/number paraphrases ("March 1, 2026" for "2026-03-01") are not matched —
+#   keep expected_answer in the wording the org materializes. Score.metadata records
+#   scorer_version + answer_format_ok.
+# * Refusal is also decided by the committed value when present ('ANSWER: cannot
 #   determine' refuses; 'ANSWER: $1.2M' under hedged reasoning commits — abstain-then-
-#   hallucinate IS caught). Without an ANSWER line the full-text keyword scan remains,
-#   where that case is not. The llm engine is the higher-fidelity cross-check.
+#   hallucinate IS caught; 'ANSWER: Unknown Holdings' commits — a value that merely
+#   leads with an abstention word is not a refusal). Without an ANSWER line the
+#   full-text keyword scan remains, where those cases are not. The llm engine is the
+#   higher-fidelity cross-check.

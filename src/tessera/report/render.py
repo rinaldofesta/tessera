@@ -100,10 +100,12 @@ def render_report(header: RunHeader, overall_pass_k: float, overall_mean: float,
                   probes: list[ProbeReliability]) -> str:
     grader = f" (grader: {header.grader})" if header.grader else ""
     scorer = f" · **Scorer:** {header.scorer_version}" if header.scorer_version else ""
+    engine_ver = (f" · **inspect_ai:** {header.inspect_ai_version}"
+                  if header.inspect_ai_version else "")
     title = [
         "# Tessera Reliability Report",
         f"**Model:** {header.model} · **Engine:** {header.engine}{grader}{scorer}",
-        f"**Run:** {header.created} · **Probes:** {len(probes)} × {header.k} epochs",
+        f"**Run:** {header.created} · **Probes:** {len(probes)} × {header.k} epochs{engine_ver}",
     ]
     footer = [
         "---",

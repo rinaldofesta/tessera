@@ -49,6 +49,11 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
         if score:
             # Excerpt = the last line of the body (the rendered sentence that follows the
             # frontmatter), capped at 200 chars; the 'or [""]' guards an empty body.
+            # NOTE: this rendered sentence carries the claim's VALUE, so the excerpt can
+            # reveal the answer. This is intentional and consistent with det-4's call-based
+            # docs provenance: an agent that reads the value from the excerpt still earns
+            # NO docs provenance until it opens the file via docs_get_file. The excerpt is
+            # a search teaser; consulting the claim means opening its file. (review A5)
             excerpt = (body.strip().splitlines() or [""])[-1][:200]
             ranked.append((score, md.name, {"path": f"docs/{md.name}", "excerpt": excerpt}))
     ranked.sort(key=lambda r: (-r[0], r[1]))  # most terms first; filename breaks ties

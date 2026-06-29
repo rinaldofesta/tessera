@@ -5,13 +5,14 @@ from tessera.report.serialize import report_to_dict
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
-              model="anthropic/claude-sonnet-4-6", location="./logs/run.eval"):
+              model="anthropic/claude-sonnet-4-6", location="./logs/run.eval",
+              packages={"inspect_ai": "0.3.235"}):
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
     from inspect_ai.model import ModelConfig
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
     spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
-                    task_args={"judge": judge}, model_roles=roles)
+                    task_args={"judge": judge}, model_roles=roles, packages=packages)
     return EvalLog(eval=spec, samples=samples, location=location)
 
 
@@ -49,6 +50,14 @@ def test_header_and_overall():
     assert d["header"]["engine"] == "llm" and d["header"]["grader"] == "openai/gpt-4o"
     assert d["header"]["k"] == 3 and d["header"]["location"] == "./logs/run.eval"
     assert d["overall"]["pass_k_rate"] == 1.0 and d["overall"]["mean_rate"] == 1.0
+    # the producing inspect_ai version is recorded for reproducibility (read from the log's
+    # eval.packages); None when the log didn't record it
+    assert d["header"]["inspect_ai_version"] == "0.3.235"
+
+
+def test_inspect_ai_version_is_none_when_unrecorded():
+    log = _eval_log([_answer("q1", 1, "none", True)], packages={})
+    assert report_to_dict(log)["header"]["inspect_ai_version"] is None
 
 
 def test_categories_canonical_order_and_flaky():
