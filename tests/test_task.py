@@ -1,6 +1,38 @@
 import pytest
 
-from tessera.evals.task import tessera_probes
+from tessera.evals.task import (
+    _BASELINE_PROMPT, _REFUSAL_AWARE_PROMPT, _SCAFFOLD_REFUSE_AWARE,
+    _SCAFFOLD_REFUSE_BASELINE, _SCAFFOLDS, tessera_probes,
+)
+
+
+def test_scaffolds_differ_only_in_the_refusal_block():
+    # The intervention's validity rests on a surgical contrast: the two arms must be
+    # identical everywhere except the refusal scaffolding, so a paired run isolates it.
+    assert _BASELINE_PROMPT != _REFUSAL_AWARE_PROMPT
+    blanked_b0 = _BASELINE_PROMPT.replace(_SCAFFOLD_REFUSE_BASELINE, "<<R>>")
+    blanked_r1 = _REFUSAL_AWARE_PROMPT.replace(_SCAFFOLD_REFUSE_AWARE, "<<R>>")
+    assert blanked_b0 == blanked_r1
+
+
+def test_baseline_is_the_default_scaffold(tmp_path, monkeypatch):
+    # The baseline arm must stay the default so existing det-4/k=3 logs remain the B0
+    # arm and the delegation producer is unchanged.
+    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    assert _SCAFFOLDS["baseline"] is _BASELINE_PROMPT
+    assert tessera_probes().dataset is not None  # builds with the default scaffold
+
+
+def test_refusal_aware_scaffold_names_the_taxonomy():
+    # R1 operationalizes the four-type taxonomy without naming which probes are ties.
+    for token in ("unresolvable", "tiebreaker", "cannot determine", "escalate"):
+        assert token in _REFUSAL_AWARE_PROMPT
+
+
+def test_unknown_scaffold_rejected(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    with pytest.raises(ValueError):
+        tessera_probes(scaffold="nope")
 
 
 def test_task_builds_for_both_engines(tmp_path, monkeypatch):

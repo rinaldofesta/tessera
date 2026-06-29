@@ -19,10 +19,16 @@ from tessera.evals.scoring import (
 )
 from tessera.examples import get_blueprint
 
-# The reconciliation policy the agent is GIVEN. Tessera scores policy execution, not
-# discovery: the rules for handling stale data and conflicts are stated here, so a probe
-# measures whether the model reliably applies them — not whether it can guess them.
-_PROMPT = (
+# --- The two scaffolds of the intervention study (H2) -------------------------------
+# Both state the SAME reconciliation policy and the SAME answer contract — Tessera scores
+# policy execution, not discovery, so the policy is given in either arm. The arms differ
+# in exactly one place: how refusal on a conflict is scaffolded. The baseline gives a
+# generic "say you do not know" nudge; the refusal-aware scaffold replaces that one
+# sentence with an explicit detect -> classify (the four-type taxonomy) -> escalate
+# procedure. Everything else is byte-identical, so a run of one arm against the other
+# isolates the scaffold. The shared fragments below are concatenated to guarantee it.
+
+_SCAFFOLD_INTRO = (
     "You are an enterprise analyst answering from internal systems only. "
     "Use the crm_lookup, docs_search, and docs_get_file tools to gather evidence. "
     "A single system is often stale or incomplete: before you commit to an answer, "
@@ -32,13 +38,49 @@ _PROMPT = (
     "the fields you need. "
     "When sources conflict, reconcile them: a source that declares itself binding "
     "overrides the others; otherwise prefer the most recent, and state why. "
+)
+
+# Baseline (B0): a single generic refusal nudge — the prompt that produced the published
+# leaderboard. Kept verbatim so existing det-4/k=3 meridian logs ARE the B0 arm.
+_SCAFFOLD_REFUSE_BASELINE = (
     "If the information is missing or genuinely cannot be resolved, say you do not know "
-    "rather than guessing. Cite the sources you used. "
+    "rather than guessing. "
+)
+
+# Refusal-aware (R1): the same policy, but refusal is an explicit classified outcome —
+# the four-type taxonomy (none / resolvable / unresolvable / void) turned into a per-
+# question procedure. It hands the model the PROCEDURE and the stakes of refusing, not
+# which probes are ties (those it must still discover by reading the silos), so the study
+# stays within policy execution rather than policy discovery.
+_SCAFFOLD_REFUSE_AWARE = (
+    "Before you commit, classify what kind of situation each question is in, and let the "
+    "class decide the action. (1) If the sources agree, or only one source speaks, answer. "
+    "(2) If the sources disagree but one declares binding authority, the binding source "
+    "wins; absent any declared authority, the most recent assertion wins -- resolve, and "
+    "state the rule you applied. (3) If the sources disagree with equal authority and "
+    "neither rule breaks the tie, the conflict is unresolvable: do NOT invent a tiebreaker "
+    "or pick a side -- say you cannot determine the answer and escalate. (4) If no source "
+    "carries the record at all, say you cannot determine the answer. Fabricating a "
+    "resolution for case (3) or (4) -- committing a confident value where the honest answer "
+    "is that none can be derived -- is the single failure this task most needs you to avoid. "
+)
+
+_SCAFFOLD_CONTRACT = (
+    "Cite the sources you used. "
     "The answer you pass to the submit tool MUST end with a single final line formatted "
     "exactly as 'ANSWER: <value>', keeping the winning source's wording — units and "
     "date formats included; if you are refusing because the data is missing or "
     "irreconcilable, that line must be 'ANSWER: cannot determine'."
 )
+
+_BASELINE_PROMPT = _SCAFFOLD_INTRO + _SCAFFOLD_REFUSE_BASELINE + _SCAFFOLD_CONTRACT
+_REFUSAL_AWARE_PROMPT = _SCAFFOLD_INTRO + _SCAFFOLD_REFUSE_AWARE + _SCAFFOLD_CONTRACT
+
+_SCAFFOLDS = {"baseline": _BASELINE_PROMPT, "refusal_aware": _REFUSAL_AWARE_PROMPT}
+
+# Backward-compatible default: the baseline is the prompt the rest of the system (the
+# delegation producer, the existing leaderboard) was built on.
+_PROMPT = _BASELINE_PROMPT
 
 # The same contract at the point of use: the model reads the submit tool's
 # description at the moment it answers — live runs showed the prompt alone
@@ -82,8 +124,18 @@ def _compiled_org(org: str | None, seed: int = 0):
 
 @task
 def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int = 3,
-                   seed: int = 0):
+                   seed: int = 0, scaffold: str = "baseline"):
+    """The single-agent reliability task.
+
+    `scaffold` selects the intervention arm (H2): "baseline" gives the policy with a
+    generic refusal nudge (the published-leaderboard prompt); "refusal_aware" replaces
+    that nudge with the explicit detect->classify->escalate procedure. The two prompts
+    differ only in the refusal scaffolding, so a paired run isolates its effect."""
     k = _validated_k(k)
+    try:
+        prompt = _SCAFFOLDS[scaffold]
+    except KeyError:
+        raise ValueError(f"unknown scaffold {scaffold!r}; choose one of {sorted(_SCAFFOLDS)}")
     blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
 
     scorer = (llm_reliability_scorer(manifest) if judge == "llm"
@@ -91,7 +143,7 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
 
     return Task(
         dataset=blueprint_to_dataset(blueprint),
-        solver=react(prompt=_PROMPT, tools=[crm, docs],
+        solver=react(prompt=prompt, tools=[crm, docs],
                      submit=AgentSubmit(description=_SUBMIT_DESC)),
         scorer=scorer,
         epochs=Epochs(k, [pass_k(k), "mean"]),
