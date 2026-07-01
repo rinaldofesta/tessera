@@ -60,6 +60,18 @@ def test_inspect_ai_version_is_none_when_unrecorded():
     assert report_to_dict(log)["header"]["inspect_ai_version"] is None
 
 
+def test_header_carries_scaffold_and_seed():
+    # The serialized header is what the API and the leaderboard consume: without these
+    # keys an R1 or factory-variant run is indistinguishable from a published B0 row.
+    log = _eval_log([_answer("q1", 1, "none", True)])
+    log.eval.task_args.update({"scaffold": "refusal_aware", "seed": 4})
+    d = report_to_dict(log)
+    assert d["header"]["scaffold"] == "refusal_aware" and d["header"]["seed"] == 4
+    # absent task_args -> the task defaults (baseline arm, authored org)
+    d0 = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
+    assert d0["header"]["scaffold"] == "baseline" and d0["header"]["seed"] == 0
+
+
 def test_categories_canonical_order_and_flaky():
     # one consistent 'none' probe (pass_k), one flaky 'resolvable' probe (2/3)
     samples = [

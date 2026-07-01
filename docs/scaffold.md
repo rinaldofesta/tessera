@@ -29,8 +29,9 @@ isolates the scaffold.
   factory variants (seeds 1–4, [ADR-0008](adr/0008-scenario-factory-and-holdout-protocol.md)),
   each re-dealing the conflict graph and synthesizing fresh anti-prior values while holding
   the 6/6/5/5 category counts fixed. Five instances × 22 probes = **110 probe-instances per
-  model per arm**, five per conflict type per seed rather than one — the n=1-per-type
-  weakness of a single org is retired.
+  model per arm**: five independent realisations of every probe slot, pooling 25–30
+  probe-instances per conflict type against the 5–6 one authored org affords — the
+  single-instance weakness of the fixed org is retired.
 - **Models.** Four API models under the frozen `det-4`, k=3, strict pass^3 protocol:
   claude-sonnet-4-6, claude-haiku-4-5, gpt-4o, gpt-4o-mini. Run 2026-06-28.
 - **Statistic.** Each (seed, probe) is graded as strict pass^3 under each arm and the two
@@ -106,10 +107,24 @@ replicates:
 | arm | net pass^3 | none | resolvable | unresolvable | void |
 |---|--:|--:|--:|--:|--:|
 | B0 | 86.4% | 100% | 100% | 40% | 100% |
-| **R1** | **95.5%** | 83% | 100% | **100%** | 100% |
+| **R1** | **95.5%** | 83.3% | 100% | **100%** | 100% |
 
-The commitment, the reveal, and the verification are in
-[`logs/scaffold/holdout/`](../logs/scaffold/holdout/).
+`COMMITMENT.json` and `REVEAL.json` are committed to the repo in
+[`logs/scaffold/holdout/`](../logs/scaffold/holdout/) (the run logs themselves stay
+local, like all logs); anyone can recompute the digest:
+
+```bash
+.venv/bin/python -c "import json; from tessera.factory.commit import verify; \
+r = json.load(open('logs/scaffold/holdout/REVEAL.json')); \
+print(verify(r['commitment_sha256'], r['seed'], r['salt'], r['factory_version']))"
+```
+
+*Publication caveat.* The commitment was created before the run, but commitment and
+results entered the public git history in the same commit — an outside auditor cannot
+distinguish that from post-hoc construction and must trust the author on the ordering.
+The next holdout closes this gap by publishing (pushing) the commitment before the run
+starts, which is what the protocol's "published before the run" stage was always meant
+to be.
 
 ## Limitations
 
@@ -124,11 +139,16 @@ The commitment, the reveal, and the verification are in
 ## Reproduce
 
 ```bash
-# one arm, one seed, one model
+# one arm, one seed, one model — give the run its OWN org dir and an s*/ log dir:
+# parallel runs sharing the default /tmp/tessera/run would read each other's org
+# mid-run, and analyze.py pools logs/scaffold/s*/ only.
+TESSERA_OUT=/tmp/tessera/scaffold_s0_refusal_aware_sonnet \
 .venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \
   --model anthropic/claude-sonnet-4-6 -T org=meridian -T k=3 -T seed=0 \
-  -T scaffold=refusal_aware --log-dir logs/scaffold
-# the full matrix + paired analysis
+  -T scaffold=refusal_aware --log-dir logs/scaffold/s0_refusal_aware_sonnet
+# the full matrix + paired analysis (per-type tables, overall + H1₂ subset McNemar).
+# analyze.py pools the breadth seeds 0–4 only; a holdout run (e.g. seed 31337) is
+# excluded with a warning — analyze it separately with --seeds 31337.
 scripts/scaffold/run.sh <seed> <baseline|refusal_aware> <provider/model> ...
 .venv/bin/python scripts/scaffold/analyze.py
 ```

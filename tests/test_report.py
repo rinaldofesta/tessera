@@ -197,13 +197,15 @@ from tessera.report.log_adapter import eval_log_to_records
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
-              model="anthropic/claude-sonnet-4-6", location="./logs/run.eval"):
+              model="anthropic/claude-sonnet-4-6", location="./logs/run.eval",
+              task_args=None):
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
     from inspect_ai.model import ModelConfig
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
     spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
-                    task_args={"judge": judge}, model_roles=roles)
+                    task_args=(task_args if task_args is not None else {"judge": judge}),
+                    model_roles=roles)
     # A directly-constructed EvalLog has location="" by default; set it so the adapter
     # has a stable path to surface (read_eval_log fills this in on the real path).
     return EvalLog(eval=spec, samples=samples, location=location)
@@ -249,6 +251,30 @@ def test_adapter_selects_score_by_axis_keys_regardless_of_scorer_name():
     header, [r] = eval_log_to_records(_eval_log([s], judge="deterministic", grader=None))
     assert header.engine == "deterministic" and header.grader is None
     assert r.passed is True
+
+
+def test_header_records_scaffold_and_seed():
+    # ADR-0009 made the prompt (-T scaffold=…) and ADR-0008 the org instance (-T seed=…)
+    # run parameters; a header that drops them makes an R1/variant run indistinguishable
+    # from a published baseline row everywhere downstream.
+    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
+                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
+                     expected_sources=["crm"], answer="4 hours")
+    log = _eval_log([s], task_args={"judge": "deterministic", "org": "meridian",
+                                    "scaffold": "refusal_aware", "seed": "31337"})
+    header, _ = eval_log_to_records(log)
+    assert header.scaffold == "refusal_aware"
+    assert header.seed == 31337  # -T seed=… arrives as a string from the inspect CLI
+
+
+def test_header_scaffold_and_seed_default_for_pre_adr9_logs():
+    # Logs that never passed -T scaffold/-T seed ran the baseline prompt on the
+    # authored org — the task defaults — so the header says exactly that.
+    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
+                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
+                     expected_sources=["crm"], answer="4 hours")
+    header, _ = eval_log_to_records(_eval_log([s]))
+    assert header.scaffold == "baseline" and header.seed == 0
 
 
 def test_adapter_raises_on_no_samples():

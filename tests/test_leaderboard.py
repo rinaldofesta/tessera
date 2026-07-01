@@ -9,13 +9,13 @@ from tessera.report.leaderboard import leaderboard_rows, render_leaderboard
 
 def _report(model="anthropic/claude-sonnet-4-6", org="meridian", k=3,
             scorer_version="det-4", created="2026-06-11T17:26:31+00:00",
-            pass_k=0.864, mean=0.909, categories=None):
+            pass_k=0.864, mean=0.909, categories=None, scaffold="baseline", seed=0):
     cats = categories if categories is not None else {
         "none": 1.0, "resolvable": 1.0, "unresolvable": 0.4, "void": 1.0}
     return {
         "header": {"model": model, "engine": "deterministic", "grader": None, "org": org,
                    "k": k, "created": created, "location": "./logs/run.eval",
-                   "scorer_version": scorer_version},
+                   "scorer_version": scorer_version, "scaffold": scaffold, "seed": seed},
         "overall": {"pass_k_rate": pass_k, "mean_rate": mean},
         "categories": [{"key": key, "n_probes": 5, "pass_k_rate": rate,
                         "mean_rate": rate, "flaky": False} for key, rate in cats.items()],
@@ -63,6 +63,37 @@ def test_refuses_mixed_org_or_k():
         leaderboard_rows([_report(), _report(model="openai/gpt-4o", org="toy")])
     with pytest.raises(ValueError, match="k"):
         leaderboard_rows([_report(), _report(model="openai/gpt-4o", k=2)])
+
+
+def test_refuses_mixed_scaffold_or_seed():
+    # ADR-0009 made the prompt a task parameter, opening the exact dimension the freeze
+    # exists to close: an R1 run scores ~20 points higher on the same org and must never
+    # mix into a B0 table. Same for factory seeds — a different seed is a different org
+    # instance with a different answer key (ADR-0008).
+    with pytest.raises(ValueError, match="scaffold"):
+        leaderboard_rows([_report(),
+                          _report(model="openai/gpt-4o", scaffold="refusal_aware")])
+    with pytest.raises(ValueError, match="seed"):
+        leaderboard_rows([_report(), _report(model="openai/gpt-4o", seed=3)])
+
+
+def test_pre_scaffold_report_dicts_default_to_baseline_seed_zero():
+    # Dicts serialized before ADR-0009 carry no scaffold/seed keys; they were produced
+    # by the baseline prompt on the authored org, so they pair with explicit ones.
+    old = _report()
+    del old["header"]["scaffold"], old["header"]["seed"]
+    assert len(leaderboard_rows([old, _report(model="openai/gpt-4o")])) == 2
+
+
+def test_repro_block_pins_the_scaffold_arm_and_seed():
+    md = render_leaderboard([_report()])
+    assert "-T seed=0 -T scaffold=baseline" in md
+
+
+def test_non_baseline_scaffold_is_disclosed():
+    md = render_leaderboard([_report(scaffold="refusal_aware"),
+                             _report(model="openai/gpt-4o", scaffold="refusal_aware")])
+    assert "non-baseline scaffold" in md
 
 
 def test_methodology_block_present():

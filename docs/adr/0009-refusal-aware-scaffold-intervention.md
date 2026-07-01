@@ -52,7 +52,7 @@ The intervention is a **capability amplifier, not a substitute**. R1 significant
 improves correct refusal, without a significant answering loss, for the models that can
 perceive the conflict — claude-sonnet-4-6 (refusal subset 18 helped / 1 harmed,
 p = 0.0001; net 75.5% → 95.5%) and gpt-4o (9 / 0, p = 0.004). On claude-haiku-4-5 the
-refusal gain is real (9 / 1, p = 0.022) but offset by over-refusal on resolvable probes,
+refusal gain is real (9 / 1, p = 0.021) but offset by over-refusal on resolvable probes,
 so net behaviour is unchanged (p = 0.86). gpt-4o-mini, which fails the cross-silo joins
 upstream, never reaches the ties (0 / 0) and H0₂ is retained. The full tables and the
 holdout reveal are in [docs/scaffold.md](../scaffold.md).

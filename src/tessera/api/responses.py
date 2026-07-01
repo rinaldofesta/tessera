@@ -31,6 +31,8 @@ class ReportHeader(BaseModel):
     location: str
     scorer_version: str | None = None  # det-4/llm-2 etc.; null on pre-versioned logs
     inspect_ai_version: str | None = None  # producing inspect_ai (from log packages); null if unrecorded
+    scaffold: str | None = None  # prompt arm (ADR-0009); null on payloads serialized before it
+    seed: int | None = None      # factory org instance (ADR-0008, 0 = authored); null on older payloads
 
 
 class ReportOverall(BaseModel):

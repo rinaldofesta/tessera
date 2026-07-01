@@ -27,7 +27,7 @@ def _require_uniform(rows: list[dict], field: str) -> None:
     if len(values) > 1 or None in values:
         raise ValueError(
             f"rows are not comparable: {field} differs across runs ({sorted(map(str, values))}); "
-            f"one leaderboard = one protocol (same org, k, scorer_version)")
+            f"one leaderboard = one protocol (same org, k, scorer_version, scaffold, seed)")
 
 
 def leaderboard_rows(reports: list[dict], labels: list[str | None] | None = None,
@@ -49,9 +49,16 @@ def leaderboard_rows(reports: list[dict], labels: list[str | None] | None = None
             "scorer_version": h["scorer_version"],
             "org": h["org"],
             "k": h["k"],
+            # Dicts serialized before ADR-0009/ADR-0008 carry no scaffold/seed keys;
+            # they were produced by the task defaults (baseline prompt, authored org).
+            "scaffold": h.get("scaffold") or "baseline",
+            "seed": (0 if h.get("seed") is None else h["seed"]),
             "notes": (notes[i] if i < len(notes) and notes[i] else ""),
         })
-    for field in ("scorer_version", "org", "k"):
+    # scaffold and seed are protocol dimensions like the rest: an R1 run scores ~20
+    # points higher on the same org (ADR-0009) and a different seed is a different
+    # answer key (ADR-0008) — neither may mix into one table.
+    for field in ("scorer_version", "org", "k", "scaffold", "seed"):
         _require_uniform(rows, field)
     rows.sort(key=lambda r: (-r["pass_k_rate"], -r["mean_rate"], r["label"]))
     return rows
@@ -62,6 +69,7 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
                        title: str | None = None) -> str:
     rows = leaderboard_rows(reports, labels, notes)
     org, k, scorer = rows[0]["org"], rows[0]["k"], rows[0]["scorer_version"]
+    scaffold, seed = rows[0]["scaffold"], rows[0]["seed"]
     as_of = max(r["date"] for r in rows)
 
     head = [
@@ -73,6 +81,14 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
         f"Protocol: [ADR-0006]({_ADR}).",
         "",
     ]
+    if scaffold != "baseline" or seed != 0:
+        # The guard lets a uniform non-default table through; it must say so out loud.
+        head += [
+            f"> ⚠️ `scaffold={scaffold}`, `seed={seed}` — a non-baseline scaffold and/or "
+            "a factory org instance (ADR-0008/0009). These rows are NOT comparable with "
+            "the published ADR-0006 baseline leaderboard.",
+            "",
+        ]
 
     cat_cells = " | ".join(CANONICAL_ORDER)
     table = [
@@ -111,7 +127,8 @@ def render_leaderboard(reports: list[dict], labels: list[str | None] | None = No
         "",
         "```bash",
         ".venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \\",
-        f"  --model <provider/model> -T org={org} -T judge=deterministic -T k={k} --log-dir logs",
+        f"  --model <provider/model> -T org={org} -T judge=deterministic -T k={k} \\",
+        f"  -T seed={seed} -T scaffold={scaffold} --log-dir logs",
         ".venv/bin/tessera-leaderboard logs/<run>.eval [logs/<run>.eval ...] -o docs/leaderboard.md",
         "```",
     ]
