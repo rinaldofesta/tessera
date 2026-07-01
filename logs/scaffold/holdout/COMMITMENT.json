@@ -1,0 +1,12 @@
+{
+  "stage": "pre-registration (published before the run)",
+  "date": "2026-06-28",
+  "factory_version": "fac-1",
+  "commitment_sha256": "df55a1901cdeaf7daa96944ba05080523f6df635cb350a82b1f55c826331ce82",
+  "model": "anthropic/claude-sonnet-4-6",
+  "scaffolds": [
+    "baseline",
+    "refusal_aware"
+  ],
+  "note": "seed and salt are sealed until reveal; this commits the graded instance in advance."
+}

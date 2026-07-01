@@ -31,7 +31,9 @@ In order:
 3. **Realistic fragmentation patterns** the generator should model (how knowledge
    actually scatters and contradicts itself across CRMs, wikis, tickets).
 4. **Leaderboard rows**: a meridian run on a model we have not measured, under the
-   exact protocol (`det`, `k=3`, full 22 probes — see
+   exact protocol (`det`, `k=3`, full 22 probes, the **baseline scaffold** —
+   `-T scaffold=baseline`, the default; the refusal-aware arm of ADR-0009 is an
+   intervention study, never a leaderboard row — see
    [docs/adr/0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md)).
    Attach the `.eval` log; every 0/3 probe gets adjudicated from its transcript
    before the row ships.
@@ -71,8 +73,9 @@ Read the index before changing anything load-bearing.
   `inspect_ai` (only `log_adapter.py` and `cli.py` may — there is a test that
   parses the AST). The compiler is deterministic and pure.
 - **The benchmark protocol is frozen per row** (ADR-0006): deterministic engine,
-  k=3, full probe set, no model-specific prompt tuning. Comparability guards are
-  executable — `tessera-leaderboard` refuses mixed scorer_version/org/k.
+  k=3, full probe set, the baseline scaffold, the authored org (seed 0), no
+  model-specific prompt tuning. Comparability guards are executable —
+  `tessera-leaderboard` refuses mixed scorer_version/org/k/scaffold/seed.
 
 ## Adding an org / dataset
 

@@ -508,6 +508,10 @@ export interface components {
             scorer_version?: string | null;
             /** Inspect Ai Version */
             inspect_ai_version?: string | null;
+            /** Scaffold */
+            scaffold?: string | null;
+            /** Seed */
+            seed?: number | null;
         };
         /** ReportOverall */
         ReportOverall: {

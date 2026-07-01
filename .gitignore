@@ -26,8 +26,16 @@ web/node_modules/
 web/dist/
 web/*.tsbuildinfo
 
-# Inspect logs
-logs/
+# Inspect logs (kept local) — except the holdout commitment + reveal, which are the
+# published half of the ADR-0008 pre-registration protocol (docs/scaffold.md links them).
+# gitignore cannot re-include below an ignored DIRECTORY, hence the star-then-negate dance.
+logs/*
+!logs/scaffold/
+logs/scaffold/*
+!logs/scaffold/holdout/
+logs/scaffold/holdout/*
+!logs/scaffold/holdout/COMMITMENT.json
+!logs/scaffold/holdout/REVEAL.json
 *.eval
 # ...but keep the pinned demo logs the showcase depends on
 !examples/*.eval

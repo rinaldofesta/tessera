@@ -1,0 +1,8 @@
+{
+  "stage": "reveal (published after the run)",
+  "seed": 31337,
+  "salt": "85aee5cb7806d82eadda39007fb8d76e1c365dbc5b8bd7c49b4e1da4ffd7786b",
+  "factory_version": "fac-1",
+  "commitment_sha256": "df55a1901cdeaf7daa96944ba05080523f6df635cb350a82b1f55c826331ce82",
+  "verified": true
+}

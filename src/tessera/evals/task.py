@@ -135,7 +135,8 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
     try:
         prompt = _SCAFFOLDS[scaffold]
     except KeyError:
-        raise ValueError(f"unknown scaffold {scaffold!r}; choose one of {sorted(_SCAFFOLDS)}")
+        raise ValueError(
+            f"unknown scaffold {scaffold!r}; choose one of {sorted(_SCAFFOLDS)}") from None
     blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
 
     scorer = (llm_reliability_scorer(manifest) if judge == "llm"

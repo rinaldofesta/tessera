@@ -48,6 +48,11 @@ class RunHeader:
     #                                        the log's eval.packages); None if unrecorded.
     #                                        Load-bearing for reproducibility — react/submit
     #                                        semantics move answer_format_ok across versions.
+    scaffold: str = "baseline"        # the prompt arm (-T scaffold=…, ADR-0009). Logs that
+    #                                   predate the parameter ran the baseline prompt.
+    seed: int = 0                     # the factory org instance (-T seed=…, ADR-0008);
+    #                                   0 is the authored org. A different seed is a
+    #                                   different answer key — a comparability dimension.
 
 
 @dataclass(frozen=True)

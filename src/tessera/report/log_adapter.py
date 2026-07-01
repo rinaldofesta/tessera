@@ -83,5 +83,9 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         org=(str(args["org"]) if "org" in args else None),
         scorer_version=(str(scorer_version) if scorer_version else None),
         inspect_ai_version=(spec.packages or {}).get("inspect_ai"),
+        # Absent task_args mean the task defaults ran: the baseline prompt (ADR-0009)
+        # on the authored org (seed 0, ADR-0008). -T values arrive as strings.
+        scaffold=str(args.get("scaffold", "baseline")),
+        seed=int(args.get("seed", 0)),
     )
     return header, records

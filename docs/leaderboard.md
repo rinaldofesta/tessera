@@ -22,6 +22,7 @@ Reproduce a row, then regenerate this file:
 
 ```bash
 .venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \
-  --model <provider/model> -T org=meridian -T judge=deterministic -T k=3 --log-dir logs
+  --model <provider/model> -T org=meridian -T judge=deterministic -T k=3 \
+  -T seed=0 -T scaffold=baseline --log-dir logs
 .venv/bin/tessera-leaderboard logs/<run>.eval [logs/<run>.eval ...] -o docs/leaderboard.md
 ```
