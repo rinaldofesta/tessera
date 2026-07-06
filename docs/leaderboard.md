@@ -1,14 +1,18 @@
 # Tessera leaderboard — meridian
 
-Results as of 2026-06-12. Deterministic engine (`det-4`), k=3: the headline is **strict pass^3** — a probe counts only if it passed every one of its 3 repetitions; `mean` alongside is capability when the dice land well. Protocol: [ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md).
+Results as of 2026-07-06. Deterministic engine (`det-4`), k=3: the headline is **strict pass^3** — a probe counts only if it passed every one of its 3 repetitions; `mean` alongside is capability when the dice land well. Protocol: [ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md).
 
 | # | Model | pass^3 | mean | none | resolvable | unresolvable | void | ANSWER fmt | scorer | run date | notes |
 |--:|---|--:|--:|--:|--:|--:|--:|--:|---|---|---|
-| 1 | anthropic/claude-sonnet-4-6 | **86.4%** | 90.9% | 100% | 100% | 40% | 100% | 98.5% | det-4 | 2026-06-11 |  |
-| 2 | anthropic/claude-haiku-4-5 | **54.5%** | 68.2% | 66.7% | 66.7% | 0% | 80% | 3% | det-4 | 2026-06-12 | fabricates on all five ties; grades ride the fallback path |
-| 3 | ollama/qwen3.5:latest | **45.5%** | 71.2% | 83.3% | 33.3% | 0% | 60% | 43.9% | det-4 | 2026-06-12 | open-weights 9.7B Q4_K_M, local via Ollama; diligent reader (provenance 98%) but 5 of 12 failed probes are fallback strictness on format-noncompliant answers — det-5 candidate |
-| 4 | openai/gpt-4o | **45.5%** | 54.5% | 0% | 83.3% | 0% | 100% | 22.7% | det-4 | 2026-06-12 | skips the CRM leg of cross-silo joins (8 of 12 failed probes) |
-| 5 | openai/gpt-4o-mini | **27.3%** | 40.9% | 0% | 16.7% | 0% | 100% | 92.4% | det-4 | 2026-06-12 | fails the joins and all five ties |
+| 1 | anthropic/claude-fable-5 | **100%** | 100% | 100% | 100% | 100% | 100% | 100% | det-4 | 2026-07-06 |  |
+| 2 | anthropic/claude-opus-4-8 | **100%** | 100% | 100% | 100% | 100% | 100% | 100% | det-4 | 2026-07-06 |  |
+| 3 | anthropic/claude-sonnet-4-6 | **86.4%** | 90.9% | 100% | 100% | 40% | 100% | 98.5% | det-4 | 2026-06-11 |  |
+| 4 | moa/max (gpt-5.5+deepseek-v4-pro+glm-5.2 to opus-4.8) | **81.8%** | 89.4% | 66.7% | 100% | 60% | 100% | 100% | det-4 | 2026-07-06 | MoA ensemble via local shim; refs advisory-only, aggregator holds tools |
+| 5 | anthropic/claude-sonnet-5 | **77.3%** | 86.4% | 100% | 100% | 0% | 100% | 100% | det-4 | 2026-07-06 |  |
+| 6 | anthropic/claude-haiku-4-5 | **54.5%** | 68.2% | 66.7% | 66.7% | 0% | 80% | 3% | det-4 | 2026-06-12 | fabricates on all five ties; grades ride the fallback path |
+| 7 | ollama/qwen3.5:latest | **45.5%** | 71.2% | 83.3% | 33.3% | 0% | 60% | 43.9% | det-4 | 2026-06-12 | open-weights 9.7B Q4_K_M, local via Ollama; diligent reader (provenance 98%) but 5 of 12 failed probes are fallback strictness on format-noncompliant answers |
+| 8 | openai/gpt-4o | **45.5%** | 54.5% | 0% | 83.3% | 0% | 100% | 22.7% | det-4 | 2026-06-12 | skips the CRM leg of cross-silo joins (8 of 12 failed probes) |
+| 9 | openai/gpt-4o-mini | **27.3%** | 40.9% | 0% | 16.7% | 0% | 100% | 92.4% | det-4 | 2026-06-12 | fails the joins and all five ties |
 
 ## Methodology
 
