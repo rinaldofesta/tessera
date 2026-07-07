@@ -36,7 +36,10 @@ In order:
    intervention study, never a leaderboard row — see
    [docs/adr/0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md)).
    Attach the `.eval` log; every 0/3 probe gets adjudicated from its transcript
-   before the row ships.
+   before the row ships. The table itself is generated — never hand-edit
+   `docs/leaderboard.md`: run `tessera-leaderboard --extract <log>` to get the row's
+   JSON, merge it into `docs/leaderboard.rows.json`, and regenerate with
+   `--manifest` (CI fails on drift; ADR-0010).
 
 ## Development setup
 

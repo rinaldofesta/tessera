@@ -29,11 +29,12 @@ Configurations measured on the same org, scorer, and k, but outside the single-m
 - Tessera scores policy execution, not discovery: the agent is told the reconciliation policy; the question is whether it executes it reliably.
 - `ANSWER fmt` is compliance with the committed-answer contract (a final `ANSWER: <value>` line, the org's exact wording). Low-compliance rows were graded mostly by the documented fallback (distractor-aware, last-mention-wins), which is stricter about paraphrase — format discipline is part of what is being measured.
 
-Reproduce a row, then regenerate this file:
+This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — the committed source of truth (ADR-0010). Never edit the table by hand; CI regenerates it from the manifest and fails on drift. To add or update a row, produce a run, extract its row (numbers guaranteed to match the log), merge it into the manifest, then regenerate:
 
 ```bash
 .venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \
   --model <provider/model> -T org=meridian -T judge=deterministic -T k=3 \
   -T seed=0 -T scaffold=baseline --log-dir logs
-.venv/bin/tessera-leaderboard logs/<run>.eval [logs/<run>.eval ...] -o docs/leaderboard.md
+.venv/bin/tessera-leaderboard --extract logs/<run>.eval   # -> a manifest row (JSON)
+.venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
 ```
