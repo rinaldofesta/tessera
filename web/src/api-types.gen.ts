@@ -512,6 +512,8 @@ export interface components {
             scaffold?: string | null;
             /** Seed */
             seed?: number | null;
+            /** Harness */
+            harness?: string | null;
         };
         /** ReportOverall */
         ReportOverall: {

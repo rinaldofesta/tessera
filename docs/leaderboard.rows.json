@@ -50,6 +50,23 @@
       "log": null
     },
     {
+      "label": "moa/max (gpt-5.5+deepseek-v4-pro+glm-5.2 to opus-4.8)",
+      "model": "moa/max",
+      "date": "2026-07-06",
+      "pass_k_rate": 0.818,
+      "mean_rate": 0.894,
+      "categories": {"none": 0.667, "resolvable": 1.0, "unresolvable": 0.6, "void": 1.0},
+      "answer_format_rate": 1.0,
+      "scorer_version": "det-4",
+      "org": "meridian",
+      "k": 3,
+      "scaffold": "baseline",
+      "seed": 0,
+      "harness": "ensemble",
+      "notes": "MoA ensemble via local shim; refs advisory-only, aggregator holds tools",
+      "log": null
+    },
+    {
       "label": "anthropic/claude-sonnet-5",
       "model": "anthropic/claude-sonnet-5",
       "date": "2026-07-06",
@@ -130,17 +147,5 @@
       "log": null
     }
   ],
-  "exhibitions": [
-    {
-      "label": "moa/max (gpt-5.5+deepseek-v4-pro+glm-5.2 to opus-4.8)",
-      "date": "2026-07-06",
-      "pass_k_rate": 0.818,
-      "mean_rate": 0.894,
-      "categories": {"none": 0.667, "resolvable": 1.0, "unresolvable": 0.6, "void": 1.0},
-      "answer_format_rate": 1.0,
-      "scorer_version": "det-4",
-      "notes": "MoA ensemble via local shim; refs advisory-only, aggregator holds tools",
-      "log": null
-    }
-  ]
+  "exhibitions": []
 }

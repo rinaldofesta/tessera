@@ -94,13 +94,19 @@ matches:
 - **org / k** — which blueprint, and how many repetitions behind `pass^k`.
 - **scorer_version** (e.g. `det-4`) — the exact grading rules. Numbers from different scorer
   versions are different experiments (`null` on logs that predate version stamping).
-- **inspect_ai_version** — the harness that produced the log, for reproducibility.
+- **inspect_ai_version** — the framework version that produced the log, for reproducibility.
 - **scaffold / seed** (ADR-0009 / ADR-0008) — which prompt arm the agent ran
   (`baseline` is the published-leaderboard prompt; `refusal_aware` is the intervention) and
   which factory variant of the org it saw (`0` is the authored org). Logs from before these
   dimensions existed default to `baseline` / `0`, which is what they were. The leaderboard
   generator refuses to mix rows that differ on any of these, and flags non-baseline tables
   with a ⚠️ disclosure.
+- **harness** (ADR-0011) — how the run's model calls were dispatched: `single` is a lone
+  model (every `tessera_probes` run); `ensemble` is a multi-agent configuration. Unlike the
+  guarded dimensions above, harness does *not* gate comparability — a `single` and an
+  `ensemble` run that agree on scorer/org/k/scaffold/seed ran the identical benchmark and
+  rank together, with the harness shown as a column (leaderboard) or a header note
+  (scorecard), and only when it is not `single`.
 
 ## How to read a failure block
 

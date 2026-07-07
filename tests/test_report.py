@@ -277,6 +277,28 @@ def test_header_scaffold_and_seed_default_for_pre_adr9_logs():
     assert header.scaffold == "baseline" and header.seed == 0
 
 
+def _answer_sample():
+    return _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer",
+                        passed=True, accuracy_ok=True, provenance_ok=True, refusal_ok=True,
+                        consulted=["crm"], expected_sources=["crm"], answer="4 hours")
+
+
+def test_header_records_harness_when_an_ensemble_shim_sets_it():
+    # An ensemble records its harness in task_args (ADR-0011); the header must carry it,
+    # or the leaderboard cannot label an ensemble row as anything but a lone model.
+    log = _eval_log([_answer_sample()],
+                    task_args={"judge": "deterministic", "harness": "ensemble"})
+    header, _ = eval_log_to_records(log)
+    assert header.harness == "ensemble"
+
+
+def test_header_harness_defaults_to_single():
+    # RunHeader.harness is ALWAYS populated (unlike the nullable API field): a log with no
+    # harness arg is a single-model run — every tessera_probes run is exactly that.
+    header, _ = eval_log_to_records(_eval_log([_answer_sample()]))
+    assert header.harness == "single"
+
+
 def test_adapter_raises_on_no_samples():
     with pytest.raises(ReportError):
         eval_log_to_records(_eval_log([]))
@@ -343,3 +365,45 @@ def test_cli_main_missing_file_exits_2(capsys):
     rc = main(["/nonexistent/path.eval"])
     err = capsys.readouterr().err
     assert rc == 2 and "cannot read log" in err
+
+
+def _scorecard_log(task_args=None):
+    # A fixed, path-independent single-model log for the byte-exact scorecard golden: fixed
+    # location, deterministic samples. task_args lets a test flip on the harness dimension.
+    samples = [
+        _eval_sample("q_none", e, conflict_type="none", expected_behavior="answer",
+                     passed=True, accuracy_ok=True, provenance_ok=True, refusal_ok=True,
+                     consulted=["crm"], expected_sources=["crm"], answer="4 hours",
+                     question="How long is onboarding?")
+        for e in (1, 2, 3)
+    ] + [
+        _eval_sample("q_tie", e, conflict_type="unresolvable", expected_behavior="refuse",
+                     passed=(e == 1), accuracy_ok=(e == 1), provenance_ok=True,
+                     refusal_ok=(e == 1), consulted=["crm", "deal_desk"],
+                     expected_sources=["crm", "deal_desk"],
+                     answer=("cannot determine" if e == 1 else "$1.5M"),
+                     question="What is the contract value?")
+        for e in (1, 2, 3)
+    ]
+    return _eval_log(samples, judge="deterministic", grader=None,
+                     task_args=(task_args if task_args is not None
+                                else {"judge": "deterministic"}))
+
+
+def test_scorecard_single_render_is_byte_identical_to_golden():
+    # Backcompat for the second render surface: adding the conditional harness annotation
+    # must not perturb a single-model scorecard (ADR-0011). Literal diff, fixed-location log.
+    from pathlib import Path
+
+    from tessera.report.cli import _build_report
+    golden = (Path(__file__).resolve().parents[1]
+              / "tests/fixtures/scorecard_single.golden.txt").read_text()
+    assert _build_report(_scorecard_log()) == golden
+    assert "Harness" not in golden          # no annotation when the run is a lone model
+
+
+def test_scorecard_discloses_harness_when_not_single():
+    # An ensemble scorecard must say so — the same disclosure rule as the leaderboard.
+    from tessera.report.cli import _build_report
+    log = _scorecard_log(task_args={"judge": "deterministic", "harness": "ensemble"})
+    assert "**Harness:** ensemble" in _build_report(log)

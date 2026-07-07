@@ -33,6 +33,7 @@ class ReportHeader(BaseModel):
     inspect_ai_version: str | None = None  # producing inspect_ai (from log packages); null if unrecorded
     scaffold: str | None = None  # prompt arm (ADR-0009); null on payloads serialized before it
     seed: int | None = None      # factory org instance (ADR-0008, 0 = authored); null on older payloads
+    harness: str | None = None   # how model calls were dispatched (ADR-0011, "single"=lone model); null on older payloads
 
 
 class ReportOverall(BaseModel):

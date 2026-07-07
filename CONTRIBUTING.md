@@ -79,6 +79,12 @@ Read the index before changing anything load-bearing.
   k=3, full probe set, the baseline scaffold, the authored org (seed 0), no
   model-specific prompt tuning. Comparability guards are executable —
   `tessera-leaderboard` refuses mixed scorer_version/org/k/scaffold/seed.
+- **`harness` is a displayed axis, not a guard** (ADR-0011): it labels how a row's
+  model calls were dispatched. Canonical values are **`single`** (a lone model — the
+  default, and what every `tessera_probes` run is) and **`ensemble`** (a multi-agent
+  configuration). Use exactly those two strings, not `moa`/`MoA`/etc. An ensemble ranks
+  in the table only if it still matches every guarded dimension; it is shown with the
+  `harness` column disclosed.
 
 ## Adding an org / dataset
 

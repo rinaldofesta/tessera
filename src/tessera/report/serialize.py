@@ -79,6 +79,7 @@ def report_to_dict(log) -> dict:
             "inspect_ai_version": header.inspect_ai_version,
             "scaffold": header.scaffold,
             "seed": header.seed,
+            "harness": header.harness,
         },
         "overall": {
             "pass_k_rate": overall_pass_k_rate(probes),
