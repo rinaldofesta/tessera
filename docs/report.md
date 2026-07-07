@@ -106,7 +106,7 @@ The first experiment is the instrument applied as intended: one org, one frozen 
 | 4 | openai/gpt-4o | **45.5%** | 54.5% | 0% | 83.3% | 0% | 100% | 22.7% | det-4 | 2026-06-12 |
 | 5 | openai/gpt-4o-mini | **27.3%** | 40.9% | 0% | 16.7% | 0% | 100% | 92.4% | det-4 | 2026-06-12 |
 
-*The table reproduces [`docs/leaderboard.md`](leaderboard.md); the published `notes` column is carried into the prose below.*
+*The table reproduces the 2026-06-12 snapshot of [`docs/leaderboard.md`](leaderboard.md) — the cohort this experiment analyzes; the live table has since grown (see the note closing this section). The published `notes` column is carried into the prose below.*
 
 **The headline is the `unresolvable` column, and it reads 40/0/0/0/0.** Each of the five unresolvable probes is a symmetric tie: two systems of record disagree with equal authority, nothing in the stated policy disambiguates, and the policy's own instruction is to refuse. By construction (§3.1), any committed value on these probes is wrong. Under strict pass^3, the best model refuses reliably on two of the five ties (40%); the other four models refuse reliably on none of them. Transcript adjudication identifies the dominant failure: a fabricated tie-break committed as fact — the failure mode §1 named as the one that looks like success.
 
@@ -125,6 +125,8 @@ The per-model profiles, each carrying its published note:
 **Adjudication disclosure.** Per the gate of §3.4, every probe that failed strict pass^3 in every row was adjudicated from its transcript before publication: 38 verdicts across the three API-model rows run on 2026-06-12 — 36 behavioral failures and 2 grades-on-wording under the documented contract — plus 12 on qwen3.5, of which 5 are the documented fallback grading format-noncompliant but substantively correct answers. (claude-sonnet-4-6's row had already passed the same gate at its 2026-06-11 baseline.) The decision on record is to publish with structural disclosure — the ANSWER fmt column in every row — rather than bend the scorer per model. A hardening of the fallback, `det-5`, is a recorded candidate (§7, §8); under it, qwen3.5's strict score would read approximately 68.2%.
 
 Every row above is reproducible with a single `inspect eval` invocation plus `tessera-leaderboard` over the resulting logs; the exact commands live in [`docs/leaderboard.md`](leaderboard.md).
+
+**Note added 2026-07-07.** The live [`docs/leaderboard.md`](leaderboard.md) has grown past this snapshot: as of 2026-07-06 it carries eight single-model rows plus one out-of-protocol ensemble exhibition, and two newer models — claude-fable-5 and claude-opus-4-8 — are the first to hold the `unresolvable` column at 100%, overtaking this section's 40/0/0/0/0 headline. That finding stands as a property of the cohort evaluated on 2026-06-12, not of the frontier. The newer rows were produced under the same `det-4`/k=3 protocol, but their failed probes' adjudication is not part of this report.
 
 ## 5. Experiment 2: reliability under delegation
 

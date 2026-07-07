@@ -8,9 +8,9 @@
 [![status](https://img.shields.io/badge/status-v0-brightgreen)](#status-and-roadmap)
 [![license](https://img.shields.io/badge/code-Apache--2.0-blue)](LICENSE)
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](LICENSE-DATA.md)
-[![leaderboard](https://img.shields.io/badge/leaderboard-5_models-orange)](docs/leaderboard.md)
+[![leaderboard](https://img.shields.io/badge/leaderboard-8_models-orange)](docs/leaderboard.md)
 
-> ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. Five models measured on the 22-probe meridian org, strict pass^3: see the [leaderboard](docs/leaderboard.md). Open issues, tell me where I am wrong.
+> ⚠️ **Building in public.** **v0 shipped mid-2026**: generator, MCP harness, core task suite, dual-engine scorer, runnable quickstart — plus a product UI over the whole loop. Eight models measured on the 22-probe meridian org, strict pass^3 — claude-fable-5 and claude-opus-4-8 are the first perfect rows: see the [leaderboard](docs/leaderboard.md). Open issues, tell me where I am wrong.
 
 **Technical report:** [docs/report.md](docs/report.md) — the benchmark, the protocol, and the measured results (leaderboard + delegation + the refusal-aware scaffold intervention).
 
@@ -125,6 +125,8 @@ src/tessera/
     scoring.py          the dual-engine scorer + the pure grade_from_signals combiner
     judges.py           model-graded accuracy + refusal judges (the LLM engine)
     task.py             the runnable Inspect task (a react agent over MCP, pass^k epochs)
+  factory/              the scenario factory (ADR-0008): generate_variant(seed) re-deals meridian's
+                        conflict graph per seed; salted-commitment holdout (CLI tessera-variant)
   report/               tessera-report: a pure scorecard over an .eval log (no model)
   api/                  FastAPI backend: logs / reports / blueprints / runs + SSE / trends (SQLite run store)
 web/                    the product UI: React + Vite + TypeScript SPA (Dashboard, Datasets, Run, Results)
@@ -262,7 +264,7 @@ Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR 
 - [x] **First Contact:** a first cross-graded measurement on the reference org — Sonnet 4.6, pass^3 75% (see [First Contact](#first-contact)).
 - [x] **The Reliability Explorer:** a product UI over the whole loop — author a dataset in the browser, launch a live run, read and compare scorecards.
 - [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
-- [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model fabricates tie-breaks on the unresolvable column.
+- [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline of that first five-model run: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model in the run fabricated tie-breaks on the unresolvable column — a finding the 2026-07-06 rows overturned: **claude-fable-5** and **claude-opus-4-8** are the first to hold that column at 100%. The table now carries eight baseline rows, plus a MoA ensemble shown as an out-of-protocol exhibition.
 - [x] **Companion write-up:** the technical report on measuring enterprise-agent reliability ([docs/report.md](docs/report.md)) — the benchmark and the protocol as the contribution, the leaderboard, delegation, and scaffold-intervention measurements as the evidence.
 - [x] **The scenario factory + holdout protocol** (ADR-0008): `tessera.factory.generate_variant(seed)` (CLI `tessera-variant`) deterministically re-deals `meridian`'s conflict graph per seed and synthesizes fresh anti-prior values, holding the category counts fixed — `seed = 0` equals the authored meridian object-for-object, so the published baseline stays valid. A leaderboard's headline numbers run on a **withheld** seed, fixed in advance by a salted SHA-256 commitment and revealed afterward as `{seed, salt, factory_version}` so anyone can recompute the digest and reproduce the exact org. The family — not one fixed key — is what's published; this is the answer to the "public blueprint is the answer key" problem. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
 - [ ] **Live holdout leaderboard + your-own-data generation:** a published row produced on a withheld seed with `factory_version` stamped on it and the seed exposed on the API/UI (the ADR-0008 non-goals), and pointing the generator at arbitrary user knowledge beyond the `meridian` family.
@@ -273,7 +275,7 @@ Dev setup, house rules (contract regeneration, `scorer_version` policy, the ADR 
 
 The first measurement, before meridian and the [leaderboard](docs/leaderboard.md) existed: **Claude Sonnet 4.6** on the 4-probe toy org, k=3, cross-provider judge (GPT-4o). **pass^3 75%**, provenance 100%, accuracy 100%. The missing 25%: the *unresolvable* probe, two systems of record disagreeing on a contract value with identical timestamps and equal authority. The only compliant outcome is to refuse and escalate. Instead, 3 runs of 3, the model acknowledged the tie and **manufactured a tiebreaker** (the deal desk outranks the CRM) to commit to a single figure.
 
-The leaderboard later confirmed it at scale: every model measured fabricates tie-breaks on that column. Limits: toy org, n=4, and three harness bugs fixed before the model's behavior was visible. Full report with per-epoch transcripts: [`examples/first-contact-report.md`](examples/first-contact-report.md).
+The first five-model leaderboard confirmed it at scale: every model in that run fabricated tie-breaks on the column, until the 2026-07-06 rows — claude-fable-5 and claude-opus-4-8 are the first to hold it at 100%. Limits: toy org, n=4, and three harness bugs fixed before the model's behavior was visible. Full report with per-epoch transcripts: [`examples/first-contact-report.md`](examples/first-contact-report.md).
 
 ## Integrity and limitations
 

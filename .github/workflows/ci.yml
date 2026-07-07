@@ -59,3 +59,19 @@ jobs:
       - run: PYTHON=python bash scripts/gen-types.sh
       - name: Fail on contract drift
         run: git diff --exit-code -- openapi.json web/src/api-types.gen.ts
+
+  # The leaderboard is a deterministic render of docs/leaderboard.rows.json (ADR-0010):
+  # regenerate the Markdown from the committed manifest and fail if it differs. A row
+  # hand-typed into the table, or a manifest that violates the ADR-0006 comparability
+  # guard (render exits non-zero), fails the build. The manifest is the reviewable source.
+  leaderboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "."
+      - run: tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
+      - name: Fail on leaderboard drift
+        run: git diff --exit-code -- docs/leaderboard.md
