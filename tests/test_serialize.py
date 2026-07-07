@@ -72,6 +72,18 @@ def test_header_carries_scaffold_and_seed():
     assert d0["header"]["scaffold"] == "baseline" and d0["header"]["seed"] == 0
 
 
+def test_header_carries_harness():
+    # harness (ADR-0011) is how the run's model calls were dispatched: an ensemble shim
+    # records it in task_args; tessera_probes (the single-model harness) never does, so a
+    # normal log serializes as "single". The leaderboard reads this to label ensemble rows.
+    log = _eval_log([_answer("q1", 1, "none", True)])
+    log.eval.task_args.update({"harness": "ensemble"})
+    assert report_to_dict(log)["header"]["harness"] == "ensemble"
+    # absent task_args -> the single-model default (what every tessera_probes run is)
+    d0 = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
+    assert d0["header"]["harness"] == "single"
+
+
 def test_categories_canonical_order_and_flaky():
     # one consistent 'none' probe (pass_k), one flaky 'resolvable' probe (2/3)
     samples = [

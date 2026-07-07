@@ -53,6 +53,11 @@ class RunHeader:
     seed: int = 0                     # the factory org instance (-T seed=…, ADR-0008);
     #                                   0 is the authored org. A different seed is a
     #                                   different answer key — a comparability dimension.
+    harness: str = "single"           # how the run's model calls were dispatched (ADR-0011).
+    #                                   "single" is a lone model (every tessera_probes run);
+    #                                   an ensemble shim records e.g. "ensemble". Unlike the
+    #                                   guarded dims, harness is a DISPLAYED axis: it labels
+    #                                   how a row was run, it does not gate comparability.
 
 
 @dataclass(frozen=True)

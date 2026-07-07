@@ -102,9 +102,12 @@ def render_report(header: RunHeader, overall_pass_k: float, overall_mean: float,
     scorer = f" · **Scorer:** {header.scorer_version}" if header.scorer_version else ""
     engine_ver = (f" · **inspect_ai:** {header.inspect_ai_version}"
                   if header.inspect_ai_version else "")
+    # harness (ADR-0011) is disclosed only when it is not a lone model, so a single-model
+    # scorecard is byte-identical to a pre-harness one.
+    harness = f" · **Harness:** {header.harness}" if header.harness != "single" else ""
     title = [
         "# Tessera Reliability Report",
-        f"**Model:** {header.model} · **Engine:** {header.engine}{grader}{scorer}",
+        f"**Model:** {header.model} · **Engine:** {header.engine}{grader}{scorer}{harness}",
         f"**Run:** {header.created} · **Probes:** {len(probes)} × {header.k} epochs{engine_ver}",
     ]
     footer = [

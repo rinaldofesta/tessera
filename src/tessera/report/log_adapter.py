@@ -87,5 +87,8 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         # on the authored org (seed 0, ADR-0008). -T values arrive as strings.
         scaffold=str(args.get("scaffold", "baseline")),
         seed=int(args.get("seed", 0)),
+        # tessera_probes is the single-model harness and records no harness arg; only an
+        # ensemble shim sets one, so an absent arg is a genuine "single" (ADR-0011).
+        harness=str(args.get("harness", "single")),
     )
     return header, records

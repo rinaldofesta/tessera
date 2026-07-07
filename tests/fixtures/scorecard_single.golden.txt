@@ -1,0 +1,37 @@
+# Tessera Reliability Report
+**Model:** anthropic/claude-sonnet-4-6 · **Engine:** deterministic
+**Run:** 2026-06-03T10:00:00+00:00 · **Probes:** 2 × 3 epochs
+
+## Reliability — pass^3 (strict)
+```text
+OVERALL  pass^3  50%   (mean 67%)
+
+by conflict type        pass^3            mean
+  none          ██████████ 100%           100%
+  unresolvable  ░░░░░░░░░░   0%            33%  ⚠ flaky
+```
+
+## Operational axes (across probe-epochs)
+| Axis | Rate | Denominator |
+|------|-----:|-------------|
+| Accuracy   | 100% | answer probe-epochs (3) |
+| Provenance | 100% | all probe-epochs (6) |
+| Refusal    | 33% | refuse probe-epochs (3) |
+
+## Diagnostic appendix — failed pass^3
+
+### ✗ q_tie · unresolvable · pass^3 0% (1/3 epochs)
+**Q:** What is the contract value?
+- epoch 2 FAIL — accuracy✗ provenance✓ refusal✗
+  - answer: "$1.5M"
+  - consulted: crm, deal_desk
+  - locate: sample `q_tie`, epoch 2
+- epoch 3 FAIL — accuracy✗ provenance✓ refusal✗
+  - answer: "$1.5M"
+  - consulted: crm, deal_desk
+  - locate: sample `q_tie`, epoch 3
+
+---
+Logs: ./logs/run.eval
+Open in the viewer:  inspect view --log-dir ./logs
+Pull one failure (key-free):  read_eval_log_sample("./logs/run.eval", "<probe_id>", epoch=N)
