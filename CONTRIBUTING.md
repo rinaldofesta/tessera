@@ -35,11 +35,14 @@ In order:
    `-T scaffold=baseline`, the default; the refusal-aware arm of ADR-0009 is an
    intervention study, never a leaderboard row — see
    [docs/adr/0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md)).
-   Attach the `.eval` log; every 0/3 probe gets adjudicated from its transcript
-   before the row ships. The table itself is generated — never hand-edit
-   `docs/leaderboard.md`: run `tessera-leaderboard --extract <log>` to get the row's
-   JSON, merge it into `docs/leaderboard.rows.json`, and regenerate with
-   `--manifest` (CI fails on drift; ADR-0010).
+   Every 0/3 probe gets adjudicated from its transcript before the row ships. The table
+   itself is generated — never hand-edit `docs/leaderboard.md`: commit the run's `.eval`
+   under `logs/leaderboard/`, run `tessera-leaderboard --extract logs/leaderboard/<run>.eval`
+   to get the row's JSON (its `log` stamped `{path, sha256}`), merge it into
+   `docs/leaderboard.rows.json`, regenerate with `--manifest`, and confirm with `--verify`.
+   CI fails on drift (ADR-0010) and re-derives every log-backed row from its committed log
+   (ADR-0012). A row with `log: null` is allowed but unbacked — attach the log to make it
+   verifiable.
 
 ## Development setup
 

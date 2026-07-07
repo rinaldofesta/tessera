@@ -39,6 +39,14 @@ logs/scaffold/holdout/*
 *.eval
 # ...but keep the pinned demo logs the showcase depends on
 !examples/*.eval
+# ...and the committed leaderboard logs that back manifest rows (ADR-0012). Two ignores to
+# beat here — the logs/* directory rule AND the global *.eval above — so re-include the
+# directory first (star-then-negate), then re-include *.eval AFTER the global ignore so
+# last-match-wins applies. Verify with: git check-ignore -v logs/leaderboard/x.eval
+!logs/leaderboard/
+logs/leaderboard/*
+!logs/leaderboard/*.eval
+!logs/leaderboard/README.md
 
 # Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
 docs/superpowers/
