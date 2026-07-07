@@ -15,3 +15,5 @@ The cadence: each working week closes with the ADRs for the decisions it made.
 | [0005](0005-per-field-crm-provenance.md) | 2026-06-11 | Per-field CRM provenance: credit what the agent actually received | Accepted |
 | [0006](0006-meridian-and-the-leaderboard-protocol.md) | 2026-06-11 | Meridian ships as the public reference org; the leaderboard protocol | Accepted |
 | [0007](0007-delegation-mvp.md) | 2026-06-12 | Reliability under delegation: a two-stage chain, not handoff() | Accepted |
+| [0008](0008-scenario-factory-and-holdout-protocol.md) | 2026-06-19 | The scenario-factory and the holdout protocol | Accepted |
+| [0009](0009-refusal-aware-scaffold-intervention.md) | 2026-06-28 | The refusal-aware scaffold intervention | Accepted |

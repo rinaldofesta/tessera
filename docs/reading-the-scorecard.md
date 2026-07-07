@@ -82,6 +82,26 @@ refuses, a committed value does not — keyword markers only when the line is mi
 LLM-judge engine grades the same contract semantically, which is what still catches
 keyword-free abstentions that skip the ANSWER line.
 
+## The header: is this scorecard comparable to that one?
+
+The block at the top is not boilerplate — it is the comparability contract. Two scorecards
+support a conclusion like "model A beats model B" only when everything here except the model
+matches:
+
+- **model / engine / grader** — who was measured, and which scoring engine graded it
+  (`deterministic` needs no grader; the LLM engine names its judge, and a guard rejects
+  self-grading).
+- **org / k** — which blueprint, and how many repetitions behind `pass^k`.
+- **scorer_version** (e.g. `det-4`) — the exact grading rules. Numbers from different scorer
+  versions are different experiments (`null` on logs that predate version stamping).
+- **inspect_ai_version** — the harness that produced the log, for reproducibility.
+- **scaffold / seed** (ADR-0009 / ADR-0008) — which prompt arm the agent ran
+  (`baseline` is the published-leaderboard prompt; `refusal_aware` is the intervention) and
+  which factory variant of the org it saw (`0` is the authored org). Logs from before these
+  dimensions existed default to `baseline` / `0`, which is what they were. The leaderboard
+  generator refuses to mix rows that differ on any of these, and flags non-baseline tables
+  with a ⚠️ disclosure.
+
 ## How to read a failure block
 
 Each failed probe in the appendix shows, per epoch, which axes broke and the exact locator:
