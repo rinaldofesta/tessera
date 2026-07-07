@@ -14,6 +14,7 @@ Two entry points share one renderer (`_render_doc`):
 from __future__ import annotations
 
 import hashlib
+import os
 
 from tessera.report.models import CANONICAL_ORDER
 
@@ -93,24 +94,77 @@ def leaderboard_rows(reports: list[dict], labels: list[str | None] | None = None
 
 
 def extract_rows(reports: list[dict], labels: list[str | None] | None = None,
-                 notes: list[str | None] | None = None,
-                 logs: list[str | None] | None = None) -> list[dict]:
-    """Manifest rows in input order, each stamped with its source log's sha256 (or None).
+                 notes: list[str | None] | None = None) -> list[dict]:
+    """Manifest rows in input order, `log` left None for the caller to attach.
 
     Unlike `leaderboard_rows` this neither guards nor sorts — a maintainer extracts one
     row (or a few) to merge into the manifest; the guard and the sort run at render time.
+    The CLI attaches `log` = {path, sha256} because path normalization and hashing are
+    I/O concerns, kept out of this pure function.
     """
     labels = labels or []
     notes = notes or []
-    logs = logs or []
     out = []
     for i, rep in enumerate(reports):
         row = _row_from_report(rep,
                                labels[i] if i < len(labels) and labels[i] else None,
                                notes[i] if i < len(notes) and notes[i] else None)
-        row["log"] = _sha256_file(logs[i]) if i < len(logs) and logs[i] else None
+        row["log"] = None
         out.append(row)
     return out
+
+
+# --- log verification (ADR-0012): a manifest row is "backed" when a committed log
+# re-derives its published numbers. The comparison is pure and lives here; reading the
+# log (inspect_ai) stays in cli.py, preserving the report-package purity invariant. ------
+
+# The fields a row inherits from its log. NOT label/notes/log — those are maintainer
+# metadata and must never trip verification (a hand-edited label is legitimate).
+LOG_DERIVED_FIELDS = ("model", "date", "scorer_version", "org", "k", "scaffold", "seed",
+                      "harness", "pass_k_rate", "mean_rate", "answer_format_rate",
+                      "categories")
+_RATE_FIELDS = frozenset({"pass_k_rate", "mean_rate", "answer_format_rate"})
+
+
+def row_metric_mismatches(manifest_row: dict, derived_row: dict) -> list[str]:
+    """LOG_DERIVED_FIELDS where the manifest disagrees with what the log re-derives.
+
+    Rates compare by RENDERED value (`_pct`), so a stored display-rounded `0.667` matches a
+    log's exact `2/3`: "backed" means "reproduces the published cell", not bit-equality.
+    """
+    out = []
+    for field in LOG_DERIVED_FIELDS:
+        m, d = manifest_row.get(field), derived_row.get(field)
+        if field in _RATE_FIELDS:
+            if _pct(m) != _pct(d):
+                out.append(field)
+        elif field == "categories":
+            m, d = m or {}, d or {}
+            if any(_pct(m.get(k)) != _pct(d.get(k)) for k in set(m) | set(d)):
+                out.append("categories")
+        elif m != d:
+            out.append(field)
+    return out
+
+
+def _is_safe_repo_relative_path(path: str) -> bool:
+    """A committed-log path must be strictly inside the repo — `--verify` hashes the bytes
+    at this path in CI. Reject absolutes, drive letters, backslashes, and parent escapes."""
+    if not path or "\\" in path or path.startswith("/") or os.path.isabs(path):
+        return False
+    if len(path) > 1 and path[1] == ":":            # windows drive letter (C:/…)
+        return False
+    parts = path.split("/")
+    return ".." not in parts and "" not in parts     # no ../, no // or trailing/leading /
+
+
+def _repo_relative(abspath: str, repo_root: str) -> str:
+    """POSIX path of `abspath` relative to `repo_root`; raises if it lands outside the repo
+    (a log that cannot live in the repo cannot back a committed row)."""
+    rel = os.path.relpath(os.path.abspath(abspath), os.path.abspath(repo_root))
+    if rel == ".." or rel.startswith(".." + os.sep):
+        raise ValueError(f"log path is outside the repo: {abspath}")
+    return rel.replace(os.sep, "/")
 
 
 def _exhibition_section(exhibitions: list[dict], k: int) -> list[str]:
@@ -219,16 +273,18 @@ def _render_doc(rows: list[dict], exhibitions: list[dict],
         "",
         "This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — "
         "the committed source of truth (ADR-0010). Never edit the table by hand; CI "
-        "regenerates it from the manifest and fails on drift. To add or update a row, "
-        "produce a run, extract its row (numbers guaranteed to match the log), merge it "
-        "into the manifest, then regenerate:",
+        "regenerates it from the manifest and fails on drift, and `--verify` re-derives "
+        "every log-backed row from its committed log (ADR-0012). To add or update a row, "
+        "produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it "
+        "into the manifest, then regenerate and verify:",
         "",
         "```bash",
         ".venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \\",
         f"  --model <provider/model> -T org={org} -T judge=deterministic -T k={k} \\",
-        f"  -T seed={seed} -T scaffold={scaffold} --log-dir logs",
-        ".venv/bin/tessera-leaderboard --extract logs/<run>.eval   # -> a manifest row (JSON)",
+        f"  -T seed={seed} -T scaffold={scaffold} --log-dir logs/leaderboard",
+        ".venv/bin/tessera-leaderboard --extract logs/leaderboard/<run>.eval  # -> a manifest row",
         ".venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md",
+        ".venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json --verify",
         "```",
     ]
     return "\n".join(head + table + disclosure + exhibit + method) + "\n"

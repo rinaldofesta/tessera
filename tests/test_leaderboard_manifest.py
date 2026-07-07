@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 from tessera.report.leaderboard import (
-    leaderboard_rows, render_leaderboard, render_manifest,
+    LOG_DERIVED_FIELDS, _is_safe_repo_relative_path, _repo_relative, leaderboard_rows,
+    render_leaderboard, render_manifest, row_metric_mismatches,
 )
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -144,19 +145,23 @@ def _write_eval_log(path):
     write_eval_log(EvalLog(eval=spec, samples=samples, location=str(path)), str(path))
 
 
-def test_cli_extract_emits_manifest_rows_with_a_log_digest(tmp_path):
+def test_cli_extract_stamps_a_repo_relative_path_and_digest(tmp_path, monkeypatch):
+    # --extract must stamp a REPO-RELATIVE path (ADR-0012), even when run from a non-root
+    # cwd with a relative arg — otherwise --verify (run from root) can't resolve it.
     from tessera.report.cli import leaderboard_main
-    log = tmp_path / "run.eval"
-    _write_eval_log(log)
+    (tmp_path / ".git").mkdir()
+    logdir = tmp_path / "logs" / "leaderboard"
+    logdir.mkdir(parents=True)
+    _write_eval_log(logdir / "run.eval")
+    (tmp_path / "docs").mkdir()
+    monkeypatch.chdir(tmp_path / "docs")
     out = tmp_path / "row.json"
-    assert leaderboard_main(["--extract", str(log), "-o", str(out)]) == 0
-    rows = json.loads(out.read_text())
-    assert len(rows) == 1
-    row = rows[0]
+    assert leaderboard_main(["--extract", "../logs/leaderboard/run.eval", "-o", str(out)]) == 0
+    row = json.loads(out.read_text())[0]
     assert row["model"] == "anthropic/claude-sonnet-4-6" and row["scorer_version"] == "det-4"
-    assert len(row["log"]) == 64                       # sha256 hex of the source log
-    # the extracted row renders back through the manifest path
-    assert "det-4" in render_manifest({"rows": rows})
+    assert row["log"]["path"] == "logs/leaderboard/run.eval"   # repo-relative, not ../…
+    assert len(row["log"]["sha256"]) == 64
+    assert "det-4" in render_manifest({"rows": [row]})         # round-trips through render
 
 
 def test_cli_manifest_writes_markdown(tmp_path):
@@ -168,6 +173,115 @@ def test_cli_manifest_writes_markdown(tmp_path):
     assert leaderboard_main(["--manifest", str(mpath), "-o", str(out)]) == 0
     md = out.read_text()
     assert "## Out-of-protocol exhibitions" in md and "det-4" in md
+
+
+# --- tessera-leaderboard --verify: re-derive backed rows from committed logs (ADR-0012) --
+
+def _write_realistic_log(path):
+    # Non-degenerate metrics (a passing category and a failing one, format flag set), reused
+    # across the verify cases so a "mismatch names the field" assertion has real signal.
+    from inspect_ai.log import (
+        EvalConfig, EvalDataset, EvalLog, EvalSample, EvalSpec, write_eval_log,
+    )
+    from inspect_ai.scorer import Score
+
+    def s(pid, e, ct, eb, passed, answer):
+        return EvalSample(
+            id=pid, epoch=e, input="Q?", target="",
+            metadata={"conflict_type": ct, "expected_behavior": eb,
+                      "expected_answer": None, "expected_sources": ["crm"]},
+            scores={"deterministic_reliability_scorer": Score(
+                value=("C" if passed else "I"), answer=answer,
+                metadata={"passed": passed, "accuracy_ok": passed, "provenance_ok": True,
+                          "refusal_ok": passed, "consulted": ["crm"],
+                          "scorer_version": "det-4", "answer_format_ok": True})})
+    samples = [s("q_none", e, "none", "answer", True, "4 hours") for e in (1, 2, 3)]
+    samples += [s("q_tie", e, "unresolvable", "refuse", e == 1,
+                  "cannot determine" if e == 1 else "$1.5M") for e in (1, 2, 3)]
+    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="tessera_probes",
+                    dataset=EvalDataset(), model="anthropic/claude-sonnet-4-6",
+                    config=EvalConfig(epochs=3),
+                    task_args={"judge": "deterministic", "org": "meridian", "k": 3})
+    write_eval_log(EvalLog(eval=spec, samples=samples, location=str(path)), str(path))
+
+
+def _backed_manifest(tmp_path, mutate=None):
+    # A hermetic repo (tmp .git) with a real log under logs/leaderboard/ and a genuinely
+    # backed row (numbers derived FROM the log). `mutate` corrupts it to drive failures.
+    from inspect_ai.log import read_eval_log
+
+    from tessera.report.leaderboard import _sha256_file, extract_rows
+    from tessera.report.serialize import report_to_dict
+    (tmp_path / ".git").mkdir()
+    logdir = tmp_path / "logs" / "leaderboard"
+    logdir.mkdir(parents=True)
+    logfile = logdir / "sonnet.eval"
+    _write_realistic_log(logfile)
+    row = extract_rows([report_to_dict(read_eval_log(str(logfile)))])[0]
+    row["log"] = {"path": "logs/leaderboard/sonnet.eval", "sha256": _sha256_file(str(logfile))}
+    if mutate:
+        mutate(row)
+    manifest = tmp_path / "rows.json"
+    manifest.write_text(json.dumps({"rows": [row]}))
+    return manifest
+
+
+def test_verify_passes_when_the_log_reproduces_the_row(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path)
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
+    assert "verified 1/1" in capsys.readouterr().out
+
+
+def test_verify_flags_a_hand_edited_metric(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path, mutate=lambda r: r.update(pass_k_rate=0.99))
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
+    assert "pass_k_rate" in capsys.readouterr().err
+
+
+def test_verify_ignores_a_hand_edited_label(tmp_path):
+    # label is authored metadata, not log-derived: editing it must NOT fail verification.
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path, mutate=lambda r: r.update(label="Sonnet 4.6 (baseline)"))
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
+
+
+def test_verify_flags_a_tampered_digest(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path, mutate=lambda r: r["log"].update(sha256="0" * 64))
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
+    assert "sha256" in capsys.readouterr().err
+
+
+def test_verify_flags_a_missing_log(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path,
+                         mutate=lambda r: r["log"].update(path="logs/leaderboard/nope.eval"))
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
+    assert "not found" in capsys.readouterr().err
+
+
+def test_verify_rejects_a_path_traversal(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = _backed_manifest(tmp_path, mutate=lambda r: r["log"].update(path="../../etc/passwd"))
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
+    assert "unsafe" in capsys.readouterr().err.lower()
+
+
+def test_verify_treats_null_log_as_unbacked_not_a_failure(tmp_path, capsys):
+    from tessera.report.cli import leaderboard_main
+    m = tmp_path / "rows.json"
+    m.write_text(json.dumps({"rows": leaderboard_rows([_report()])}))   # rows carry no log
+    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
+    out = capsys.readouterr().out
+    assert "0/1" in out and "1 unbacked" in out
+
+
+def test_verify_requires_a_manifest(capsys):
+    from tessera.report.cli import leaderboard_main
+    assert leaderboard_main(["--verify"]) == 2
+    assert "requires --manifest" in capsys.readouterr().err
 
 
 # --- harness as a displayed comparability axis (ADR-0011) --------------------------
@@ -218,3 +332,79 @@ def test_harness_disclosure_names_the_identical_protocol():
                              _report("moa/x", pass_k=0.8, mean=0.85, harness="ensemble")])
     assert "identical protocol" in md
     assert "org, k, scorer, scaffold, seed" in md
+
+
+# --- log verification: the pure comparator + path safety (ADR-0012) ----------------
+
+def _manifest_row(**over):
+    row = {"model": "anthropic/claude-sonnet-4-6", "label": "sonnet", "date": "2026-06-11",
+           "pass_k_rate": 0.864, "mean_rate": 0.909,
+           "categories": {"none": 1.0, "resolvable": 1.0, "unresolvable": 0.4, "void": 1.0},
+           "answer_format_rate": 0.985, "scorer_version": "det-4", "org": "meridian",
+           "k": 3, "scaffold": "baseline", "seed": 0, "harness": "single",
+           "notes": "", "log": None}
+    row.update(over)
+    return row
+
+
+def test_row_metric_mismatches_empty_when_derived_matches():
+    assert row_metric_mismatches(_manifest_row(), _manifest_row()) == []
+
+
+def test_row_metric_mismatches_ignores_maintainer_metadata():
+    # label/notes/log are authored, not log-derived: editing them must NOT trip --verify.
+    manifest = _manifest_row(label="Sonnet 4.6 (baseline)", notes="hand-written note",
+                             log={"path": "logs/leaderboard/s.eval", "sha256": "abc"})
+    derived = _manifest_row()  # extract_rows output: label==model, no note, log None
+    assert row_metric_mismatches(manifest, derived) == []
+
+
+def test_row_metric_mismatches_flags_a_hand_edited_metric():
+    # A pass_k typed to something the log does not produce is exactly what verify must catch.
+    assert row_metric_mismatches(_manifest_row(pass_k_rate=0.99), _manifest_row()) \
+        == ["pass_k_rate"]
+
+
+def test_row_metric_mismatches_tolerates_display_rounding():
+    # The manifest stores display-rounded rates (0.667); a log re-derives the exact fraction
+    # (2/3). They render to the same cell, so they are NOT a mismatch — 'backed' means
+    # 'reproduces the published number', not bit-equality.
+    manifest = _manifest_row(pass_k_rate=0.667,
+                             categories={"none": 0.667, "resolvable": 1.0,
+                                         "unresolvable": 0.4, "void": 1.0})
+    derived = _manifest_row(pass_k_rate=2 / 3,
+                            categories={"none": 2 / 3, "resolvable": 1.0,
+                                        "unresolvable": 0.4, "void": 1.0})
+    assert row_metric_mismatches(manifest, derived) == []
+
+
+def test_row_metric_mismatches_flags_a_category_that_really_differs():
+    manifest = _manifest_row(categories={"none": 0.5, "resolvable": 1.0,
+                                         "unresolvable": 0.4, "void": 1.0})
+    assert row_metric_mismatches(manifest, _manifest_row()) == ["categories"]
+
+
+def test_row_metric_mismatches_flags_a_protocol_field():
+    assert row_metric_mismatches(_manifest_row(scaffold="refusal_aware"), _manifest_row()) \
+        == ["scaffold"]
+
+
+def test_log_derived_fields_excludes_authored_metadata():
+    for authored in ("label", "notes", "log"):
+        assert authored not in LOG_DERIVED_FIELDS
+    for derived in ("pass_k_rate", "categories", "scaffold", "seed", "harness", "model"):
+        assert derived in LOG_DERIVED_FIELDS
+
+
+def test_is_safe_repo_relative_path_rejects_traversal_and_absolutes():
+    assert _is_safe_repo_relative_path("logs/leaderboard/x.eval")
+    for bad in ("/etc/passwd", "../x.eval", "logs/../../x", "a\\b.eval",
+                "C:/x.eval", "C:\\x.eval", "/logs/x.eval", "", "logs//x.eval"):
+        assert not _is_safe_repo_relative_path(bad), bad
+
+
+def test_repo_relative_normalizes_and_rejects_outside_the_repo():
+    assert _repo_relative("/repo/logs/leaderboard/x.eval", "/repo") == "logs/leaderboard/x.eval"
+    assert _repo_relative("/repo/docs/../logs/x.eval", "/repo") == "logs/x.eval"
+    with pytest.raises(ValueError, match="outside"):
+        _repo_relative("/etc/passwd", "/repo")

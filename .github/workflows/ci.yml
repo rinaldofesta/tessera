@@ -75,3 +75,7 @@ jobs:
       - run: tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
       - name: Fail on leaderboard drift
         run: git diff --exit-code -- docs/leaderboard.md
+      # For every row backed by a committed log (ADR-0012): re-derive it from the log and
+      # fail on any digest or metric mismatch. Rows with log:null are unbacked, not failures.
+      - name: Verify log-backed rows reproduce their numbers
+        run: tessera-leaderboard --manifest docs/leaderboard.rows.json --verify

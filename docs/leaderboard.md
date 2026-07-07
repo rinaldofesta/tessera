@@ -24,12 +24,13 @@ Results as of 2026-07-06. Deterministic engine (`det-4`), k=3: the headline is *
 - Tessera scores policy execution, not discovery: the agent is told the reconciliation policy; the question is whether it executes it reliably.
 - `ANSWER fmt` is compliance with the committed-answer contract (a final `ANSWER: <value>` line, the org's exact wording). Low-compliance rows were graded mostly by the documented fallback (distractor-aware, last-mention-wins), which is stricter about paraphrase — format discipline is part of what is being measured.
 
-This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — the committed source of truth (ADR-0010). Never edit the table by hand; CI regenerates it from the manifest and fails on drift. To add or update a row, produce a run, extract its row (numbers guaranteed to match the log), merge it into the manifest, then regenerate:
+This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — the committed source of truth (ADR-0010). Never edit the table by hand; CI regenerates it from the manifest and fails on drift, and `--verify` re-derives every log-backed row from its committed log (ADR-0012). To add or update a row, produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it into the manifest, then regenerate and verify:
 
 ```bash
 .venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \
   --model <provider/model> -T org=meridian -T judge=deterministic -T k=3 \
-  -T seed=0 -T scaffold=baseline --log-dir logs
-.venv/bin/tessera-leaderboard --extract logs/<run>.eval   # -> a manifest row (JSON)
+  -T seed=0 -T scaffold=baseline --log-dir logs/leaderboard
+.venv/bin/tessera-leaderboard --extract logs/leaderboard/<run>.eval  # -> a manifest row
 .venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
+.venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json --verify
 ```
