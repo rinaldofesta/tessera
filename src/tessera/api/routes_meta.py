@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, Request
 
 from tessera.api import blueprint_store
@@ -38,4 +40,8 @@ def list_orgs(request: Request):
 @router.get("/api/models", response_model=list[str])
 def list_models():
     """The canonical model choices for the Run form (model under test + grader)."""
-    return _MODELS
+    # TESSERA_MODELS (comma-separated inspect_ai model strings) replaces the defaults —
+    # set it in .env or the shell; credentials for each provider live in .env too.
+    env = os.environ.get("TESSERA_MODELS", "")
+    models = [m.strip() for m in env.split(",") if m.strip()]
+    return models or _MODELS

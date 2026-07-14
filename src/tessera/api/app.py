@@ -101,6 +101,13 @@ app = create_app()
 
 def main() -> None:
     import uvicorn
+
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+
     uvicorn.run("tessera.api.app:app", host="127.0.0.1",
                 port=int(os.environ.get("TESSERA_API_PORT", "8000")))
 

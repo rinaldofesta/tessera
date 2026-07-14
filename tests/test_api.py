@@ -119,6 +119,18 @@ def test_list_models(tmp_path):
     assert "anthropic/claude-haiku-4-5" in models and "ollama/qwen3.5:latest" in models
 
 
+def test_list_models_env_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_MODELS", "a/x, b/y")
+    r = _client(tmp_path).get("/api/models")
+    assert r.status_code == 200 and r.json() == ["a/x", "b/y"]
+
+
+def test_list_models_env_whitespace_falls_back_to_default(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_MODELS", " , ,")
+    r = _client(tmp_path).get("/api/models")
+    assert r.status_code == 200 and "anthropic/claude-sonnet-4-6" in r.json()
+
+
 def test_every_api_route_declares_a_response_model(tmp_path):
     # The OpenAPI schema is the single contract the SPA types are generated from:
     # a route without a response_model publishes `unknown` and silently re-opens
