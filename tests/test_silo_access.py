@@ -35,8 +35,19 @@ def test_crm_lookup_filters_to_requested_fields(out):
     # det-4: the agent can fetch just the fields it needs; provenance follows the response
     rec = crm_lookup_record(out, "Acme Corp", fields=["tier"])
     assert rec == {"tier": {"value": "Gold", "asserted_at": None}}
-    assert crm_lookup_record(out, "Acme Corp", fields=["no_such_field"]) == {}
     assert crm_lookup_record(out, "Beta Corp", fields=["tier"]) is None
+
+
+def test_crm_lookup_names_unknown_fields_and_lists_available(out):
+    # a wrong field-name guess must be distinguishable from an absent field: the record
+    # names the unknowns and the available schema (like a real API) — '{}' would be
+    # ambiguous with "field is empty"
+    rec = crm_lookup_record(out, "Acme Corp", fields=["seats", "tier"])
+    assert rec["_unknown_fields"] == ["seats"]
+    assert rec["_available_fields"] == ["renewal_date", "tier"]
+    assert rec["tier"]["value"] == "Gold"
+    only_miss = crm_lookup_record(out, "Acme Corp", fields=["no_such_field"])
+    assert only_miss["_unknown_fields"] == ["no_such_field"] and "tier" not in only_miss
 
 
 def test_docs_search_finds_the_renewal_note(out):

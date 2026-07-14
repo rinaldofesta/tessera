@@ -3,7 +3,7 @@
 import pytest
 
 from tessera.api import blueprint_store as bs
-from tessera.examples import get_blueprint
+from tessera.orgs import get_blueprint
 
 
 def test_round_trip_preserves_blueprint(tmp_path):

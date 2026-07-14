@@ -35,7 +35,8 @@ def _safe_path(store_dir: str | Path, blueprint_id: str) -> Path:
 
 def seed_from_orgs(store_dir: str | Path) -> None:
     """Materialize built-in ORGS as editable JSON (only if not already present)."""
-    from tessera.examples import ORGS, get_blueprint
+    from tessera.examples import ORGS
+    from tessera.orgs import get_blueprint
     for name in ORGS:
         path = Path(store_dir) / f"{name}.json"
         if not path.exists():

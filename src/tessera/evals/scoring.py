@@ -316,10 +316,6 @@ def deterministic_reliability_scorer(manifest: dict[str, dict]):
     return score
 
 
-# Backward-compat alias (existing task.py / tests import this name).
-reliability_scorer = deterministic_reliability_scorer
-
-
 # Where the delegation chain (evals/delegation.py) stores the producer's submitted
 # brief for the scorer — per-sample, via inspect's solver↔scorer Store.
 DELEGATION_PRODUCER_KEY = "tessera:producer_completion"
