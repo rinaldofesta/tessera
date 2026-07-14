@@ -85,8 +85,17 @@ export default function App() {
             <div>[1–4] switch view</div>
             <div>★ pinned example run</div>
             <div className="border-t border-border pt-1">
-              pass^k is strict · provenance is read from real tool calls
+              a score counts only if every repeat passed (pass^k) · citations are checked
+              against real tool calls
             </div>
+            <a
+              href="/learn"
+              target="_blank"
+              rel="noreferrer"
+              className="block underline-offset-2 hover:text-foreground hover:underline"
+            >
+              ? how this works — plain-language guide
+            </a>
           </div>
         </aside>
 
