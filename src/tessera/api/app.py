@@ -38,6 +38,9 @@ async def _background_schedule(coro) -> None:
     asyncio.create_task(coro)
 
 
+_LESSON = Path("docs/tessera-lesson.html")
+
+
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
                blueprint_dir: Path | None = None) -> FastAPI:
@@ -55,8 +58,21 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
 
+    _mount_learn(app)
     _mount_spa(app)
     return app
+
+
+def _mount_learn(app: FastAPI, lesson: Path = _LESSON) -> None:
+    """Serve the plain-language guide at /learn. Excluded from the OpenAPI schema on
+    purpose: it is a static page for humans, not part of the typed contract."""
+    from fastapi.responses import FileResponse
+
+    @app.get("/learn", include_in_schema=False)
+    def learn():
+        if not lesson.exists():
+            raise HTTPException(404, "guide not found")
+        return FileResponse(lesson, media_type="text/html")
 
 
 def _mount_spa(app: FastAPI, dist: Path = Path("web/dist")) -> None:
