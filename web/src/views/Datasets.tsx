@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAsync } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { Artifacts, Blueprint, Claim, ProbeDef, ValidationResult } from "@/types";
+import { CONFLICT } from "../copy";
 
 // editor rows carry a stable uid so removable rows don't recycle React state
 type ClaimRow = Claim & { _uid: string };
@@ -41,24 +42,36 @@ const newProbe = (): ProbeRow => ({ _uid: uid(), probe_id: "", question: "", ref
 const csv = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 const SILOS = [
-  { value: "crm", label: "crm — structured field" },
-  { value: "docs", label: "docs — prose document" },
+  { value: "crm", label: "crm record — structured field" },
+  { value: "docs", label: "document — written prose" },
 ];
-const CONFLICT_TYPES = [
-  { value: "none", label: "none — sources agree" },
-  { value: "resolvable", label: "resolvable — a rule breaks the tie" },
-  { value: "unresolvable", label: "unresolvable — genuine tie" },
-  { value: "void", label: "void — fact absent" },
-];
+const CONFLICT_TYPES = ["none", "resolvable", "unresolvable", "void"].map((value) => ({
+  value,
+  label: `${CONFLICT[value].label} (${value})`,
+}));
 const RULES = [
-  { value: "", label: "— pick a rule —" },
-  { value: "recency_wins", label: "recency_wins" },
-  { value: "authority_wins", label: "authority_wins" },
+  { value: "", label: "— pick a tiebreaker —" },
+  { value: "recency_wins", label: "newer wins (recency_wins)" },
+  { value: "authority_wins", label: "more authoritative wins (authority_wins)" },
 ];
 
 const FieldLabel = ({ children }: React.PropsWithChildren) => (
   <span className="mb-0.5 block text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{children}</span>
 );
+
+function Field({ label, value, placeholder, onChange }: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label>
+      <FieldLabel>{label}</FieldLabel>
+      <Input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
 
 const tabCls =
   "rounded-none px-2.5 py-1 text-xs data-[state=active]:bg-foreground data-[state=active]:text-background data-[active]:bg-foreground data-[active]:text-background";
@@ -207,7 +220,7 @@ export default function Datasets() {
     <div className="space-y-4">
       <ViewHeader
         cmd="tessera blueprint edit"
-        desc="author claims (facts) + probes (questions) — validated and compiled live, nothing leaves your machine"
+        desc="author facts (claims) + test questions (probes) — validated and compiled live, nothing leaves your machine"
       />
 
       <div className="grid gap-4 lg:grid-cols-12">
@@ -235,7 +248,7 @@ export default function Datasets() {
               >
                 <div className="truncate">{b.id}{dirty && selected === b.id ? " *" : ""}</div>
                 <div className={cn("text-[10px]", selected === b.id ? "text-background/70" : "text-muted-foreground")}>
-                  {b.claims} claims · {b.probes} probes
+                  {b.claims} facts · {b.probes} questions
                 </div>
               </button>
             ))}
@@ -287,8 +300,8 @@ export default function Datasets() {
             ) : (
               <Tabs defaultValue="claims">
                 <TabsList className="h-9 w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-1">
-                  <TabsTrigger value="claims" className={tabCls}>claims [{bp.claims.length}]</TabsTrigger>
-                  <TabsTrigger value="probes" className={tabCls}>probes [{bp.probes.length}]</TabsTrigger>
+                  <TabsTrigger value="claims" className={tabCls}>facts [{bp.claims.length}]</TabsTrigger>
+                  <TabsTrigger value="probes" className={tabCls}>questions [{bp.probes.length}]</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="claims" className="space-y-2 p-3">
@@ -296,7 +309,7 @@ export default function Datasets() {
                     <div key={c._uid} className="border border-border p-2">
                       <div className="mb-1.5 flex items-center justify-between">
                         <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                          claim {i + 1}
+                          fact {i + 1}
                         </span>
                         <button
                           onClick={() => removeClaim(c._uid)}
@@ -306,16 +319,12 @@ export default function Datasets() {
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                        <label><FieldLabel>claim_id</FieldLabel>
-                          <Input value={c.claim_id} onChange={(e) => setClaim(c._uid, { claim_id: e.target.value })} /></label>
-                        <label><FieldLabel>subject</FieldLabel>
-                          <Input value={c.subject} onChange={(e) => setClaim(c._uid, { subject: e.target.value })} /></label>
-                        <label><FieldLabel>predicate</FieldLabel>
-                          <Input value={c.predicate} onChange={(e) => setClaim(c._uid, { predicate: e.target.value })} /></label>
-                        <label><FieldLabel>value</FieldLabel>
-                          <Input value={String(c.value ?? "")} onChange={(e) => setClaim(c._uid, { value: e.target.value })} /></label>
+                        <Field label="id" value={c.claim_id} onChange={(v) => setClaim(c._uid, { claim_id: v })} />
+                        <Field label="about (subject)" value={c.subject} onChange={(v) => setClaim(c._uid, { subject: v })} />
+                        <Field label="field name (predicate)" value={c.predicate} onChange={(v) => setClaim(c._uid, { predicate: v })} />
+                        <Field label="value" value={String(c.value ?? "")} onChange={(v) => setClaim(c._uid, { value: v })} />
                         <div>
-                          <FieldLabel>silo</FieldLabel>
+                          <FieldLabel>stored as</FieldLabel>
                           <Select
                             value={c.silo}
                             items={SILOS}
@@ -335,22 +344,20 @@ export default function Datasets() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <label><FieldLabel>asserted_at (ISO, optional)</FieldLabel>
-                          <Input value={c.asserted_at ?? ""} placeholder="e.g. 2026-02-01T09:00:00Z"
-                            onChange={(e) => setClaim(c._uid, { asserted_at: e.target.value || null })} /></label>
-                        <label><FieldLabel>authority (optional)</FieldLabel>
+                        <Field label="as of date (ISO, optional)" value={c.asserted_at ?? ""} placeholder="e.g. 2026-02-01T09:00:00Z"
+                          onChange={(v) => setClaim(c._uid, { asserted_at: v || null })} />
+                        <label><FieldLabel>authority (optional — higher wins ties)</FieldLabel>
                           <Input type="number" value={c.authority ?? ""}
                             onChange={(e) => setClaim(c._uid, { authority: e.target.value === "" ? null : +e.target.value })} /></label>
                         {c.render.as === "prose" && (
-                          <label className="col-span-2"><FieldLabel>prose template — use {"{value}"}</FieldLabel>
-                            <Input value={c.render.template ?? ""}
-                              onChange={(e) => setClaim(c._uid, { render: { as: "prose", template: e.target.value } })} /></label>
+                          <Field label={"sentence template — {value} is replaced by the value"} value={c.render.template ?? ""}
+                            onChange={(v) => setClaim(c._uid, { render: { as: "prose", template: v } })} />
                         )}
                       </div>
                     </div>
                   ))}
                   <Button variant="outline" size="sm" className="w-full" onClick={addClaim}>
-                    + add claim
+                    + add fact
                   </Button>
                 </TabsContent>
 
@@ -359,7 +366,7 @@ export default function Datasets() {
                     <div key={p._uid} className="border border-border p-2">
                       <div className="mb-1.5 flex items-center justify-between">
                         <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                          probe {i + 1}
+                          question {i + 1}
                         </span>
                         <button
                           onClick={() => removeProbe(p._uid)}
@@ -369,12 +376,10 @@ export default function Datasets() {
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <label><FieldLabel>probe_id</FieldLabel>
-                          <Input value={p.probe_id} onChange={(e) => setProbe(p._uid, { probe_id: e.target.value })} /></label>
-                        <label><FieldLabel>question</FieldLabel>
-                          <Input value={p.question} onChange={(e) => setProbe(p._uid, { question: e.target.value })} /></label>
+                        <Field label="id" value={p.probe_id} onChange={(v) => setProbe(p._uid, { probe_id: v })} />
+                        <Field label="question" value={p.question} onChange={(v) => setProbe(p._uid, { question: v })} />
                         <div>
-                          <FieldLabel>conflict_type</FieldLabel>
+                          <FieldLabel>situation (conflict type)</FieldLabel>
                           <Select value={p.conflict_type} items={CONFLICT_TYPES}
                             onValueChange={(v) => setProbe(p._uid, { conflict_type: v as ProbeDef["conflict_type"] })}>
                             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -386,24 +391,22 @@ export default function Datasets() {
                           </Select>
                         </div>
                         <div>
-                          <FieldLabel>expected_behavior</FieldLabel>
+                          <FieldLabel>correct behavior</FieldLabel>
                           <Select value={p.expected_behavior}
                             onValueChange={(v) => setProbe(p._uid, { expected_behavior: v as ProbeDef["expected_behavior"] })}>
                             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="answer">answer</SelectItem>
-                              <SelectItem value="refuse">refuse</SelectItem>
+                              <SelectItem value="answer">answer — commit to the value (answer)</SelectItem>
+                              <SelectItem value="refuse">refuse — escalate instead of guessing (refuse)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         {p.expected_behavior === "answer" && (
-                          <label><FieldLabel>expected_answer</FieldLabel>
-                            <Input value={p.expected_answer ?? ""}
-                              onChange={(e) => setProbe(p._uid, { expected_answer: e.target.value })} /></label>
+                          <Field label="expected answer (exact wording)" value={p.expected_answer ?? ""} onChange={(v) => setProbe(p._uid, { expected_answer: v })} />
                         )}
                         {p.conflict_type === "resolvable" && (
                           <div>
-                            <FieldLabel>resolution_rule</FieldLabel>
+                            <FieldLabel>tiebreaker</FieldLabel>
                             <Select value={p.resolution_rule ?? ""} items={RULES}
                               onValueChange={(v) => setProbe(p._uid, { resolution_rule: ((v as string) || null) as ProbeDef["resolution_rule"] })}>
                               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -415,17 +418,15 @@ export default function Datasets() {
                             </Select>
                           </div>
                         )}
-                        <label><FieldLabel>references (claim_ids, comma-sep)</FieldLabel>
-                          <Input value={(p.references ?? []).join(", ")}
-                            onChange={(e) => setProbe(p._uid, { references: csv(e.target.value) })} /></label>
-                        <label><FieldLabel>expected_sources (claim_ids, comma-sep)</FieldLabel>
-                          <Input value={(p.expected_sources ?? []).join(", ")}
-                            onChange={(e) => setProbe(p._uid, { expected_sources: csv(e.target.value) })} /></label>
+                        <Field label="built on facts (ids, comma-sep)" value={(p.references ?? []).join(", ")}
+                          onChange={(v) => setProbe(p._uid, { references: csv(v) })} />
+                        <Field label="sources it should cite (fact ids, comma-sep)" value={(p.expected_sources ?? []).join(", ")}
+                          onChange={(v) => setProbe(p._uid, { expected_sources: csv(v) })} />
                       </div>
                     </div>
                   ))}
                   <Button variant="outline" size="sm" className="w-full" onClick={addProbe}>
-                    + add probe
+                    + add question
                   </Button>
                 </TabsContent>
               </Tabs>
@@ -465,21 +466,41 @@ export default function Datasets() {
             )}
           </Panel>
 
-          <Panel title="compiled org">
+          <Panel title="compiled preview">
             {previewErr && <ErrLine msg={previewErr} />}
             {!preview && !previewErr && (
               <div className="text-xs text-muted-foreground">
-                press compile ▸ (editor header) to materialize the world this blueprint produces
+                press compile ▸ (editor header) to see the world this dataset produces
               </div>
             )}
             {preview && (
               <div className="space-y-2 text-xs">
+                <div className="text-[10px] text-muted-foreground">
+                  {Object.keys(preview.manifest).length} facts placed across{" "}
+                  {Object.keys(preview.silos).length + preview.docs.length} sources — every
+                  fact's location is tracked, so citations can be checked automatically
+                </div>
                 {Object.entries(preview.silos).map(([silo, subjects]) => (
                   <div key={silo}>
-                    <SectionLabel>{silo}/db.json</SectionLabel>
-                    <pre className="max-h-44 overflow-auto border border-border bg-background p-2 text-[11px] leading-relaxed">
-                      {JSON.stringify(subjects, null, 2)}
-                    </pre>
+                    <SectionLabel>
+                      {silo} records — {Object.keys(subjects).length} accounts
+                    </SectionLabel>
+                    <div className="max-h-44 overflow-auto border border-border bg-background p-2 text-[11px] leading-relaxed">
+                      {Object.entries(subjects).map(([account, fields]) => (
+                        <div key={account} className="mb-1">
+                          <span className="font-bold">{account}</span>
+                          {Object.entries(fields).map(([field, v]) => (
+                            <div key={field} className="pl-3">
+                              <span className="text-muted-foreground">{field}: </span>
+                              {String(v?.value ?? v)}
+                              {v?.asserted_at ? (
+                                <span className="text-muted-foreground"> · as of {v.asserted_at}</span>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
                 {preview.docs.map((d) => (
@@ -490,9 +511,6 @@ export default function Datasets() {
                     </pre>
                   </div>
                 ))}
-                <div className="text-[10px] text-muted-foreground">
-                  manifest: {Object.keys(preview.manifest).length} claims mapped (provenance ground truth)
-                </div>
               </div>
             )}
           </Panel>
