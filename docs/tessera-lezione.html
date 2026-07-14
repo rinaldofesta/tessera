@@ -701,7 +701,7 @@ const MODULES = [
   <h3>Testare la tua azienda</h3>
   <p>Due strade, entrambe già pronte:</p>
   <div class="grid c2">
-    <div class="card"><b>🖱️ Nella UI (senza codice)</b><br><span class="muted">Apri la vista <b>Datasets</b>, scrivi Claims e Probes con validazione live e anteprima del mondo compilato, salva — il blueprint compare subito nel selettore org della vista <b>Run</b>. L’org <code>initech</code> nel tuo store è stata scritta esattamente così; il modulo 5 è il manuale campo-per-campo.</span></div>
+    <div class="card"><b>🖱️ Nella UI (senza codice)</b><br><span class="muted">Apri la vista <b>Datasets</b>, scrivi Claims e Probes con validazione live e anteprima del mondo compilato, salva — il blueprint compare subito nel selettore dataset della vista <b>Run</b>. L’org <code>initech</code> nel tuo store è stata scritta esattamente così; il modulo 5 è il manuale campo-per-campo.</span></div>
     <div class="card"><b>🐍 In Python</b><br><span class="muted">Copia <code>src/tessera/examples/your_org.py</code> (uno starter pesantemente commentato), registralo nel registry delle org, poi esegui con <code>-T org=your</code>.</span></div>
   </div>
   <div class="callout"><b>L’idea durevole (i «due livelli»).</b> Generare casi di test sta
@@ -909,7 +909,7 @@ const NEXT = [
   {tt:"Confronta i due modelli che hai già misurato", why:"Costo zero — entrambe le run sono fissate in examples/. Apri la modalità Compare della vista Results: Sonnet 4.6 vs GPT-4o, corretti l’uno dall’altro. GPT-4o ha fallito la probe irrisolvibile nello stesso modo?",
    cmd:".venv/bin/uvicorn tessera.api.app:app --port 8000   # → Results → Compare"},
   {tt:"Lancia eval dalla UI finché la Dashboard non racconta una storia", why:"Ogni run dalla vista Run scrive una riga durevole nel run store e alimenta storico e linee di tendenza della Dashboard. Una manciata di run tra modelli/motori trasforma quelle viste da pannelli vuoti in un vero registro di affidabilità.",
-   cmd:"# vista Run → org: toy · engine: llm · grader ≠ modello · epochs: 3"},
+   cmd:"# vista Run → dataset: toy · engine: llm · grader ≠ modello · epochs: 3"},
   {tt:"Fai uno sweep di k sull’org giocattolo", why:"L’esperimento sull’instabilità: la media resta piatta mentre il pass^k decade. Esegui la stessa eval a k crescente e trova dove ogni probe inizia a fallire — quella è la sua affidabilità reale, e rende concreta la curva del modulo 8. Sbloccato: il task ora accetta <code>-T k=N</code> (conteggio e reducer seguono insieme), quindi lo sweep gira così com’è.",
    cmd:"for k in 1 3 5 10; do .venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 -T k=$k; done"},
   {tt:"Scrivi una probe per authority_wins ✓ (fatto — «initech»)", why:"Consegnata il 2026-06-10 attraverso il loop author→run: il blueprint initech contrappone un semplice campo CRM a un documento «signed master agreement» — Sonnet 4.6 ha scelto il contratto 3/3. Il prossimo colpo di scena: una variante IRRISOLVIBILE dello stesso scontro (formulazione pari, stessi timestamp) — la ricetta è nel modulo 5.",

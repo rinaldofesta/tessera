@@ -696,7 +696,7 @@ const MODULES = [
   <h3>Testing your own company</h3>
   <p>Two paths, both shipping today:</p>
   <div class="grid c2">
-    <div class="card"><b>🖱️ In the UI (no code)</b><br><span class="muted">Open the <b>Datasets</b> view, author Claims and Probes with live validation and a compiled-world preview, save — the blueprint immediately appears in the <b>Run</b> view's org picker. The <code>initech</code> org in your store was authored exactly this way; module 5 is the field-by-field manual.</span></div>
+    <div class="card"><b>🖱️ In the UI (no code)</b><br><span class="muted">Open the <b>Datasets</b> view, author Claims and Probes with live validation and a compiled-world preview, save — the blueprint immediately appears in the <b>Run</b> view's dataset picker. The <code>initech</code> org in your store was authored exactly this way; module 5 is the field-by-field manual.</span></div>
     <div class="card"><b>🐍 In Python</b><br><span class="muted">Copy <code>src/tessera/examples/your_org.py</code> (a heavily commented starter), register it in the org registry, then run with <code>-T org=your</code>.</span></div>
   </div>
   <div class="callout"><b>The durable idea (the "two tiers").</b> Generating test cases is getting
@@ -903,7 +903,7 @@ const NEXT = [
   {tt:"Compare the two models you already measured", why:"Zero cost — both runs are pinned in examples/. Open the Results view's Compare mode: Sonnet 4.6 vs GPT-4o, graded by each other. Did GPT-4o fail the unresolvable probe the same way?",
    cmd:".venv/bin/uvicorn tessera.api.app:app --port 8000   # → Results → Compare"},
   {tt:"Run evals from the UI until the Dashboard tells a story", why:"Every run from the Run view writes a durable row into the run store and feeds the Dashboard's history and trend lines. A handful of runs across models/engines turns those views from empty panels into an actual reliability record.",
-   cmd:"# Run view → org: toy · engine: llm · grader ≠ model · epochs: 3"},
+   cmd:"# Run view → dataset: toy · engine: llm · grader ≠ model · epochs: 3"},
   {tt:"Sweep k on the toy org", why:"The flakiness experiment: mean stays flat while pass^k decays. Run the same eval at increasing k and find where each probe starts failing — that's its real reliability, and it makes the module-8 curve real. Unblocked: the task now takes <code>-T k=N</code> (count and reducer follow together), so the sweep runs as-is.",
    cmd:"for k in 1 3 5 10; do .venv/bin/inspect eval src/tessera/evals/task.py --model anthropic/claude-sonnet-4-6 -T k=$k; done"},
   {tt:"Author a probe for authority_wins ✓ (done — 'initech')", why:"Shipped 2026-06-10 through the author→run loop: the initech blueprint pairs a plain CRM field against a 'signed master agreement' doc — Sonnet 4.6 picked the contract 3/3. The next twist: an UNRESOLVABLE variant of the same clash (equal wording, same timestamps) — module 5 has the recipe.",

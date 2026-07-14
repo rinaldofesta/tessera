@@ -196,6 +196,9 @@ claims & probes, in plain language:
 - 🇬🇧 **`docs/tessera-lesson.html`** (English)
 - 🇮🇹 **`docs/tessera-lezione.html`** (Italiano)
 
+With the app running, the English guide is also served at **`/learn`** — linked from the
+sidebar ("how this works").
+
 ## The Reliability Explorer (product UI)
 
 Tessera ships a product-grade web app — a **React + Vite + TypeScript** SPA served as
@@ -209,11 +212,11 @@ cd web && npm install && npm run build && cd ..   # build the SPA once
 
 Open **http://localhost:8000**. Four views:
 
-- **Dashboard** — headline pass^k/mean tiles, a pass^k trend line (Recharts) over runs, recent-run history.
+- **Dashboard** — headline reliability/average tiles (strict pass^k and mean, in plain words), a reliability trend line (Recharts) over runs, recent-run history.
 - **Datasets** — author a dataset in the browser: an editor for **Claims** + **Probes**
-  with **live validation** and a **compiled-org preview** (CRM `db.json` + rendered docs),
+  with **live validation** and a **compiled preview** (CRM records + rendered docs),
   create / save / delete. No Python editing required.
-- **Run** — configure (org / model / engine / grader / k), launch, and watch a **live**
+- **Run** — configure (dataset / model / scoring / grader / repeats), launch, and watch a **live**
   monitor (SSE), with run history.
 - **Results** — the pass^k scorecard, axes, failure drill-down, and a **Compare**
   mode with a key-aligned diff.
@@ -227,7 +230,7 @@ immediately runnable — it appears in the Run picker and via `-T org=<name>`.
 **Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
 with one probe of each conflict type), describe your facts as **Claims** and your
 questions as **Probes**, and register the builder in `src/tessera/examples/__init__.py`.
-Select it by name — `-T org=your`, `TESSERA_ORG=your`, or the Org picker on the Run page:
+Select it by name — `-T org=your`, `TESSERA_ORG=your`, or the dataset picker on the Run page:
 
 ```bash
 inspect eval src/tessera/evals/task.py -T org=your \
@@ -241,7 +244,7 @@ POST   /api/reports               upload an .eval -> JSON
 GET    /api/orgs                  runnable orgs: built-ins + saved datasets
 GET    /api/blueprints            list datasets        (POST to create;
 POST   /api/blueprints/validate   validation as JSON    GET|PUT|DELETE /{id})
-POST   /api/blueprints/preview    compiled-org preview, in memory (key-free)
+POST   /api/blueprints/preview    compiled preview, in memory (key-free)
 POST   /api/runs                  start a gated live run
 GET    /api/runs                  run history           (GET /api/runs/{id} to poll)
 GET    /api/runs/{id}/events      SSE live status — what the Run view watches
