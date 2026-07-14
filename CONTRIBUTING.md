@@ -107,7 +107,7 @@ resolution_rule, void ⇒ no references).
   (`feat(evals): …`, `fix(report): …`).
 - Before pushing: `.venv/bin/python -m pytest` green, `cd web && npm run build`
   clean if you touched the UI, contract regenerated if you touched response models.
-- CI must be green (`tests`, `web`, `contract`). PRs from forks run the same jobs —
+- CI must be green (`tests`, `web`, `contract`, `leaderboard`). PRs from forks run the same jobs —
   all key-free.
 - If your change alters scoring or the protocol, say so loudly in the PR body and
   propose the ADR. Decisions get recorded; surprises do not.
