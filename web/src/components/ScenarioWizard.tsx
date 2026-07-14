@@ -99,9 +99,9 @@ export function ScenarioWizard({
                 onClick={() => pick(key)}
                 className="border border-border p-3 text-left hover:bg-muted"
               >
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold">{RECIPES[key].title}</span>
-                  <span className="shrink-0 border border-border px-1 text-[10px] uppercase text-muted-foreground">
+                <div className="mb-1">
+                  <div className="text-sm font-bold">{RECIPES[key].title}</div>
+                  <span className="mt-1 inline-block border border-border px-1 text-[10px] uppercase text-muted-foreground">
                     {conflictLabel(RECIPE_CONFLICT[key])}
                   </span>
                 </div>
@@ -167,8 +167,7 @@ export function ScenarioWizard({
             )}
 
             <div className="border border-border p-2 text-xs">
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">question</span>
+              <div className="mb-1 flex justify-end">
                 <span className="border border-border px-1 text-[10px] uppercase text-muted-foreground">
                   {conflictLabel(draft.probe.conflict_type)}
                 </span>
