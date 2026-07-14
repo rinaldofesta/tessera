@@ -14,6 +14,7 @@ import { useAsync } from "@/hooks";
 import { pct, shortModel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { LogMeta, Report } from "@/types";
+import { conflictLabel, engineLabel } from "../copy";
 
 function rowLabel(m: LogMeta) {
   return `${shortModel(m.model)}${m.grader ? ` / ${shortModel(m.grader)}` : ""}`;
@@ -26,11 +27,11 @@ function DiffTable({ a, b }: { a: Report; b: Report }) {
   const rows = order.filter((k) => k in da || k in db).map((k) => ({ k, a: da[k], b: db[k] }));
   rows.push({ k: "OVERALL", a: a.overall.pass_k_rate, b: b.overall.pass_k_rate });
   return (
-    <Panel title="delta — pass^k by conflict type (B − A)" bodyClassName="p-0">
+    <Panel title="delta — reliability by question type (B − A)" bodyClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="text-[10px] uppercase tracking-[0.15em]">conflict</TableHead>
+            <TableHead className="text-[10px] uppercase tracking-[0.15em]">question type</TableHead>
             <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">A · {shortModel(a.header.model)}</TableHead>
             <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">B · {shortModel(b.header.model)}</TableHead>
             <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">Δ</TableHead>
@@ -41,7 +42,7 @@ function DiffTable({ a, b }: { a: Report; b: Report }) {
             const delta = r.a != null && r.b != null ? Math.round((r.b - r.a) * 100) : null;
             return (
               <TableRow key={r.k} className={cn("text-xs", r.k === "OVERALL" && "font-bold")}>
-                <TableCell>{r.k}</TableCell>
+                <TableCell>{r.k === "OVERALL" ? "OVERALL" : conflictLabel(r.k)}</TableCell>
                 <TableCell className="text-right tabular-nums">{pct(r.a)}</TableCell>
                 <TableCell className="text-right tabular-nums">{pct(r.b)}</TableCell>
                 <TableCell className="text-right tabular-nums">
@@ -98,7 +99,7 @@ export default function Results() {
     <div className="space-y-4">
       <ViewHeader
         cmd="tessera report --inspect"
-        desc="read a run down to the failed transcripts — pass^k is strict: right on every repeat"
+        desc="read a run down to the failed transcripts — a question counts only if it was right on every repeat (pass^k)"
       />
 
       {logs.error && <ErrLine msg={logs.error} />}
@@ -143,7 +144,7 @@ export default function Results() {
                       {isB && <span className="shrink-0 border border-current px-1 text-[9px]">B</span>}
                     </div>
                     <div className={cn("flex justify-between text-[10px]", active ? "text-background/70" : "text-muted-foreground")}>
-                      <span>{m.engine}{m.org ? ` · ${m.org}` : ""} · k={m.k}</span>
+                      <span>{engineLabel(m.engine)}{m.org ? ` · ${m.org}` : ""} · {m.k} repeats</span>
                       <span>{m.created.slice(0, 10)}</span>
                     </div>
                   </button>

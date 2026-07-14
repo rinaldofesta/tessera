@@ -3,13 +3,7 @@ import { GradeToken, Metric, MeterBar, SectionLabel } from "@/components/term";
 import { fmtTs, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Probe, Report } from "@/types";
-
-const CONFLICT: Record<string, { behavior: string; desc: string }> = {
-  none: { behavior: "answer", desc: "facts agree across silos — stitch them into one answer" },
-  resolvable: { behavior: "answer", desc: "sources clash but a rule (newer / more authoritative) breaks the tie" },
-  unresolvable: { behavior: "refuse", desc: "equal-authority sources clash, no tiebreaker — must refuse and escalate" },
-  void: { behavior: "refuse", desc: "the fact is absent — must refuse, not invent it" },
-};
+import { CONFLICT, conflictLabel } from "../copy";
 
 function whyFailed(p: Probe, e: Probe["failures"][number]): string {
   if (p.expected_behavior === "refuse" && !e.refusal_ok) return "committed to an answer when it should have refused";
@@ -33,10 +27,16 @@ export function Scorecard({ report }: { report: Report }) {
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="border border-foreground px-1.5 py-0.5 text-xs font-bold">{h.model}</span>
         <span className="text-[11px] text-muted-foreground">
-          engine={h.engine}
-          {h.grader ? ` grader=${h.grader}` : ""}
-          {h.org ? ` org=${h.org}` : ""} · {report.probes.length} probes × {h.k} repeats · {fmtTs(h.created)}
+          {h.engine === "llm" ? `scored by an ai grader${h.grader ? ` (${h.grader})` : ""}` : "scored by fixed rules"}
+          {h.org ? ` · dataset: ${h.org}` : ""} · {report.probes.length} questions × {h.k} repeats · {fmtTs(h.created)}
         </span>
+      </div>
+
+      <div className="text-[10px] text-muted-foreground">
+        run details: {h.scorer_version ? `scorer ${h.scorer_version}` : "scorer version not recorded"}
+        {h.seed ? ` · dataset variant seed ${h.seed}` : ""}
+        {h.scaffold && h.scaffold !== "baseline" ? ` · prompt scaffold: ${h.scaffold}` : ""}
+        {h.harness && h.harness !== "single" ? ` · harness: ${h.harness} (how model calls were dispatched)` : ""}
       </div>
 
       {/* verdict */}
@@ -47,7 +47,7 @@ export function Scorecard({ report }: { report: Report }) {
           </>
         ) : (
           <>
-            <b>✗ NOT RELIABLE on {failedCats.map((c) => c.key).join(", ")}</b> — it does not behave
+            <b>✗ NOT RELIABLE on {failedCats.map((c) => conflictLabel(c.key)).join(", ")}</b> — it does not behave
             correctly every time; a single average score would hide this.
           </>
         )}
@@ -55,20 +55,20 @@ export function Scorecard({ report }: { report: Report }) {
 
       {/* overall */}
       <div className="grid grid-cols-2 gap-2">
-        <Metric label={`pass^${h.k} (strict)`} value={pct(report.overall.pass_k_rate)} />
-        <Metric label="mean" value={pct(report.overall.mean_rate)} />
+        <Metric label="reliability" value={pct(report.overall.pass_k_rate)} sub={`passed all ${h.k} repeats — pass^${h.k}`} />
+        <Metric label="average" value={pct(report.overall.mean_rate)} sub="mean rate across repeats" />
       </div>
 
       {/* by conflict type */}
       <div>
-        <SectionLabel>pass^{h.k} by conflict type</SectionLabel>
+        <SectionLabel>reliability by question type</SectionLabel>
         <div className="space-y-2.5">
           {report.categories.map((c) => {
             const info = CONFLICT[c.key] ?? { behavior: "?", desc: "" };
             return (
               <div key={c.key}>
                 <div className="flex items-center gap-2">
-                  <span className="w-28 shrink-0 truncate text-xs">{c.key}</span>
+                  <span className="w-40 shrink-0 truncate text-xs">{conflictLabel(c.key)}</span>
                   <div className="min-w-0 flex-1">
                     <MeterBar value={c.pass_k_rate} flaky={c.flaky} />
                   </div>
@@ -80,8 +80,8 @@ export function Scorecard({ report }: { report: Report }) {
                   </span>
                   <GradeToken passK={c.pass_k_rate} flaky={c.flaky} />
                 </div>
-                <div className="pl-[7.5rem] text-[11px] text-muted-foreground">
-                  expect {info.behavior} — {info.desc}
+                <div className="pl-[10.5rem] text-[11px] text-muted-foreground">
+                  {c.key} · expect {info.behavior} — {info.desc}
                 </div>
               </div>
             );
@@ -91,13 +91,16 @@ export function Scorecard({ report }: { report: Report }) {
 
       {/* axes */}
       <div className="grid grid-cols-3 gap-2">
-        <Metric label="accuracy" value={pct(report.axes.accuracy_rate)} sub={`${report.axes.n_answer_epochs} answer-epochs`} />
-        <Metric label="provenance" value={pct(report.axes.provenance_rate)} sub={`${report.axes.n_total_epochs} epochs · mechanical`} />
-        <Metric label="refusal" value={pct(report.axes.refusal_rate)} sub={`${report.axes.n_refuse_epochs} refuse-epochs`} />
+        <Metric label="right answers" value={pct(report.axes.accuracy_rate)} sub={`accuracy · ${report.axes.n_answer_epochs} answer-epochs`} />
+        <Metric label="cited the right sources" value={pct(report.axes.provenance_rate)} sub={`provenance · ${report.axes.n_total_epochs} epochs`} />
+        <Metric label="refused when it should" value={pct(report.axes.refusal_rate)} sub={`refusal · ${report.axes.n_refuse_epochs} refuse-epochs`} />
+        {report.axes.answer_format_rate != null && (
+          <Metric label="answered in the expected format" value={pct(report.axes.answer_format_rate)} sub="the ANSWER: <value> contract" />
+        )}
       </div>
       <p className="text-[11px] text-muted-foreground">
-        denominators differ — an axis only counts where it applies. provenance is read from the
-        agent's real tool calls, never judged by a model.
+        denominators differ — an axis only counts where it applies. "cited the right sources"
+        is read from the agent's real tool calls, never judged by a model.
       </p>
 
       {/* failures */}
@@ -114,7 +117,7 @@ export function Scorecard({ report }: { report: Report }) {
                 onClick={() => setOpen(open === p.probe_id ? null : p.probe_id)}
                 className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-xs hover:bg-muted"
               >
-                <span className="font-bold">✗ {p.probe_id} · {p.conflict_type}</span>
+                <span className="font-bold">✗ {p.probe_id} · {conflictLabel(p.conflict_type)}</span>
                 <span className="shrink-0 text-muted-foreground">
                   {p.epochs_passed}/{p.epochs_total} passed {open === p.probe_id ? "▾" : "▸"}
                 </span>

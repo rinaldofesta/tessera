@@ -4,6 +4,7 @@ import {
 } from "@/components/ui/table";
 import { fmtTs, pct, shortModel } from "@/lib/format";
 import type { RunSummary } from "@/types";
+import { engineLabel } from "../copy";
 
 export function RunsTable({ rows }: { rows: RunSummary[] }) {
   return (
@@ -13,11 +14,11 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
           <TableHead className="text-[10px] uppercase tracking-[0.15em]">when (utc)</TableHead>
           <TableHead className="text-[10px] uppercase tracking-[0.15em]">status</TableHead>
           <TableHead className="text-[10px] uppercase tracking-[0.15em]">model</TableHead>
-          <TableHead className="hidden text-[10px] uppercase tracking-[0.15em] md:table-cell">org</TableHead>
-          <TableHead className="hidden text-[10px] uppercase tracking-[0.15em] md:table-cell">engine</TableHead>
-          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">k</TableHead>
-          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">pass^k</TableHead>
-          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">mean</TableHead>
+          <TableHead className="hidden text-[10px] uppercase tracking-[0.15em] md:table-cell">dataset</TableHead>
+          <TableHead className="hidden text-[10px] uppercase tracking-[0.15em] md:table-cell">scoring</TableHead>
+          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">repeats</TableHead>
+          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">reliability</TableHead>
+          <TableHead className="text-right text-[10px] uppercase tracking-[0.15em]">average</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -27,7 +28,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
             <TableCell><StatusToken status={r.status} /></TableCell>
             <TableCell className="max-w-[160px] truncate">{shortModel(r.model)}</TableCell>
             <TableCell className="hidden md:table-cell">{r.org}</TableCell>
-            <TableCell className="hidden text-muted-foreground md:table-cell">{r.judge}</TableCell>
+            <TableCell className="hidden text-muted-foreground md:table-cell">{engineLabel(r.judge)}</TableCell>
             <TableCell className="text-right tabular-nums">{r.epochs}</TableCell>
             <TableCell className="text-right font-bold tabular-nums">{pct(r.pass_k_rate)}</TableCell>
             <TableCell className="text-right tabular-nums text-muted-foreground">{pct(r.mean_rate)}</TableCell>
