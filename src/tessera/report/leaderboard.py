@@ -191,66 +191,43 @@ def _exhibition_section(exhibitions: list[dict], k: int) -> list[str]:
     return lines
 
 
-def _render_doc(rows: list[dict], exhibitions: list[dict],
-                title: str | None = None) -> str:
-    rows = list(rows)
-    for field in _UNIFORM_FIELDS:
-        _require_uniform(rows, field)
-    rows.sort(key=lambda r: (-r["pass_k_rate"], -r["mean_rate"], r["label"]))
-    org, k, scorer = rows[0]["org"], rows[0]["k"], rows[0]["scorer_version"]
-    scaffold, seed = rows[0]["scaffold"], rows[0]["seed"]
-    as_of = max([r["date"] for r in rows] + [e["date"] for e in exhibitions])
+def _table_section(rows: list[dict], k: int) -> list[str]:
+    """The ranked table, plus the harness disclosure when a non-single row is present.
 
-    head = [
-        title or f"# Tessera leaderboard — {org}",
-        "",
-        f"Results as of {as_of}. Deterministic engine (`{scorer}`), k={k}: the headline "
-        f"is **strict pass^{k}** — a probe counts only if it passed every one of its "
-        f"{k} repetitions; `mean` alongside is capability when the dice land well. "
-        f"Protocol: [ADR-0006]({_ADR}).",
-        "",
-    ]
-    if scaffold != "baseline" or seed != 0:
-        # The guard lets a uniform non-default table through; it must say so out loud.
-        head += [
-            f"> ⚠️ `scaffold={scaffold}`, `seed={seed}` — a non-baseline scaffold and/or "
-            "a factory org instance (ADR-0008/0009). These rows are NOT comparable with "
-            "the published ADR-0006 baseline leaderboard.",
-            "",
-        ]
-
-    # The harness column (ADR-0011) is conditional: it appears only when a non-single row
-    # is present, so a table of single-model rows is byte-identical to a pre-harness table.
+    The harness column (ADR-0011) is conditional: it appears only when a non-single row
+    is present, so a table of single-model rows is byte-identical to a pre-harness table."""
     show_harness = any(r.get("harness", "single") != "single" for r in rows)
     h_hdr = " harness |" if show_harness else ""
     h_sep = "---|" if show_harness else ""
 
     cat_cells = " | ".join(CANONICAL_ORDER)
-    table = [
+    lines = [
         f"| # | Model |{h_hdr} pass^{k} | mean | {cat_cells} | ANSWER fmt | scorer | run date | notes |",
         "|--:|---|" + h_sep + "--:|--:|" + "--:|" * (len(CANONICAL_ORDER) + 1) + "---|---|---|",
     ]
     for i, r in enumerate(rows, start=1):
         cats = " | ".join(_pct(r["categories"].get(key)) for key in CANONICAL_ORDER)
         h_cell = f" {r.get('harness', 'single')} |" if show_harness else ""
-        table.append(
+        lines.append(
             f"| {i} | {r['label']} |{h_cell} **{_pct(r['pass_k_rate'])}** | {_pct(r['mean_rate'])} "
             f"| {cats} | {_pct(r['answer_format_rate'])} | {r['scorer_version']} "
             f"| {r['date']} | {r['notes']} |")
 
-    disclosure = [
-        "",
-        "> Rows with a non-`single` `harness` ran the identical protocol (same org, k, "
-        "scorer, scaffold, seed) as the single-model rows — they are comparable and ranked "
-        "together; the `harness` column discloses how each row's model calls were "
-        "dispatched (e.g. an ensemble of advisory models with an aggregator that commits "
-        "the answer). Comparability rides on the guarded dimensions, not on the harness "
-        "(ADR-0011).",
-    ] if show_harness else []
+    if show_harness:
+        lines += [
+            "",
+            "> Rows with a non-`single` `harness` ran the identical protocol (same org, k, "
+            "scorer, scaffold, seed) as the single-model rows — they are comparable and ranked "
+            "together; the `harness` column discloses how each row's model calls were "
+            "dispatched (e.g. an ensemble of advisory models with an aggregator that commits "
+            "the answer). Comparability rides on the guarded dimensions, not on the harness "
+            "(ADR-0011).",
+        ]
+    return lines
 
-    exhibit = _exhibition_section(exhibitions, k) if exhibitions else []
 
-    method = [
+def _methodology_section(org: str, k: int, scaffold: str, seed: int) -> list[str]:
+    return [
         "",
         "## Methodology",
         "",
@@ -287,7 +264,39 @@ def _render_doc(rows: list[dict], exhibitions: list[dict],
         ".venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json --verify",
         "```",
     ]
-    return "\n".join(head + table + disclosure + exhibit + method) + "\n"
+
+
+def _render_doc(rows: list[dict], exhibitions: list[dict],
+                title: str | None = None) -> str:
+    rows = list(rows)
+    for field in _UNIFORM_FIELDS:
+        _require_uniform(rows, field)
+    rows.sort(key=lambda r: (-r["pass_k_rate"], -r["mean_rate"], r["label"]))
+    org, k, scorer = rows[0]["org"], rows[0]["k"], rows[0]["scorer_version"]
+    scaffold, seed = rows[0]["scaffold"], rows[0]["seed"]
+    as_of = max([r["date"] for r in rows] + [e["date"] for e in exhibitions])
+
+    head = [
+        title or f"# Tessera leaderboard — {org}",
+        "",
+        f"Results as of {as_of}. Deterministic engine (`{scorer}`), k={k}: the headline "
+        f"is **strict pass^{k}** — a probe counts only if it passed every one of its "
+        f"{k} repetitions; `mean` alongside is capability when the dice land well. "
+        f"Protocol: [ADR-0006]({_ADR}).",
+        "",
+    ]
+    if scaffold != "baseline" or seed != 0:
+        # The guard lets a uniform non-default table through; it must say so out loud.
+        head += [
+            f"> ⚠️ `scaffold={scaffold}`, `seed={seed}` — a non-baseline scaffold and/or "
+            "a factory org instance (ADR-0008/0009). These rows are NOT comparable with "
+            "the published ADR-0006 baseline leaderboard.",
+            "",
+        ]
+
+    exhibit = _exhibition_section(exhibitions, k) if exhibitions else []
+    return "\n".join(head + _table_section(rows, k) + exhibit
+                     + _methodology_section(org, k, scaffold, seed)) + "\n"
 
 
 def render_leaderboard(reports: list[dict], labels: list[str | None] | None = None,
