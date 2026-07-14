@@ -227,6 +227,8 @@ immediately runnable — it appears in the Run picker and via `-T org=<name>`.
 
 > Frontend dev mode: `cd web && npm run dev` (Vite on :5173, proxies `/api` to :8000).
 
+> `TESSERA_MODELS` (comma-separated) overrides the model choices; "custom model…" in the form accepts any inspect_ai model string.
+
 **Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
 with one probe of each conflict type), describe your facts as **Claims** and your
 questions as **Probes**, and register the builder in `src/tessera/examples/__init__.py`.

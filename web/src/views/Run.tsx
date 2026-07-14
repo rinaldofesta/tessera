@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/api";
+import { Field } from "@/components/form";
 import { RunsTable } from "@/components/RunsTable";
 import { Scorecard } from "@/components/Scorecard";
 import { ErrLine, Panel, ViewHeader } from "@/components/term";
@@ -15,6 +16,8 @@ import { DATASET_DESCRIPTIONS } from "../copy";
 
 // Offline fallback only — the canonical list lives server-side at GET /api/models.
 const FALLBACK_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"];
+const CUSTOM = "__custom__";
+const CUSTOM_PLACEHOLDER = "provider/model — e.g. openrouter/meta-llama/llama-4-maverick";
 type Engine = RunConfig["judge"];
 const ENGINES: { value: Engine; label: string }[] = [
   { value: "llm", label: "ai grader — a second model marks the answers (llm)" },
@@ -35,6 +38,17 @@ export default function Run() {
   const [grader, setGrader] = useState(FALLBACK_MODELS[1]);
   const [org, setOrg] = useState("toy");
   const [epochsStr, setEpochsStr] = useState("3");
+  const [customModel, setCustomModel] = useState("");
+  const [customGrader, setCustomGrader] = useState("");
+
+  // effective values: the typed custom string when "custom model…" is selected,
+  // the picked list value otherwise — launch(), the console echo, and the
+  // self-grading check all read these instead of the raw select state.
+  const effModel = model === CUSTOM ? customModel.trim() : model;
+  const effGrader = grader === CUSTOM ? customGrader.trim() : grader;
+  const customIncomplete =
+    (model === CUSTOM && !customModel.trim()) ||
+    (engine === "llm" && grader === CUSTOM && !customGrader.trim());
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [lines, setLines] = useState<string[]>([]);
@@ -135,7 +149,7 @@ export default function Run() {
   }, [jobId, running]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function launch() {
-    if (engine === "llm" && grader === model) {
+    if (engine === "llm" && effGrader === effModel) {
       setError("grader must differ from the model under test — a model can't grade itself");
       return;
     }
@@ -147,10 +161,12 @@ export default function Run() {
     setRunning(true);
     lastStatus.current = "";
     startedAt.current = Date.now();
-    const cfg: RunConfig = { model, judge: engine, org, epochs, ...(engine === "llm" ? { grader } : {}) };
+    const cfg: RunConfig = {
+      model: effModel, judge: engine, org, epochs, ...(engine === "llm" ? { grader: effGrader } : {}),
+    };
     setLines([
-      `$ inspect eval tessera_probes --model ${model} -T org=${org} -T judge=${engine}` +
-        (engine === "llm" ? ` --model-role grader=${grader}` : "") +
+      `$ inspect eval tessera_probes --model ${effModel} -T org=${org} -T judge=${engine}` +
+        (engine === "llm" ? ` --model-role grader=${effGrader}` : "") +
         ` -T k=${epochs}`,
     ]);
     api
@@ -180,7 +196,9 @@ export default function Run() {
 
   function onModelChange(v: string) {
     setModel(v);
-    if (engine === "llm" && grader === v) {
+    // custom-vs-custom equality is caught by the effective-string check at launch,
+    // not by this list-only convenience reassignment
+    if (engine === "llm" && v !== CUSTOM && grader === v) {
       setGrader(modelList.find((m) => m !== v) ?? modelList[0]);
     }
   }
@@ -223,8 +241,22 @@ export default function Run() {
                   {modelList.map((m) => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
+                  <SelectItem value={CUSTOM}>custom model…</SelectItem>
                 </SelectContent>
               </Select>
+              {model === CUSTOM && (
+                <>
+                  <Field
+                    label="custom model"
+                    value={customModel}
+                    placeholder={CUSTOM_PLACEHOLDER}
+                    onChange={setCustomModel}
+                  />
+                  <div className="text-[10px] text-muted-foreground">
+                    any model string inspect_ai supports — put the provider's key/base-url in .env
+                  </div>
+                </>
+              )}
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
@@ -256,12 +288,26 @@ export default function Run() {
                         {m}{m === model ? " (under test)" : ""}
                       </SelectItem>
                     ))}
+                    <SelectItem value={CUSTOM}>custom model…</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="text-[10px] text-muted-foreground">
                   the grader marks the answers, so it must differ from the model under test —
                   a model can't grade itself
                 </div>
+                {grader === CUSTOM && (
+                  <>
+                    <Field
+                      label="custom grader"
+                      value={customGrader}
+                      placeholder={CUSTOM_PLACEHOLDER}
+                      onChange={setCustomGrader}
+                    />
+                    <div className="text-[10px] text-muted-foreground">
+                      any model string inspect_ai supports — put the provider's key/base-url in .env
+                    </div>
+                  </>
+                )}
               </div>
             )}
             <div className="space-y-1">
@@ -281,7 +327,7 @@ export default function Run() {
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <Button onClick={launch} disabled={running} className="flex-1">
+              <Button onClick={launch} disabled={running || customIncomplete} className="flex-1">
                 {running ? "running…" : "▸ run eval"}
               </Button>
               {running ? (
