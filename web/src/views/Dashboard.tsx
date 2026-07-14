@@ -53,17 +53,17 @@ export default function Dashboard() {
         <>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <Metric
-              label="latest pass^k"
+              label="latest reliability"
               value={latest ? pct(latest.pass_k_rate) : "—"}
               sub={latest ? `${latest.org} · ${shortModel(latest.model)}` : "no completed runs"}
             />
-            <Metric label="latest mean" value={latest ? pct(latest.mean_rate) : "—"} />
+            <Metric label="latest average" value={latest ? pct(latest.mean_rate) : "—"} />
             <Metric label="runs total" value={String(rows.length)} />
             <Metric label="completed" value={String(done.length)} sub={errored.length ? `${errored.length} errored` : undefined} />
           </div>
 
           {series.length > 1 && (
-            <Panel title="trend — pass^k vs mean (oldest → newest)">
+            <Panel title="trend — reliability vs average (oldest → newest)">
               <ResponsiveContainer width="100%" height={190}>
                 <LineChart data={series} margin={{ top: 6, right: 6, left: -24, bottom: 0 }}>
                   <CartesianGrid stroke="rgba(255,255,255,0.07)" strokeDasharray="2 4" />
@@ -79,13 +79,13 @@ export default function Dashboard() {
                     }}
                     labelFormatter={(n) => `run #${n}`}
                   />
-                  <Line type="stepAfter" dataKey="passk" name="pass^k" stroke="#e5e5e5" strokeWidth={1.5} dot={{ r: 2, fill: "#e5e5e5", strokeWidth: 0 }} />
-                  <Line type="stepAfter" dataKey="mean" name="mean" stroke="#666" strokeWidth={1} strokeDasharray="4 3" dot={false} />
+                  <Line type="stepAfter" dataKey="passk" name="reliability" stroke="#e5e5e5" strokeWidth={1.5} dot={{ r: 2, fill: "#e5e5e5", strokeWidth: 0 }} />
+                  <Line type="stepAfter" dataKey="mean" name="average" stroke="#666" strokeWidth={1} strokeDasharray="4 3" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
               <div className="mt-1 flex gap-4 text-[10px] text-muted-foreground">
-                <span>── pass^k (strict)</span>
-                <span>╌╌ mean</span>
+                <span>── reliability (passed every repeat — pass^k)</span>
+                <span>╌╌ average</span>
               </div>
             </Panel>
           )}
