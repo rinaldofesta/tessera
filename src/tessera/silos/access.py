@@ -14,8 +14,10 @@ def crm_lookup_record(out_dir: str | Path, account_name: str,
                       fields: list[str] | None = None) -> dict[str, Any] | None:
     """Return the flattened CRM record for an account, or None if absent.
 
-    `fields` narrows the record to the named fields (unknown names are simply
-    absent) — provenance credit follows what is actually returned (det-4)."""
+    `fields` narrows the record to the named fields — provenance credit follows what is
+    actually returned (det-4). A requested name that does not exist is reported under
+    '_unknown_fields' together with the record's '_available_fields', so a wrong guess
+    is recoverable and '{}' is never ambiguous with "field is empty"."""
     db_path = Path(out_dir) / "crm" / "db.json"
     if not db_path.exists():
         return None
@@ -23,8 +25,11 @@ def crm_lookup_record(out_dir: str | Path, account_name: str,
     record = db.get(account_name)
     if record is None or fields is None:
         return record
-    requested = set(fields)
-    return {k: v for k, v in record.items() if k in requested}
+    known = {k: v for k, v in record.items() if k in set(fields)}
+    unknown = [f for f in fields if f not in record]
+    if unknown:
+        return {**known, "_unknown_fields": unknown, "_available_fields": sorted(record)}
+    return known
 
 
 def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
