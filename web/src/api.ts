@@ -35,6 +35,8 @@ export const api = {
     fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
       .then(j<StartRunResult>),
   getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<RunStatus>),
+  // EventSource isn't fetch-shaped, but network access still routes through this module.
+  watchRun: (id: string) => new EventSource(`/api/runs/${id}/events`),
   listRuns: () => fetch("/api/runs").then(j<RunSummary[]>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);
