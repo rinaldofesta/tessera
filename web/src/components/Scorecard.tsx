@@ -33,7 +33,7 @@ export function Scorecard({ report }: { report: Report }) {
       </div>
 
       <div className="text-[10px] text-muted-foreground">
-        run details: scorer {h.scorer_version}
+        run details: {h.scorer_version ? `scorer ${h.scorer_version}` : "scorer version not recorded"}
         {h.seed ? ` · dataset variant seed ${h.seed}` : ""}
         {h.scaffold && h.scaffold !== "baseline" ? ` · prompt scaffold: ${h.scaffold}` : ""}
         {h.harness && h.harness !== "single" ? ` · harness: ${h.harness} (how model calls were dispatched)` : ""}
@@ -47,7 +47,7 @@ export function Scorecard({ report }: { report: Report }) {
           </>
         ) : (
           <>
-            <b>✗ NOT RELIABLE on {failedCats.map((c) => c.key).join(", ")}</b> — it does not behave
+            <b>✗ NOT RELIABLE on {failedCats.map((c) => conflictLabel(c.key)).join(", ")}</b> — it does not behave
             correctly every time; a single average score would hide this.
           </>
         )}
