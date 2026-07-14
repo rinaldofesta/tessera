@@ -57,7 +57,7 @@ export default function Dashboard() {
               value={latest ? pct(latest.pass_k_rate) : "—"}
               sub={latest ? `${latest.org} · ${shortModel(latest.model)}` : "no completed runs"}
             />
-            <Metric label="latest average" value={latest ? pct(latest.mean_rate) : "—"} />
+            <Metric label="latest average" value={latest ? pct(latest.mean_rate) : "—"} sub="success rate" />
             <Metric label="runs total" value={String(rows.length)} />
             <Metric label="completed" value={String(done.length)} sub={errored.length ? `${errored.length} errored` : undefined} />
           </div>
@@ -85,7 +85,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
               <div className="mt-1 flex gap-4 text-[10px] text-muted-foreground">
                 <span>── reliability (passed every repeat — pass^k)</span>
-                <span>╌╌ average</span>
+                <span>╌╌ average success rate</span>
               </div>
             </Panel>
           )}
