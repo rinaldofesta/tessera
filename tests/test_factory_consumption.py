@@ -1,6 +1,6 @@
 # tests/test_factory_consumption.py
 import pytest
-from tessera.examples import get_blueprint
+from tessera.orgs import get_blueprint
 from tessera.factory.generate import generate_variant
 
 

@@ -5,7 +5,7 @@ from collections import Counter
 
 from tessera.compiler import build_artifacts
 from tessera.evals.dataset import blueprint_to_dataset
-from tessera.examples import get_blueprint
+from tessera.orgs import get_blueprint
 from tessera.examples.meridian_org import build_meridian_blueprint
 
 

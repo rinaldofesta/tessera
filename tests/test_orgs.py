@@ -2,7 +2,7 @@
 
 import pytest
 
-from tessera.examples import get_blueprint, org_names
+from tessera.orgs import get_blueprint, org_names
 from tessera.models import Blueprint, ConflictType
 
 

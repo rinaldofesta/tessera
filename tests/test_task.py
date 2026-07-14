@@ -8,7 +8,7 @@ from tessera.evals.task import (
     _SCAFFOLD_REFUSE_AWARE, _SCAFFOLD_REFUSE_BASELINE, _SCAFFOLDS, _SUBMIT_DESC,
     tessera_probes,
 )
-from tessera.examples import get_blueprint
+from tessera.orgs import get_blueprint
 
 # The prompt that produced every published leaderboard row (docs/leaderboard.md) and
 # the B0 arm of the scaffold study (ADR-0009). If this hash moves, new "baseline" runs

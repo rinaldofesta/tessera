@@ -129,7 +129,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         """Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
         dataset authored on the Datasets page is immediately runnable here. Raises (500)
         if a custom org module fails to import — surfaced by the frontend as a warning."""
-        from tessera.examples import org_names
+        from tessera.orgs import org_names
         names = set(org_names())
         try:
             names |= {b["id"] for b in blueprint_store.list_blueprints(app.state.blueprint_dir)}

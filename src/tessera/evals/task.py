@@ -17,7 +17,7 @@ from tessera.evals.delegation import delegated_solver
 from tessera.evals.scoring import (
     delegated_reliability_scorer, deterministic_reliability_scorer, llm_reliability_scorer,
 )
-from tessera.examples import get_blueprint
+from tessera.orgs import get_blueprint
 
 # --- The two scaffolds of the intervention study (H2) -------------------------------
 # Both state the SAME reconciliation policy and the SAME answer contract — Tessera scores
