@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/api";
+import { ScenarioCards } from "@/components/ScenarioCards";
 import { ErrLine, Panel, SectionLabel, ViewHeader } from "@/components/term";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel, ValidationErrors } from "@/components/form";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -55,24 +57,6 @@ const RULES = [
   { value: "authority_wins", label: "more authoritative wins (authority_wins)" },
 ];
 
-const FieldLabel = ({ children }: React.PropsWithChildren) => (
-  <span className="mb-0.5 block text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{children}</span>
-);
-
-function Field({ label, value, placeholder, onChange }: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label>
-      <FieldLabel>{label}</FieldLabel>
-      <Input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    </label>
-  );
-}
-
 const tabCls =
   "rounded-none px-2.5 py-1 text-xs data-[state=active]:bg-foreground data-[state=active]:text-background data-[active]:bg-foreground data-[active]:text-background";
 
@@ -81,6 +65,7 @@ export default function Datasets() {
   const [selected, setSelected] = useState<string>("");
   const [isNew, setIsNew] = useState(false);
   const [bp, setBp] = useState<BpRows>(EMPTY);
+  const [advanced, setAdvanced] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [loadingBp, setLoadingBp] = useState(false);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -125,7 +110,9 @@ export default function Datasets() {
   function doNew() {
     setSelected("");
     setIsNew(true);
-    setBp({ claims: [newClaim()], probes: [newProbe()] });
+    // starts empty, not a blank claim+probe pair — the simple view's own
+    // "+ new scenario" CTA is the entry point for a fresh blueprint now
+    setBp(EMPTY);
     setDirty(false);
     setPreview(null);
     setMsg("");
@@ -161,6 +148,12 @@ export default function Datasets() {
   const removeProbe = (id: string) => touch((b) => ({ ...b, probes: b.probes.filter((x) => x._uid !== id) }));
   const addClaim = () => touch((b) => ({ ...b, claims: [...b.claims, newClaim()] }));
   const addProbe = () => touch((b) => ({ ...b, probes: [...b.probes, newProbe()] }));
+  const insertScenario = (claims: Claim[], probe: ProbeDef) =>
+    touch((b) => ({
+      ...b,
+      claims: [...b.claims, ...claims.map((c) => ({ ...c, _uid: uid() }))],
+      probes: [...b.probes, { ...probe, _uid: uid() }],
+    }));
 
   async function doPreview() {
     setPreviewErr(null);
@@ -216,6 +209,8 @@ export default function Datasets() {
     }
   }
 
+  const plain = stripUids(bp); // simple view + wizard only ever see the real Claim/ProbeDef shape
+
   return (
     <div className="space-y-4">
       <ViewHeader
@@ -270,6 +265,20 @@ export default function Datasets() {
             right={
               <div className="flex items-center gap-1.5">
                 {msg && <span className="mr-1 text-[10px] normal-case text-muted-foreground">{msg}</span>}
+                <div className="flex overflow-hidden border border-border text-[10px] uppercase tracking-[0.15em]">
+                  <button
+                    onClick={() => setAdvanced(false)}
+                    className={cn("px-2 py-1", !advanced ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+                  >
+                    simple
+                  </button>
+                  <button
+                    onClick={() => setAdvanced(true)}
+                    className={cn("border-l border-border px-2 py-1", advanced ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+                  >
+                    advanced
+                  </button>
+                </div>
                 <Button size="xs" variant="outline" onClick={doPreview}>compile ▸</Button>
                 <Button size="xs" onClick={save}>{selected ? "save" : "save as…"}</Button>
                 {selected && (
@@ -297,6 +306,8 @@ export default function Datasets() {
           >
             {loadingBp ? (
               <div className="p-3"><Skeleton className="h-40 w-full" /></div>
+            ) : !advanced ? (
+              <ScenarioCards claims={plain.claims} probes={plain.probes ?? []} onInsert={insertScenario} />
             ) : (
               <Tabs defaultValue="claims">
                 <TabsList className="h-9 w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-1">
@@ -455,14 +466,7 @@ export default function Datasets() {
             ) : validation.ok ? (
               <div className="text-xs">✓ valid — runnable from the run view once saved</div>
             ) : (
-              <ul className="space-y-1.5 text-xs">
-                {validation.errors.map((e, i) => (
-                  <li key={i} className="border-l-2 border-foreground pl-2">
-                    <div className="text-[10px] text-muted-foreground">{e.location}</div>
-                    {e.message}
-                  </li>
-                ))}
-              </ul>
+              <ValidationErrors errors={validation.errors} />
             )}
           </Panel>
 
