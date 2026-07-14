@@ -284,7 +284,7 @@ def test_blueprint_with_bad_prose_template_is_a_400_not_500(tmp_path):
 def test_resolve_rejects_unknown_source_empty_stem_and_traversal(tmp_path):
     # the log resolver's guard branches (the blueprint-store twin is parametrised; this is
     # its untested counterpart): unknown source, empty stem, and a traversal stem all -> None
-    from tessera.api.app import _resolve
+    from tessera.api.routes_reports import _resolve
     log_dirs = {"results": tmp_path}
     assert _resolve(log_dirs, "bogus:abc") is None          # unknown source
     assert _resolve(log_dirs, "results:") is None           # empty stem
