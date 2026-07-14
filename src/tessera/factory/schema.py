@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tessera.models import ConflictType, ResolutionRule
+from tessera.examples.meridian_org import build_meridian_blueprint
+from tessera.models import Claim, ConflictType, ResolutionRule
 
 FACTORY_VERSION = "fac-1"  # hand-bumped (like scorer_version "det-4") when the schema,
                            # pools, lexicon, or constructors change generated orgs.
@@ -62,63 +63,83 @@ class Assignment:
     resolution_rule: ResolutionRule | None = None
 
 
-# ---- the meridian inventory (the subsumed structure) -------------------------------
+# ---- the meridian inventory -----------------------------------------------------------
+# Subjects, predicates, and question text are READ OFF the authored org at import time
+# (single source: examples/meridian_org.py) — drift between the factory and the authored
+# probes is impossible by construction. Only what the generator alone knows (value types,
+# chain shapes, prose templates) is declared here, keyed by probe_id.
 
-from tessera.models import Claim  # noqa: E402
+_CANONICAL_BP = build_meridian_blueprint()
+_CANONICAL_PROBES = {p.probe_id: p for p in _CANONICAL_BP.probes}
+_CANONICAL_CLAIMS = {c.claim_id: c for c in _CANONICAL_BP.claims}
+
+# canonical published answers, keyed by probe_id (answer-bearing probes only).
+CANONICAL_ANSWERS = {
+    p.probe_id: p.expected_answer
+    for p in _CANONICAL_BP.probes
+    if p.expected_answer is not None
+}
+
+
+def _referenced_claims(probe_id: str) -> list[Claim]:
+    return [_CANONICAL_CLAIMS[r] for r in _CANONICAL_PROBES[probe_id].references]
+
+
+def _answerable_slot(slot_id: str, probe_id: str, value_type: str) -> AnswerableSlot:
+    # an answerable probe's referenced claims share subject and predicate — any one works
+    claim = _referenced_claims(probe_id)[0]
+    return AnswerableSlot(slot_id, probe_id, claim.subject, claim.predicate,
+                          _CANONICAL_PROBES[probe_id].question, value_type)
+
+
+def _chain_slot(slot_id: str, probe_id: str, shape: str, key_value_type: str,
+                rule_value_type: str | None, key_subject_template: str | None,
+                rule_template: str, rule_fixed_value: str | None) -> ChainSlot:
+    refs = _referenced_claims(probe_id)
+    crm = next(c for c in refs if c.silo == "crm")
+    docs = next(c for c in refs if c.silo == "docs")
+    return ChainSlot(slot_id, probe_id, crm.subject, crm.predicate, key_value_type,
+                     docs.predicate, _CANONICAL_PROBES[probe_id].question, shape,
+                     rule_value_type, key_subject_template, rule_template,
+                     rule_fixed_value)
+
 
 _CHAINS = [
-    ChainSlot("chn01", "q_veltrix_response", "Veltrix Labs", "support_plan", "plan",
-              "response_window", "What is the first-response window for Veltrix Labs support tickets?",
-              "value_keyed", "duration", "{key} plan",
-              "{key} plan tickets get a first response within {value}.", None),
-    ChainSlot("chn02", "q_bluepine_countersign", "Bluepine Logistics", "account_manager",
-              "person", "renewal_countersigner",
-              "Who countersigns Bluepine Logistics' renewal orders?",
-              "role_keyed", None, None,
-              "{subject} renewal orders are countersigned by {value}.", "the account manager"),
-    ChainSlot("chn03", "q_halcyon_surcharge", "Halcyon Foods", "payment_terms", "terms",
-              "late_surcharge", "What monthly surcharge applies to Halcyon Foods' late invoices?",
-              "value_keyed", "percent", "{key} terms",
-              "Accounts on {key} terms accrue a {value} monthly surcharge on late invoices.", None),
-    ChainSlot("chn04", "q_kovacs_hub", "Kovacs Industrial", "warehouse_region", "region",
-              "dispatch_hub", "From which hub do Kovacs Industrial dispatches ship?",
-              "value_keyed", "hub", "{key}",
-              "{key} dispatches ship from the {value} hub.", None),
-    ChainSlot("chn05", "q_northgate_cap", "Northgate Medical", "contract_form", "doc_form",
-              "liability_cap", "What is the per-incident liability cap for Northgate Medical?",
-              "value_keyed", "money", "{key}",
-              "Under {key} the liability cap is {value} per incident.", None),
-    ChainSlot("chn06", "q_arcadia_triage", "Arcadia Systems", "support_plan", "plan",
-              "triage_window", "What is the triage window for Arcadia Systems' tickets?",
-              "value_keyed", "duration", "{key} plan",
-              "{key}-plan tickets are triaged within {value}.", None),
+    _chain_slot("chn01", "q_veltrix_response", "value_keyed", "plan", "duration",
+                "{key} plan",
+                "{key} plan tickets get a first response within {value}.", None),
+    _chain_slot("chn02", "q_bluepine_countersign", "role_keyed", "person", None, None,
+                "{subject} renewal orders are countersigned by {value}.",
+                "the account manager"),
+    _chain_slot("chn03", "q_halcyon_surcharge", "value_keyed", "terms", "percent",
+                "{key} terms",
+                "Accounts on {key} terms accrue a {value} monthly surcharge on late invoices.",
+                None),
+    _chain_slot("chn04", "q_kovacs_hub", "value_keyed", "region", "hub", "{key}",
+                "{key} dispatches ship from the {value} hub.", None),
+    _chain_slot("chn05", "q_northgate_cap", "value_keyed", "doc_form", "money", "{key}",
+                "Under {key} the liability cap is {value} per incident.", None),
+    _chain_slot("chn06", "q_arcadia_triage", "value_keyed", "plan", "duration",
+                "{key} plan",
+                "{key}-plan tickets are triaged within {value}.", None),
 ]
 
 _ANSWERABLE = [
-    AnswerableSlot("ans01", "q_orpheon_renewal", "Orpheon Group", "renewal_date",
-                   "When is Orpheon Group's renewal date?", "date"),
-    AnswerableSlot("ans02", "q_veltrix_seats", "Veltrix Labs", "seat_count",
-                   "How many seats does Veltrix Labs have?", "count"),
-    AnswerableSlot("ans03", "q_halcyon_discount", "Halcyon Foods", "discount_rate",
-                   "What discount rate does Halcyon Foods currently get?", "percent"),
-    AnswerableSlot("ans04", "q_bluepine_contact", "Bluepine Logistics", "primary_contact",
-                   "Who is Bluepine Logistics' primary contact?", "person"),
-    AnswerableSlot("ans05", "q_kovacs_value", "Kovacs Industrial", "contract_value",
-                   "What is Kovacs Industrial's contract value?", "money"),
-    AnswerableSlot("ans06", "q_northgate_region", "Northgate Medical", "data_region",
-                   "In which data region is Northgate Medical's data hosted?", "data_region"),
-    AnswerableSlot("ans07", "q_arcadia_value", "Arcadia Systems", "contract_value",
-                   "What is Arcadia Systems' contract value?", "money"),
-    AnswerableSlot("ans08", "q_orpheon_seats", "Orpheon Group", "seat_count",
-                   "How many seats does Orpheon Group have?", "count"),
-    AnswerableSlot("ans09", "q_quill_renewal", "Quill & Quarry", "renewal_date",
-                   "When does Quill & Quarry's contract renew?", "date"),
-    AnswerableSlot("ans10", "q_tessitura_discount", "Tessitura SpA", "discount_rate",
-                   "What discount rate does Tessitura SpA get?", "percent"),
-    AnswerableSlot("ans11", "q_calder_terms", "Calder & Sons", "payment_terms",
-                   "On what payment terms does Calder & Sons pay?", "terms"),
+    _answerable_slot("ans01", "q_orpheon_renewal", "date"),
+    _answerable_slot("ans02", "q_veltrix_seats", "count"),
+    _answerable_slot("ans03", "q_halcyon_discount", "percent"),
+    _answerable_slot("ans04", "q_bluepine_contact", "person"),
+    _answerable_slot("ans05", "q_kovacs_value", "money"),
+    _answerable_slot("ans06", "q_northgate_region", "data_region"),
+    _answerable_slot("ans07", "q_arcadia_value", "money"),
+    _answerable_slot("ans08", "q_orpheon_seats", "count"),
+    _answerable_slot("ans09", "q_quill_renewal", "date"),
+    _answerable_slot("ans10", "q_tessitura_discount", "percent"),
+    _answerable_slot("ans11", "q_calder_terms", "terms"),
 ]
 
+# Void candidates stay literal: only the five the canonical org selects exist as
+# authored probes; the other four have no authored counterpart to derive from.
 _VOID = [
     VoidSlot("void1", "q_veltrix_billing", "Veltrix Labs", "billing_address",
              "What is Veltrix Labs' billing address?"),
@@ -228,15 +249,6 @@ def _make_schema() -> Schema:
 
 
 SCHEMA = _make_schema()
-
-# canonical published answers, keyed by probe_id (answer-bearing probes only).
-from tessera.examples.meridian_org import build_meridian_blueprint  # noqa: E402
-
-CANONICAL_ANSWERS = {
-    p.probe_id: p.expected_answer
-    for p in build_meridian_blueprint().probes
-    if p.expected_answer is not None
-}
 
 
 def _validate_schema() -> None:
