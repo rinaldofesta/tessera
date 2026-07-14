@@ -33,16 +33,13 @@ def reduce_by_probe(records: list[ProbeEpoch]) -> list[ProbeReliability]:
     return out
 
 
-def aggregate_by(probes: list[ProbeReliability],
-                 key=lambda p: p.conflict_type) -> list[CategoryReliability]:
-    """Two-level average: group probes by key(), average the binary cliffs and the means.
-
-    `key` is the slicing seam: default conflict_type today; a future field (domain,
-    authority_tier, ...) is a one-line lambda swap with zero change to this function.
-    """
+def aggregate_by(probes: list[ProbeReliability]) -> list[CategoryReliability]:
+    """Two-level average per conflict_type: group, then average the binary cliffs and
+    the means. A future slicing field (domain, authority_tier, ...) is a parameter
+    away — reintroduce a key= seam when a second real grouping exists."""
     buckets: dict[object, list[ProbeReliability]] = defaultdict(list)
     for p in probes:
-        buckets[key(p)].append(p)
+        buckets[p.conflict_type].append(p)
 
     out: list[CategoryReliability] = []
     for k, ps in buckets.items():

@@ -67,12 +67,6 @@ def test_aggregate_by_conflict_type_is_two_level():
     assert abs(cat.mean_rate - (1.0 + 2 / 3) / 2) < 1e-9       # mean of the per-probe means
 
 
-def test_aggregate_by_accepts_a_custom_key_seam():
-    probes = [_pr("a", "none", True, 1.0), _pr("b", "void", True, 1.0)]
-    cats = aggregate_by(probes, key=lambda p: "all")
-    assert len(cats) == 1 and cats[0].key == "all" and cats[0].n_probes == 2
-
-
 def test_overall_rates_strict_and_mean():
     probes = [_pr("a", "none", True, 1.0), _pr("b", "resolvable", False, 2 / 3)]
     assert overall_pass_k_rate(probes) == 0.5
