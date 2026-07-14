@@ -235,7 +235,11 @@ export default function Run() {
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
                 model under test
               </Label>
-              <Select value={model} onValueChange={(v) => onModelChange(v as string)}>
+              <Select
+                value={model}
+                onValueChange={(v) => onModelChange(v as string)}
+                items={[...modelList.map((m) => ({ value: m, label: m })), { value: CUSTOM, label: "custom model…" }]}
+              >
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {modelList.map((m) => (
@@ -280,7 +284,11 @@ export default function Run() {
                 <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
                   grader model
                 </Label>
-                <Select value={grader} onValueChange={(v) => setGrader(v as string)}>
+                <Select
+                  value={grader}
+                  onValueChange={(v) => setGrader(v as string)}
+                  items={[...modelList.map((m) => ({ value: m, label: m })), { value: CUSTOM, label: "custom model…" }]}
+                >
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {modelList.map((m) => (
