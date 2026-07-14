@@ -11,13 +11,14 @@ import {
 } from "@/components/ui/select";
 import { useAsync } from "@/hooks";
 import type { Report, RunConfig } from "@/types";
+import { DATASET_DESCRIPTIONS } from "../copy";
 
 // Offline fallback only — the canonical list lives server-side at GET /api/models.
 const FALLBACK_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"];
 type Engine = RunConfig["judge"];
 const ENGINES: { value: Engine; label: string }[] = [
-  { value: "llm", label: "llm — independent grader" },
-  { value: "deterministic", label: "deterministic — key-free" },
+  { value: "llm", label: "ai grader — a second model marks the answers (llm)" },
+  { value: "deterministic", label: "fixed rules — no second model, no extra key (deterministic)" },
 ];
 const MAX_POLL_FAILURES = 5;
 
@@ -90,7 +91,7 @@ export default function Run() {
     if (!jobId || !running) return;
     let poller: ReturnType<typeof setInterval> | null = null;
     let pollFailures = 0;
-    const es = new EventSource(`/api/runs/${jobId}/events`);
+    const es = api.watchRun(jobId);
 
     const onStatus = (status: string) => {
       pollFailures = 0;
@@ -188,17 +189,17 @@ export default function Run() {
     <div className="space-y-4">
       <ViewHeader
         cmd="tessera eval --live"
-        desc="compile the org, run the agent over MCP tools, score pass^k — needs model keys in .env (~30–60s)"
+        desc="build the dataset, let the agent work through it, score every repeat — needs model keys in .env (~30–60s)"
       />
 
-      {orgs.error && <ErrLine msg={`couldn't load orgs (a custom org may be broken): ${orgs.error}`} />}
+      {orgs.error && <ErrLine msg={`couldn't load datasets (a custom dataset may be broken): ${orgs.error}`} />}
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Panel title="configure" className="lg:col-span-2">
           <div className="space-y-3">
             <div className="space-y-1">
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                org / dataset
+                dataset
               </Label>
               <Select value={org} onValueChange={(v) => setOrg(v as string)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -208,6 +209,9 @@ export default function Run() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="text-[10px] text-muted-foreground">
+                {DATASET_DESCRIPTIONS[org] ?? "a dataset saved from the datasets page"}
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
@@ -224,7 +228,7 @@ export default function Run() {
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                scoring engine
+                scoring
               </Label>
               <Select
                 value={engine}
@@ -242,7 +246,7 @@ export default function Run() {
             {engine === "llm" && (
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                  independent grader
+                  grader model
                 </Label>
                 <Select value={grader} onValueChange={(v) => setGrader(v as string)}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -254,11 +258,15 @@ export default function Run() {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="text-[10px] text-muted-foreground">
+                  the grader marks the answers, so it must differ from the model under test —
+                  a model can't grade itself
+                </div>
               </div>
             )}
             <div className="space-y-1">
               <Label className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                repeats (k) — strict pass^k
+                repeats
               </Label>
               <Input
                 type="number"
@@ -268,6 +276,9 @@ export default function Run() {
                 onChange={(e) => setEpochsStr(e.target.value)}
                 onBlur={() => setEpochsStr(String(clampEpochs(epochsStr)))}
               />
+              <div className="text-[10px] text-muted-foreground">
+                every question is asked this many times; one wrong repeat fails it (strict pass^k)
+              </div>
             </div>
             <div className="flex gap-2 pt-1">
               <Button onClick={launch} disabled={running} className="flex-1">
@@ -290,8 +301,8 @@ export default function Run() {
               <div className="text-muted-foreground">
                 — idle — configure on the left and press run
                 <div className="mt-2 opacity-70">
-                  the agent only sees the compiled silos through crm_lookup / docs_search /
-                  docs_get_file; every probe repeats k times.
+                  the agent can only see the dataset through its search tools (crm_lookup /
+                  docs_search / docs_get_file); every question repeats k times.
                 </div>
               </div>
             ) : (
