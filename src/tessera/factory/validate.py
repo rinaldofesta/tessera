@@ -26,8 +26,16 @@ def _fail(msg: str):
 def assert_variant_invariants(bp: Blueprint) -> None:
     claims = {c.claim_id: c for c in bp.claims}
     probes = bp.probes
+    _check_category_resolution(probes)
+    _check_authority_inverts_recency(probes, claims)
+    _check_distractor_derivation(bp, probes)
+    _check_verbatim_materialization(bp, probes)
+    _check_void_holes(bp, probes)
+    _check_unresolvable_symmetry(probes, claims)
+    _check_none_chain_join_visibility(probes, claims)
 
-    # 1. category resolution
+
+def _check_category_resolution(probes) -> None:
     counts = Counter(p.conflict_type.value for p in probes)
     if not all(counts[k] >= 5 for k in ("none", "resolvable", "unresolvable", "void")):
         _fail(f"category resolution: {counts}")
@@ -37,7 +45,8 @@ def assert_variant_invariants(bp: Blueprint) -> None:
     if rules != {"recency_wins", "authority_wins"}:
         _fail(f"resolution rules present: {rules}")
 
-    # 2. authority inverts recency
+
+def _check_authority_inverts_recency(probes, claims) -> None:
     for p in probes:
         if p.resolution_rule and p.resolution_rule.value == "authority_wins":
             ref = [claims[r] for r in p.references]
@@ -48,7 +57,8 @@ def assert_variant_invariants(bp: Blueprint) -> None:
                     and str(binding.value) == p.expected_answer):
                 _fail(f"authority probe not inverting recency: {p.probe_id}")
 
-    # 3. distractor derivation
+
+def _check_distractor_derivation(bp, probes) -> None:
     meta_by_id = {s.id: s.metadata for s in blueprint_to_dataset(bp)}
     for p in probes:
         meta = meta_by_id[p.probe_id]
@@ -57,14 +67,17 @@ def assert_variant_invariants(bp: Blueprint) -> None:
         if p.conflict_type.value == "none" and meta["distractor_values"]:
             _fail(f"none probe has spurious distractors: {p.probe_id}")
 
-    # 4. verbatim materialization
+
+def _check_verbatim_materialization(bp, probes) -> None:
     art = build_artifacts(bp)
     haystack = json.dumps(art["silos"]) + "\n" + "\n".join(d["content"] for d in art["docs"])
     for p in probes:
         if p.expected_answer and p.expected_answer not in haystack:
             _fail(f"expected answer not materialized: {p.probe_id}")
 
-    # 5. void holes — no claim covers the void probe's (subject, predicate)
+
+def _check_void_holes(bp, probes) -> None:
+    # no claim may cover a void probe's (subject, predicate)
     covered = {(c.subject, c.predicate) for c in bp.claims}
     void_sp = {v.probe_id: (v.subject, v.predicate) for v in SCHEMA.void_candidates}
     for p in probes:
@@ -73,7 +86,8 @@ def assert_variant_invariants(bp: Blueprint) -> None:
             if sp is None or sp in covered:
                 _fail(f"void hole is filled or unknown: {p.probe_id}")
 
-    # 6. unresolvable symmetry
+
+def _check_unresolvable_symmetry(probes, claims) -> None:
     for p in probes:
         if p.conflict_type.value == "unresolvable":
             a, b = (claims[r] for r in p.references)
@@ -82,7 +96,8 @@ def assert_variant_invariants(bp: Blueprint) -> None:
                     and str(a.value) != str(b.value)):
                 _fail(f"unresolvable tie not symmetric: {p.probe_id}")
 
-    # 7. none-chain join visibility
+
+def _check_none_chain_join_visibility(probes, claims) -> None:
     chain_shape = {c.probe_id: c.shape for c in SCHEMA.chains}
     for p in probes:
         if p.conflict_type.value == "none":
