@@ -59,3 +59,42 @@ def test_tool_owner_lookup():
 def test_build_without_write_rejected():
     with pytest.raises(ValueError, match="both build and write"):
         make_silo_type(build=lambda claims: ({}, {}))
+
+
+def _fake_ep(load_result):
+    class FakeEP:
+        name = "fake"
+        def load(self):
+            return load_result
+    return FakeEP()
+
+
+def test_entry_point_silo_type_registers(monkeypatch):
+    st = make_silo_type(name="lake", tools=("search_datasets",))
+    monkeypatch.setattr(
+        "tessera.silos.registry.entry_points",
+        lambda group: [_fake_ep(st)] if group == "tessera.silo_types" else [],
+    )
+    reg = SiloRegistry()
+    assert "lake" in reg.names()
+
+
+def test_entry_point_callable_returning_list_registers(monkeypatch):
+    st = make_silo_type(name="lake", tools=("search_datasets",))
+    monkeypatch.setattr(
+        "tessera.silos.registry.entry_points",
+        lambda group: [_fake_ep(lambda: [st])],
+    )
+    reg = SiloRegistry()
+    assert reg.get("lake") is st
+
+
+def test_entry_point_does_not_override_existing_name(monkeypatch):
+    mine = make_silo_type(name="lake", tools=("my_tool",))
+    theirs = make_silo_type(name="lake", tools=("search_datasets",))
+    monkeypatch.setattr(
+        "tessera.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
+    )
+    reg = SiloRegistry()
+    reg._types["lake"] = mine  # simulate earlier registration before first lookup
+    assert reg.get("lake") is mine

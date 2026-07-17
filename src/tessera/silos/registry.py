@@ -10,6 +10,7 @@ third-party packs register via the ``tessera.silo_types`` entry-point group.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45,19 +46,34 @@ class SiloType:
 class SiloRegistry:
     def __init__(self) -> None:
         self._types: dict[str, SiloType] = {}
+        self._eps_loaded = False
+
+    def ensure_entry_points_loaded(self) -> None:
+        if self._eps_loaded:
+            return
+        self._eps_loaded = True
+        for ep in entry_points(group=ENTRY_POINT_GROUP):
+            loaded = ep.load()
+            if callable(loaded) and not isinstance(loaded, SiloType):
+                loaded = loaded()
+            types = [loaded] if isinstance(loaded, SiloType) else list(loaded)
+            for st in types:
+                if st.name not in self._types:
+                    self.register(st)
 
     def register(self, silo_type: SiloType) -> None:
         if silo_type.name in self._types:
             raise ValueError(f"silo type {silo_type.name!r} already registered")
-        for tool in silo_type.tool_names:
-            owner = self.tool_owner(tool)
-            if owner is not None:
-                raise ValueError(
-                    f"tool {tool!r} already provided by silo type {owner.name!r}"
-                )
+        for st in self._types.values():
+            for tool in silo_type.tool_names:
+                if tool in st.tool_names:
+                    raise ValueError(
+                        f"tool {tool!r} already provided by silo type {st.name!r}"
+                    )
         self._types[silo_type.name] = silo_type
 
     def get(self, name: str) -> SiloType:
+        self.ensure_entry_points_loaded()
         try:
             return self._types[name]
         except KeyError:
@@ -67,12 +83,15 @@ class SiloRegistry:
             ) from None
 
     def get_optional(self, name: str) -> SiloType | None:
+        self.ensure_entry_points_loaded()
         return self._types.get(name)
 
     def names(self) -> tuple[str, ...]:
+        self.ensure_entry_points_loaded()
         return tuple(self._types)
 
     def tool_owner(self, tool_name: str) -> SiloType | None:
+        self.ensure_entry_points_loaded()
         for st in self._types.values():
             if tool_name in st.tool_names:
                 return st
