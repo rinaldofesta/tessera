@@ -81,7 +81,7 @@ DOCS = SiloType(
 
 def register_builtins() -> None:
     for st in (CRM, DOCS):
-        if st.name not in registry.names():
+        if not registry.is_registered(st.name):
             registry.register(st)
 
 

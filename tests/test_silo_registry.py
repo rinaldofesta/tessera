@@ -98,3 +98,56 @@ def test_entry_point_does_not_override_existing_name(monkeypatch):
     reg = SiloRegistry()
     reg._types["lake"] = mine  # simulate earlier registration before first lookup
     assert reg.get("lake") is mine
+
+
+def test_register_and_is_registered_never_trigger_entry_point_loading(monkeypatch):
+    calls = []
+
+    def recorder(*, group):
+        calls.append(group)
+        return []
+
+    monkeypatch.setattr("tessera.silos.registry.entry_points", recorder)
+    reg = SiloRegistry()
+    reg.register(make_silo_type())
+    assert reg.is_registered("wiki") is True
+    assert calls == []
+
+
+def _fake_broken_ep(name="broken"):
+    class FakeBrokenEP:
+        pass
+
+    ep = FakeBrokenEP()
+    ep.name = name
+
+    def load():
+        raise RuntimeError("boom")
+
+    ep.load = load
+    return ep
+
+
+def test_broken_entry_point_is_skipped(monkeypatch, caplog):
+    good = make_silo_type(name="lake", tools=("search_datasets",))
+    monkeypatch.setattr(
+        "tessera.silos.registry.entry_points",
+        lambda group: [_fake_broken_ep(), _fake_ep(good)],
+    )
+    reg = SiloRegistry()
+    with caplog.at_level("WARNING"):
+        assert reg.get("lake") is good
+    assert "lake" in reg.names()
+    assert any("broken" in rec.message.lower() for rec in caplog.records)
+
+
+def test_builtin_registered_before_entry_points_wins(monkeypatch):
+    ours = make_silo_type(name="crm", tools=("crm_lookup_mine",))
+    theirs = make_silo_type(name="crm", tools=("crm_lookup_theirs",))
+    reg = SiloRegistry()
+    reg.register(ours)  # simulates the builtin import-time registration path
+
+    monkeypatch.setattr(
+        "tessera.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
+    )
+    assert reg.get("crm") is ours

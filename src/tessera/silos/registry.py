@@ -9,10 +9,13 @@ third-party packs register via the ``tessera.silo_types`` entry-point group.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 ENTRY_POINT_GROUP = "tessera.silo_types"
 
@@ -53,13 +56,22 @@ class SiloRegistry:
             return
         self._eps_loaded = True
         for ep in entry_points(group=ENTRY_POINT_GROUP):
-            loaded = ep.load()
-            if callable(loaded) and not isinstance(loaded, SiloType):
-                loaded = loaded()
-            types = [loaded] if isinstance(loaded, SiloType) else list(loaded)
-            for st in types:
-                if st.name not in self._types:
-                    self.register(st)
+            try:
+                loaded = ep.load()
+                if callable(loaded) and not isinstance(loaded, SiloType):
+                    loaded = loaded()
+                types = [loaded] if isinstance(loaded, SiloType) else list(loaded)
+                for st in types:
+                    if st.name not in self._types:
+                        self.register(st)
+            except Exception:
+                logger.warning(
+                    "skipping broken silo-type entry point %r", ep.name, exc_info=True
+                )
+
+    def is_registered(self, name: str) -> bool:
+        # No entry-point loading: safe to call while built-ins register at import time.
+        return name in self._types
 
     def register(self, silo_type: SiloType) -> None:
         if silo_type.name in self._types:

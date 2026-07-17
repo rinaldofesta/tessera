@@ -41,3 +41,17 @@ def test_docs_consulted_credits_artifact_path():
 
 def test_docs_consulted_ignores_search():
     assert DOCS.consulted("docs_search", {"query": "sla"}, "[]", MANIFEST) == set()
+
+
+def test_register_builtins_does_not_trigger_entry_point_loading(monkeypatch):
+    calls = []
+
+    def recorder(*, group):
+        calls.append(group)
+        return []
+
+    monkeypatch.setattr("tessera.silos.registry.entry_points", recorder)
+    import tessera.silos.builtin as builtin_module
+
+    builtin_module.register_builtins()  # idempotent: builtins already registered
+    assert calls == []
