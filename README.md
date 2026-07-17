@@ -292,7 +292,9 @@ Publish it from your package via the entry-point group:
 lake = "your_pack.silo:LAKE"
 ```
 
-Tessera discovers it lazily on first registry lookup. A broken entry point is
+Tessera discovers it lazily on first registry lookup. An entry point may also
+load to an iterable of `SiloType`s, or a zero-arg callable returning either —
+useful when one pack registers several silo types. A broken entry point is
 skipped with a logged warning rather than breaking the registry. Claims with
 `silo="lake"` then compile through your build/write hooks (or the default
 field/prose renderer if you don't define them), the eval task launches your

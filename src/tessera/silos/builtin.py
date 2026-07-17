@@ -47,11 +47,8 @@ def _docs_consulted(
 
 # The two prompt_blurbs below are cut from the single legacy literal in
 # tessera.evals.task (now _PROMPT_TEMPLATE + _system_prompt) so that, concatenated in
-# blueprint order (crm before docs), they reproduce it byte-for-byte: the sentence
-# naming every tool ("Use the crm_lookup, docs_search, and docs_get_file tools ...")
-# spans both silos and doesn't split along a silo boundary, so CRM's blurb keeps that
-# whole shared sentence plus its own fields-argument quirk, and DOCS's blurb keeps the
-# closing conflict-resolution rule. See task-3-report.md for the full derivation.
+# blueprint order (crm before docs), they reproduce it byte-for-byte. The split is
+# impure: CRM's blurb carries the shared framing naming all tools.
 CRM = SiloType(
     name="crm",
     server_module="tessera.mcp.crm_server",

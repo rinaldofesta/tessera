@@ -49,6 +49,8 @@ def build_artifacts(blueprint: Blueprint) -> dict:
     "docs": [{"path": rel, "content": str}]}``. This is what powers the compile-PREVIEW
     endpoint (show the resulting org without materializing it). Raises ``ValueError`` on
     an intra-silo ``(subject, predicate)`` collision: contradictions must be cross-silo.
+    A ``"plugins"`` key (mapping silo name to opaque payload) is present only when a
+    claim's silo type defines a custom ``build`` hook.
     """
     seen: set[tuple[str, str, str]] = set()
     for claim in blueprint.claims:
