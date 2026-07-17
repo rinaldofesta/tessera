@@ -17,7 +17,10 @@ from tessera.evals.delegation import delegated_solver
 from tessera.evals.scoring import (
     delegated_reliability_scorer, deterministic_reliability_scorer, llm_reliability_scorer,
 )
+from tessera.examples.toy_org import build_toy_blueprint
+from tessera.models import Blueprint
 from tessera.orgs import get_blueprint
+from tessera.silos.registry import SiloType, registry as silo_registry
 
 # --- The two scaffolds of the intervention study (H2) -------------------------------
 # Both state the SAME reconciliation policy and the SAME answer contract — Tessera scores
@@ -28,17 +31,51 @@ from tessera.orgs import get_blueprint
 # procedure. Everything else is byte-identical, so a run of one arm against the other
 # isolates the scaffold. The shared fragments below are concatenated to guarantee it.
 
-_SCAFFOLD_INTRO = (
+# Registry-driven assembly: the silo-facing section of the intro used to be a bare
+# literal naming crm/docs directly. It is now built from each referenced SiloType's
+# `prompt_blurb` (tessera.silos.registry), so a new silo pack shows up in the prompt by
+# registering, not by editing this file.
+_PROMPT_TEMPLATE = (
     "You are an enterprise analyst answering from internal systems only. "
-    "Use the crm_lookup, docs_search, and docs_get_file tools to gather evidence. "
-    "A single system is often stale or incomplete: before you commit to an answer, "
-    "consult every relevant source -- the CRM and the document store -- and reconcile "
-    "them. Treat one record as a lead to corroborate, not a conclusion. "
-    "When you look up a CRM account, pass the optional fields argument to fetch only "
-    "the fields you need. "
-    "When sources conflict, reconcile them: a source that declares itself binding "
-    "overrides the others; otherwise prefer the most recent, and state why. "
+    "{silos}"
 )
+
+
+def _blueprint_silos(blueprint: Blueprint) -> list[SiloType]:
+    """The registered SiloTypes `blueprint` references, in order of first appearance
+    across its claims. Raises UnknownSiloTypeError if a claim names an unregistered
+    silo (Task 1's registry.get does the raising)."""
+    seen: list[str] = []
+    for claim in blueprint.claims:
+        if claim.silo not in seen:
+            seen.append(claim.silo)
+    return [silo_registry.get(name) for name in seen]
+
+
+def _system_prompt(blueprint: Blueprint) -> str:
+    """Assemble the intro's silo-facing section from `_blueprint_silos`' prompt_blurbs,
+    in blueprint order."""
+    blurbs = [st.prompt_blurb for st in _blueprint_silos(blueprint)]
+    return _PROMPT_TEMPLATE.format(silos="".join(blurbs))
+
+
+def _mcp_servers(blueprint: Blueprint, out: Path) -> list:
+    """One stdio MCP server per SiloType `blueprint` references (registry-driven
+    replacement for the old hardcoded crm/docs pair)."""
+    env = {"TESSERA_OUT": str(out)}
+    return [
+        mcp_server_stdio(
+            name=st.name, command=sys.executable, args=["-m", st.server_module], env=env
+        )
+        for st in _blueprint_silos(blueprint)
+    ]
+
+
+# The reference shape every published prompt (and its SHA256 pin in test_task.py) is
+# built from: the toy org's two silos, crm then docs — the same shape the old literal
+# hardcoded, now produced through the registry so CRM/DOCS's prompt_blurb is the single
+# source of truth for this text.
+_SCAFFOLD_INTRO = _system_prompt(build_toy_blueprint())
 
 # Baseline (B0): a single generic refusal nudge — the prompt that produced the published
 # leaderboard. Kept verbatim so existing det-4/k=3 meridian logs ARE the B0 arm.
@@ -105,7 +142,8 @@ def _validated_k(k: int) -> int:
 
 
 def _compiled_org(org: str | None, seed: int = 0):
-    """Compile the named org (optionally a factory seed) and stand up its two MCP servers.
+    """Compile the named org (optionally a factory seed) and stand up one MCP server per
+    silo type its blueprint references.
 
     Org selection: explicit -T org=… wins, else $TESSERA_ORG, else "toy". A non-zero seed
     selects a scenario-factory variant of meridian (holdout)."""
@@ -113,13 +151,8 @@ def _compiled_org(org: str | None, seed: int = 0):
     blueprint = get_blueprint(org_name, seed=seed)
     out = Path(os.environ.get("TESSERA_OUT", "/tmp/tessera/run")).resolve()
     manifest = compile_blueprint(blueprint, out)
-
-    env = {"TESSERA_OUT": str(out)}
-    crm = mcp_server_stdio(name="crm", command=sys.executable,
-                           args=["-m", "tessera.mcp.crm_server"], env=env)
-    docs = mcp_server_stdio(name="docs", command=sys.executable,
-                            args=["-m", "tessera.mcp.docs_server"], env=env)
-    return blueprint, manifest, crm, docs
+    servers = _mcp_servers(blueprint, out)
+    return blueprint, manifest, servers
 
 
 @task
@@ -137,14 +170,14 @@ def tessera_probes(judge: str = "deterministic", org: str | None = None, k: int 
     except KeyError:
         raise ValueError(
             f"unknown scaffold {scaffold!r}; choose one of {sorted(_SCAFFOLDS)}") from None
-    blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
+    blueprint, manifest, servers = _compiled_org(org, seed=int(seed))
 
     scorer = (llm_reliability_scorer(manifest) if judge == "llm"
               else deterministic_reliability_scorer(manifest))
 
     return Task(
         dataset=blueprint_to_dataset(blueprint),
-        solver=react(prompt=prompt, tools=[crm, docs],
+        solver=react(prompt=prompt, tools=servers,
                      submit=AgentSubmit(description=_SUBMIT_DESC)),
         scorer=scorer,
         epochs=Epochs(k, [pass_k(k), "mean"]),
@@ -165,11 +198,11 @@ def tessera_probes_delegated(org: str | None = None, k: int = 3, seed: int = 0):
     direct task's agent — same prompt, same tools, same submit contract — so a run of
     this task against the direct baseline isolates the hop (ADR-0007)."""
     k = _validated_k(k)
-    blueprint, manifest, crm, docs = _compiled_org(org, seed=int(seed))
+    blueprint, manifest, servers = _compiled_org(org, seed=int(seed))
 
     return Task(
         dataset=blueprint_to_dataset(blueprint),
-        solver=delegated_solver([crm, docs], producer_prompt=_PROMPT,
+        solver=delegated_solver(servers, producer_prompt=_PROMPT,
                                 submit_desc=_SUBMIT_DESC),
         scorer=delegated_reliability_scorer(manifest),
         epochs=Epochs(k, [pass_k(k), "mean"]),

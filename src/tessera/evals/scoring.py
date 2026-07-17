@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from typing import Any
 
@@ -14,6 +13,7 @@ from inspect_ai.solver import TaskState
 from tessera.evals.dataset import ProbeMeta
 from tessera.evals.judges import accuracy_judge as _default_accuracy_judge
 from tessera.evals.judges import refusal_judge as _default_refusal_judge
+from tessera.silos.registry import registry as silo_registry
 
 _REFUSAL_MARKERS = (
     "i don't know", "i do not know", "don't know", "do not know",
@@ -41,17 +41,6 @@ def extract_tool_events(messages: list[Any]) -> list[tuple[str, dict, str | None
     return events
 
 
-def _crm_record_fields(result: str | None) -> frozenset[str]:
-    """The field names a crm_lookup actually returned; empty for NOT_FOUND/errors."""
-    if not result:
-        return frozenset()
-    try:
-        record = json.loads(result)
-    except ValueError:
-        return frozenset()
-    return frozenset(record) if isinstance(record, dict) else frozenset()
-
-
 def consulted_claims(tool_events: list[tuple[str, dict, str | None]],
                      manifest: dict[str, dict]) -> set[str]:
     """Map tool calls to the claim_ids they surfaced, via the compiled manifest.
@@ -62,17 +51,9 @@ def consulted_claims(tool_events: list[tuple[str, dict, str | None]],
     claim-bundle per file, so the path argument is the address."""
     consulted: set[str] = set()
     for name, args, result in tool_events:
-        if name == "crm_lookup":
-            subject = args.get("account_name")
-            fields = _crm_record_fields(result)
-            consulted |= {
-                cid for cid, m in manifest.items()
-                if m.get("silo") == "crm" and m.get("subject") == subject
-                and m.get("predicate") in fields
-            }
-        elif name == "docs_get_file":
-            path = args.get("path")
-            consulted |= {cid for cid, m in manifest.items() if m.get("artifact") == path}
+        owner = silo_registry.tool_owner(name)
+        if owner is not None:
+            consulted |= owner.consulted(name, args, result, manifest)
     return consulted
 
 
