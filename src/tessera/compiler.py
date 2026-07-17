@@ -17,8 +17,10 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
-from .models import Blueprint, RenderAs
+from .models import Blueprint, Claim, RenderAs
+from .silos.registry import registry as silo_registry
 
 
 def _slug(text: str) -> str:
@@ -61,8 +63,13 @@ def build_artifacts(blueprint: Blueprint) -> dict:
     silos: dict[str, dict[str, dict]] = {}  # silo -> subject -> {predicate: value}
     docs: list[dict[str, str]] = []
     manifest: dict[str, dict] = {}
+    custom_claims: dict[str, list[Claim]] = {}
 
     for claim in blueprint.claims:
+        st = silo_registry.get_optional(claim.silo)
+        if st is not None and st.build is not None:
+            custom_claims.setdefault(claim.silo, []).append(claim)
+            continue
         if claim.render.as_ is RenderAs.field:
             silos.setdefault(claim.silo, {}).setdefault(claim.subject, {})[
                 claim.predicate
@@ -86,7 +93,16 @@ def build_artifacts(blueprint: Blueprint) -> dict:
                 "locator": rel,
             }
 
-    return {"manifest": manifest, "silos": silos, "docs": docs}
+    plugins: dict[str, Any] = {}
+    for silo_name, claims in custom_claims.items():
+        payload, entries = silo_registry.get(silo_name).build(claims)
+        plugins[silo_name] = payload
+        manifest.update(entries)
+
+    artifacts = {"manifest": manifest, "silos": silos, "docs": docs}
+    if plugins:
+        artifacts["plugins"] = plugins
+    return artifacts
 
 
 def write_artifacts(artifacts: dict, out_dir: str | Path) -> dict[str, dict]:
@@ -99,6 +115,8 @@ def write_artifacts(artifacts: dict, out_dir: str | Path) -> dict[str, dict]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(doc["content"])
     _write_json(out / "manifest.json", artifacts["manifest"])
+    for silo_name, payload in artifacts.get("plugins", {}).items():
+        silo_registry.get(silo_name).write(payload, out)
     return artifacts["manifest"]
 
 
