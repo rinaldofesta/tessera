@@ -1,5 +1,13 @@
 # STATE.md — Tessera
 
+> Aggiornamento **2026-08-23, hardening integrità post-review**: il validator non accetta più
+> score posizionali. Ogni score è indicizzato dal task ID e i set devono coincidere; rank a
+> parità corretti in `1, 1, 3`; il tie top-three usa ordine naturale (`config-9` prima di
+> `config-10`); seed e 10.000 draw sono input obbligatori. Lo scan dei log ora cerca forme
+> reali AWS/GitHub/JWT/provider/bearer/private-key senza certificare parole come
+> `authorization` o `task-force`, e copre automaticamente ogni `examples/*.eval` committato.
+> Verificato: **395 test** (392 passed, 3 xfailed); esempio analyzer completo eseguito in CI.
+
 > Aggiornamento **2026-08-23, v0.2 builder release**: README portato sul percorso
 > generate -> MCP -> run -> scorecard; quickstart key-free provato da install pulita e ora
 > eseguito in CI; receipt First Contact con SHA-256 + equivalenza semantica al toy org (limite
@@ -127,6 +135,16 @@ Contando dall'inizio documentato del lavoro (1 giugno 2026), l'ultimo design doc
 
 ## Diario
 
+- **2026-08-23 (hardening integrità validator)**: tre bug pre-run chiusi prima del freeze del
+  panel. Le liste score, prive di identità per posizione, sono diventate mappe task-ID con set
+  esatto e ordine JSON irrilevante; ranking denso sostituito dalla posizione competitiva;
+  tiebreak lessicale sostituito dall'ordine naturale dichiarato nel prereg. Il contratto
+  rifiuta bootstrap/seed assenti, chiavi JSON duplicate, config sia attive sia dropped e
+  failure di scrittura output con exit 2. Scanner credenziali spostato dal regex nel test a
+  modulo riusabile: niente valori nei finding, pattern sulle forme reali, parametrizzazione su
+  tutti i log pubblici. README ripristinato con prerequisito `uv` e comando `judge=llm` con
+  grader indipendente; esempio JSON a 7 config eseguito dalla quickstart CI. **395 test**
+  (392 passed, 3 xfailed).
 - **2026-06-10** — creato STATE.md; audit completo dei docs.
 - **2026-06-11 (T1, bonifica)** — working tree (+7383/−1911) spezzato in 7 commit tematici: fix author→run in salvo per primo, poi SPA, lezioni, sync docs (v0 dichiarato, roadmap aggiornata, call-doc rimossi), pulizia root, CI minima. HEAD verde che rappresenta l'app reale. Prossimo: T2 (k parametrico).
 - **2026-06-11 (T2, k parametrico)** — il task ora possiede conteggio E reducer: `tessera_probes(k=N)` costruisce `Epochs(k, [pass_k(k), "mean"])`; il runner passa `task_args["k"]` e NON più l'override eval-level (che cambia il conteggio ma tiene il reducer — la causa del bug). `RunRequest.epochs` validato 1..10. Studio verificato su inspect_ai 0.3.235 installato (merge in `_eval/run.py`: epochs e reducer mergiati indipendentemente). Smoke key-free: eval con mockllm a k=2 → log `pass_k_2` → scorecard «pass^2 (strict), 4 × 2 epochs». 163 test. Prossimo: T3 (contratto unico).

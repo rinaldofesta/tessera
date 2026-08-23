@@ -9,6 +9,15 @@ import sys
 from .analysis import StudyError, analyze_study, render_markdown
 
 
+def _object_without_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise StudyError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="tessera-validate-transfer",
@@ -21,17 +30,16 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         with open(args.study, encoding="utf-8") as handle:
-            study = json.load(handle)
+            study = json.load(handle, object_pairs_hook=_object_without_duplicate_keys)
         result = analyze_study(study)
-    except (OSError, ValueError, StudyError) as exc:
+        rendered = json.dumps(result, indent=2, sort_keys=True) + "\n" if args.json \
+            else render_markdown(result)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as handle:
+                handle.write(rendered)
+        else:
+            print(rendered, end="")
+    except (OSError, ValueError) as exc:
         print(f"cannot analyze study: {exc}", file=sys.stderr)
         return 2
-
-    rendered = json.dumps(result, indent=2, sort_keys=True) + "\n" if args.json \
-        else render_markdown(result)
-    if args.out:
-        with open(args.out, "w", encoding="utf-8") as handle:
-            handle.write(rendered)
-    else:
-        print(rendered, end="")
     return 0

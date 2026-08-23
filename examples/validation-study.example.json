@@ -1,0 +1,44 @@
+{
+  "study_id": "transfer-example",
+  "tessera_task_ids": ["tessera-1", "tessera-2", "tessera-3"],
+  "real_task_ids": ["real-1", "real-2", "real-3"],
+  "bootstrap": {"draws": 10000, "seed": 42},
+  "configs": [
+    {
+      "id": "config-1",
+      "tessera_task_scores": {"tessera-1": 1.0, "tessera-2": 1.0, "tessera-3": 1.0},
+      "real_task_scores": {"real-1": 0.95, "real-2": 0.95, "real-3": 0.95}
+    },
+    {
+      "id": "config-2",
+      "tessera_task_scores": {"tessera-1": 0.9, "tessera-2": 0.9, "tessera-3": 0.9},
+      "real_task_scores": {"real-1": 0.85, "real-2": 0.85, "real-3": 0.85}
+    },
+    {
+      "id": "config-3",
+      "tessera_task_scores": {"tessera-1": 0.8, "tessera-2": 0.8, "tessera-3": 0.8},
+      "real_task_scores": {"real-1": 0.75, "real-2": 0.75, "real-3": 0.75}
+    },
+    {
+      "id": "config-4",
+      "tessera_task_scores": {"tessera-1": 0.7, "tessera-2": 0.7, "tessera-3": 0.7},
+      "real_task_scores": {"real-1": 0.65, "real-2": 0.65, "real-3": 0.65}
+    },
+    {
+      "id": "config-5",
+      "tessera_task_scores": {"tessera-1": 0.6, "tessera-2": 0.6, "tessera-3": 0.6},
+      "real_task_scores": {"real-1": 0.55, "real-2": 0.55, "real-3": 0.55}
+    },
+    {
+      "id": "config-6",
+      "tessera_task_scores": {"tessera-1": 0.5, "tessera-2": 0.5, "tessera-3": 0.5},
+      "real_task_scores": {"real-1": 0.45, "real-2": 0.45, "real-3": 0.45}
+    },
+    {
+      "id": "config-7",
+      "tessera_task_scores": {"tessera-1": 0.4, "tessera-2": 0.4, "tessera-3": 0.4},
+      "real_task_scores": {"real-1": 0.35, "real-2": 0.35, "real-3": 0.35}
+    }
+  ],
+  "dropped": []
+}

@@ -11,15 +11,17 @@
 [![leaderboard](https://img.shields.io/badge/leaderboard-9_rows-orange)](docs/leaderboard.md)
 
 v0 shipped in June 2026. The repository contains the generator, two MCP servers, a
-22-probe task suite, deterministic and model-graded scoring, a web UI, and 380 offline tests.
+22-probe task suite, deterministic and model-graded scoring, a web UI, and 395 offline tests.
 The leaderboard reports eight single-model rows plus one ensemble; its render is CI-checked,
 but the underlying run logs are still 0/9 committed. First Contact is the model run with a
 committed log and receipt. The builder workflow below is the artifact.
 
 ## Run the proof
 
-The first path needs no API key. It renders a committed model run, then generates a fresh
-Meridian-family organization and answer key into a temporary directory.
+Prerequisites: Python 3.10 or newer and
+[`uv`](https://docs.astral.sh/uv/getting-started/installation/). The first path needs no API
+key. It renders a committed model run, then generates a fresh Meridian-family organization
+and answer key into a temporary directory.
 
 ```bash
 uv venv
@@ -40,15 +42,17 @@ work, and writes an Inspect log:
 
 ```bash
 .venv/bin/inspect eval src/tessera/evals/task.py \
-  --model anthropic/claude-sonnet-4-6 --display plain \
+  --model anthropic/claude-sonnet-4-6 \
+  --model-role grader=openai/gpt-4o --display plain \
   --log-dir logs/quickstart \
-  -T org=meridian -T seed=42 -T k=3
+  -T org=meridian -T seed=42 -T k=3 -T judge=llm
 
 quickstart_log=$(find logs/quickstart -name '*.eval' -type f | sort | tail -n 1)
 .venv/bin/tessera-report "$quickstart_log"
 ```
 
-A live run needs the provider key for the selected model. The full locked environment is:
+This live example needs provider keys for the selected model and independent grader. The
+full locked environment is:
 
 ```bash
 uv pip install -r requirements.lock
@@ -248,7 +252,8 @@ Select it by name — `-T org=your`, `TESSERA_ORG=your`, or the dataset picker o
 
 ```bash
 inspect eval src/tessera/evals/task.py -T org=your \
-    --model anthropic/claude-sonnet-4-6 --model-role grader=openai/gpt-4o
+    -T judge=llm --model anthropic/claude-sonnet-4-6 \
+    --model-role grader=openai/gpt-4o
 ```
 
 ```text
