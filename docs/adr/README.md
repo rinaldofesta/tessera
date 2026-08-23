@@ -20,3 +20,4 @@ The cadence: each working week closes with the ADRs for the decisions it made.
 | [0010](0010-the-leaderboard-is-generated-from-a-manifest.md) | 2026-07-07 | The leaderboard is generated from a committed manifest | Accepted |
 | [0011](0011-harness-is-a-displayed-comparability-axis.md) | 2026-07-07 | Harness is a displayed comparability axis, not a guarded one | Accepted |
 | [0012](0012-leaderboard-rows-are-verified-against-committed-logs.md) | 2026-07-07 | Leaderboard rows are verified against committed logs | Accepted |
+| [0013](0013-preregister-synthetic-to-real-rank-transfer.md) | 2026-08-23 | Preregister synthetic-to-real rank transfer | Accepted |

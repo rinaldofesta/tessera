@@ -1,6 +1,6 @@
 # Tessera: a deterministic benchmark for enterprise agent reliability
 
-**Rinaldo Festa** · June 28, 2026 · scorer `det-4` · leaderboard and delegation as of 2026-06-12, scaffold intervention as of 2026-06-28
+**Rinaldo Festa** · June 28, 2026 · scorer `det-4` · leaderboard and delegation as of 2026-06-12, scaffold intervention as of 2026-06-28 · related work updated 2026-08-23
 Repository: <https://github.com/rinaldofesta/tessera> · Protocol: [ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)
 
 ## Abstract
@@ -31,6 +31,25 @@ The remainder of the report presents related work, the method and protocol, the 
 Tessera inherits from six families of prior work; we take each in turn, closing with what it leaves unmeasured.
 
 **Tool-use reliability.** [τ-bench](https://arxiv.org/abs/2406.12045) evaluates an agent operating domain API tools under policy documents while conversing with an LM-simulated user, judged by end-of-conversation database state. It is the origin of pass^k — all k i.i.d. trials of a task must succeed — the metric Tessera adopts as its headline. [τ²-bench](https://arxiv.org/abs/2506.07982) adds dual-control environments in which agent and simulated user both wield tools, and a compositional task generator — a genuine precursor of Tessera's generator, though it composes tasks within fixed hand-built domains. [BFCL](https://proceedings.mlr.press/v267/patil25a.html) checks function-call structure by abstract-syntax-tree (AST) matching at scale and does score abstention when no provided function applies, but reports single-run accuracy with no multi-trial metric. This family pioneered pass^k and task generation; none of it scores per-field provenance against actual tool returns, or refusal when two systems of record disagree with symmetric authority — the measurements Tessera makes central.
+
+**MCP-native benchmarks.** The field grew after Tessera's initial related-work pass.
+[MCP-AgentBench](https://doi.org/10.1609/aaai.v40i37.40347) contains 600 queries over
+33 operational servers and scores end-task outcomes. [MCP-Universe](https://arxiv.org/abs/2508.14704)
+tests long-horizon work across 11 real servers in six domains, while
+[MCP-Bench](https://arxiv.org/abs/2508.20453) covers 28 servers and 250 tools with trajectory
+and completion metrics. [MCPMark](https://arxiv.org/abs/2509.24002) runs reproducible tasks
+over GitHub, Notion, Playwright, Postgres, and filesystem environments and reports repeated
+metrics. [MCP-Atlas](https://arxiv.org/abs/2602.00933) adds 1,000 expert-written tasks across
+36 servers, with a 500-task private split and claim-level judging.
+[MCPEval](https://aclanthology.org/2025.emnlp-demos.27/) automates task generation and
+evaluation; [DynamicMCPBench](https://arxiv.org/abs/2607.20531) generates trace-grounded
+tasks over live servers. [Toloka](https://toloka.ai/blog/the-importance-of-mcp-evaluations-in-agentic-ai/)
+offers managed MCP environments that mirror production tools and evaluates 300 to 500
+proprietary datapoints with repeated trials. Their primary measurements concern tool choice,
+trajectory, and end-task completion. Tessera covers a narrower failure: equal-authority
+contradictions and gaps across knowledge silos, per-field provenance derived from returned
+data, committed epistemic refusal, and false-refusal cost. Server breadth, task generation,
+and repeated trials are shared territory, not Tessera-specific claims.
 
 **General agent benchmarks.** [AgentBench](https://arxiv.org/abs/2308.03688) measures multi-turn decision-making across eight interactive environments; [GAIA](https://arxiv.org/abs/2311.12983) poses 466 real-world general-assistant questions requiring browsing and tool use, scored against unique ground truth; [WebArena](https://arxiv.org/abs/2307.13854) scores end-to-end functional success on 812 long-horizon tasks in a self-hosted web environment. All three are fixed datasets scored in a single run; WebArena even includes a set of infeasible tasks whose gold answer is "N/A" — single-run abstention — but none of the three poses conflicts between equally authoritative sources, scores provenance against tool returns, or measures repetition. They map what agents can do; Tessera asks whether a narrow set of enterprise behaviors holds up under repetition, per-field provenance checking, and deliberately symmetric cross-source conflicts — the measurements these designs do not make.
 
@@ -222,6 +241,14 @@ Four lines of work follow from the limitations.
 - **τ-bench** — ICLR 2025 — <https://arxiv.org/abs/2406.12045>
 - **τ²-bench** — arXiv 2025 — <https://arxiv.org/abs/2506.07982>
 - **BFCL (Berkeley Function-Calling Leaderboard)** — ICML 2025 (PMLR 267) — <https://proceedings.mlr.press/v267/patil25a.html>
+- **MCP-AgentBench** - AAAI 2026 - <https://doi.org/10.1609/aaai.v40i37.40347>
+- **MCP-Universe** - arXiv 2025 - <https://arxiv.org/abs/2508.14704>
+- **MCP-Bench** - arXiv 2025 - <https://arxiv.org/abs/2508.20453>
+- **MCPMark** - ICLR 2026 - <https://arxiv.org/abs/2509.24002>
+- **MCP-Atlas** - arXiv 2026 - <https://arxiv.org/abs/2602.00933>
+- **MCPEval** - EMNLP 2025 Demos - <https://aclanthology.org/2025.emnlp-demos.27/>
+- **DynamicMCPBench** - arXiv 2026 - <https://arxiv.org/abs/2607.20531>
+- **Toloka MCP evaluations** - managed service, 2026 - <https://toloka.ai/blog/the-importance-of-mcp-evaluations-in-agentic-ai/>
 - **AgentBench** — ICLR 2024 — <https://arxiv.org/abs/2308.03688>
 - **GAIA** — ICLR 2024 — <https://arxiv.org/abs/2311.12983>
 - **WebArena** — ICLR 2024 — <https://arxiv.org/abs/2307.13854>

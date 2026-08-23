@@ -10,7 +10,7 @@ you how to contribute without fighting the repo.
 ```bash
 git clone https://github.com/rinaldofesta/tessera && cd tessera
 python -m venv .venv && .venv/bin/pip install -e ".[dev,app]"
-.venv/bin/python -m pytest          # the whole suite: key-free, offline, ~1s
+.venv/bin/python -m pytest          # the whole suite: key-free and offline
 ```
 
 If those tests pass, you have everything you need — **no API key is required to
@@ -48,7 +48,7 @@ In order:
 
 - Python ≥ 3.10 (CI runs the suite + a web build + a contract-drift check).
 - `pip install -e ".[dev,app]"` gives you the eval, the report CLIs
-  (`tessera-report`, `tessera-leaderboard`) and the FastAPI/SPA product
+  (`tessera-report`, `tessera-leaderboard`, `tessera-validate-transfer`) and the FastAPI/SPA product
   (`tessera-api`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.
 - A live eval run is the only thing that needs keys: put `ANTHROPIC_API_KEY` /
@@ -60,7 +60,7 @@ In order:
 These are decisions on record in [`docs/adr/`](docs/adr/) — one file per decision.
 Read the index before changing anything load-bearing.
 
-- **Tests first, key-free always.** The suite runs offline in ~1s: scorer engines
+- **Tests first, key-free always.** The suite runs offline: scorer engines
   are stubbed, Inspect logs are fabricated in-memory. A new feature lands with the
   test that pins it. Each test file is self-contained (no cross-test-file imports —
   CI cannot resolve them).
@@ -107,7 +107,7 @@ resolution_rule, void ⇒ no references).
   (`feat(evals): …`, `fix(report): …`).
 - Before pushing: `.venv/bin/python -m pytest` green, `cd web && npm run build`
   clean if you touched the UI, contract regenerated if you touched response models.
-- CI must be green (`tests`, `web`, `contract`, `leaderboard`). PRs from forks run the same jobs —
+- CI must be green (`tests`, `web`, `quickstart`, `contract`, `leaderboard`). PRs from forks run the same jobs;
   all key-free.
 - If your change alters scoring or the protocol, say so loudly in the PR body and
   propose the ADR. Decisions get recorded; surprises do not.
