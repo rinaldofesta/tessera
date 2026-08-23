@@ -11,7 +11,7 @@
 [![leaderboard](https://img.shields.io/badge/leaderboard-9_rows-orange)](docs/leaderboard.md)
 
 v0 shipped in June 2026. The repository contains the generator, two MCP servers, a
-22-probe task suite, deterministic and model-graded scoring, a web UI, and 395 offline tests.
+22-probe task suite, deterministic and model-graded scoring, a web UI, and 398 offline tests.
 The leaderboard reports eight single-model rows plus one ensemble; its render is CI-checked,
 but the underlying run logs are still 0/9 committed. First Contact is the model run with a
 committed log and receipt. The builder workflow below is the artifact.

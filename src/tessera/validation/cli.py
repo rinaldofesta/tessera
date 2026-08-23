@@ -13,7 +13,7 @@ def _object_without_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str,
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
-            raise StudyError(f"duplicate JSON key: {key}")
+            raise StudyError("duplicate JSON object key")
         result[key] = value
     return result
 
@@ -31,15 +31,28 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with open(args.study, encoding="utf-8") as handle:
             study = json.load(handle, object_pairs_hook=_object_without_duplicate_keys)
+    except OSError as exc:
+        print(f"cannot read study: {exc}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"cannot analyze study: {exc}", file=sys.stderr)
+        return 2
+
+    try:
         result = analyze_study(study)
         rendered = json.dumps(result, indent=2, sort_keys=True) + "\n" if args.json \
             else render_markdown(result)
+    except ValueError as exc:
+        print(f"cannot analyze study: {exc}", file=sys.stderr)
+        return 2
+
+    try:
         if args.out:
             with open(args.out, "w", encoding="utf-8") as handle:
                 handle.write(rendered)
         else:
             print(rendered, end="")
-    except (OSError, ValueError) as exc:
-        print(f"cannot analyze study: {exc}", file=sys.stderr)
-        return 2
+    except OSError as exc:
+        print(f"cannot write output: {exc}", file=sys.stderr)
+        return 1
     return 0

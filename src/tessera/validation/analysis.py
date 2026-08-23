@@ -112,17 +112,20 @@ def _task_scores(value: Any, task_ids: Sequence[str], label: str) -> tuple[float
     expected = set(task_ids)
     provided = set(value)
     missing = [task_id for task_id in task_ids if task_id not in provided]
-    unexpected = sorted(provided - expected, key=_natural_id_key)
+    unexpected = provided - expected
     if missing or unexpected:
         details = []
         if missing:
-            details.append(f"missing {missing}")
+            details.append(f"{len(missing)} missing")
         if unexpected:
-            details.append(f"unexpected {unexpected}")
+            details.append(f"{len(unexpected)} unexpected")
         raise StudyError(
-            f"{label} must contain the exact registered task ids: {', '.join(details)}"
+            f"{label} must contain the exact registered task ids ({', '.join(details)})"
         )
-    return tuple(_score(value[task_id], f"{label}.{task_id}") for task_id in task_ids)
+    return tuple(
+        _score(value[task_id], f"{label}[registered index {index}]")
+        for index, task_id in enumerate(task_ids)
+    )
 
 
 def _natural_id_key(value: str) -> tuple[tuple[Any, ...], ...]:
@@ -135,7 +138,6 @@ def _natural_id_key(value: str) -> tuple[tuple[Any, ...], ...]:
             tokens.append((1, int(chunk), len(chunk)))
         else:
             tokens.append((0, chunk.casefold(), chunk))
-    tokens.append((2, value))
     return tuple(tokens)
 
 
@@ -407,5 +409,5 @@ def render_markdown(result: dict[str, Any]) -> str:
     """Render a validated analysis result, reporting malformed input as ``StudyError``."""
     try:
         return _render_markdown(result)
-    except (KeyError, TypeError, IndexError) as exc:
+    except (KeyError, TypeError, IndexError, ValueError) as exc:
         raise StudyError(f"analysis result is malformed: {exc}") from None

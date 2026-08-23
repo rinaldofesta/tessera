@@ -38,6 +38,15 @@ _VALUE_PATTERNS = (
         r"\bbearer[ \t]+[A-Za-z0-9._~+/-]{20,}={0,2}(?![A-Za-z0-9._~+/-])",
         re.IGNORECASE,
     )),
+    ("basic-auth", re.compile(
+        r"\bauthorization[ \t]*:[ \t]*basic[ \t]+"
+        r"[A-Za-z0-9+/]{8,}={0,2}(?![A-Za-z0-9+/=])",
+        re.IGNORECASE,
+    )),
+    ("cookie-header", re.compile(
+        r"\b(?:set-cookie|cookie)[ \t]*:[ \t]*[^\s=;]+=[^;\r\n]{3,}",
+        re.IGNORECASE,
+    )),
     ("secret-assignment", re.compile(
         r"\b(?:api[_-]?key|client[_-]?secret|session[_-]?token|access[_-]?token|"
         r"refresh[_-]?token|aws_secret_access_key)\b\s*[:=]\s*[\"']?"
@@ -47,9 +56,9 @@ _VALUE_PATTERNS = (
 )
 
 _SENSITIVE_FIELDS = {
-    "api_key", "apikey", "client_secret", "session_token", "access_token",
-    "refresh_token", "aws_secret_access_key", "authorization", "cookie", "password",
-    "private_key",
+    "apikey", "xapikey", "clientsecret", "sessiontoken", "accesstoken",
+    "refreshtoken", "awssecretaccesskey", "authorization", "cookie", "setcookie",
+    "password", "privatekey",
 }
 _SAFE_VALUES = {
     "", "none", "null", "redacted", "<redacted>", "[redacted]", "not set", "unset",
@@ -59,7 +68,7 @@ _SECRET_VALUE_RE = re.compile(r"[A-Za-z0-9._~+/=:-]{16,}")
 
 
 def _field_name(value: str) -> str:
-    return value.strip().lower().replace("-", "_")
+    return re.sub(r"[^a-z0-9]", "", value.casefold())
 
 
 def _secret_shaped(value: str) -> bool:
@@ -67,6 +76,23 @@ def _secret_shaped(value: str) -> bool:
     if candidate.lower() in _SAFE_VALUES or candidate.startswith(("http://", "https://")):
         return False
     return bool(_SECRET_VALUE_RE.fullmatch(candidate))
+
+
+def _sensitive_field_value(field: str, value: str) -> bool:
+    name = _field_name(field)
+    if name not in _SENSITIVE_FIELDS:
+        return False
+    candidate = value.strip().strip("\"'")
+    if candidate.lower() in _SAFE_VALUES:
+        return False
+    if name == "authorization":
+        return (
+            bool(re.fullmatch(r"(?:basic|bearer)[ \t]+\S{8,}", candidate, re.IGNORECASE))
+            or _secret_shaped(candidate)
+        )
+    if name in {"cookie", "setcookie"}:
+        return bool(re.search(r"(?:^|;[ \t]*)[^\s=;]+=[^;]+", candidate))
+    return _secret_shaped(candidate)
 
 
 def find_credential_like_values(value: Any) -> list[CredentialFinding]:
@@ -83,8 +109,7 @@ def find_credential_like_values(value: Any) -> list[CredentialFinding]:
             for key, nested in current.items():
                 child_path = f"{path}.{key}"
                 if (isinstance(key, str) and isinstance(nested, str)
-                        and _field_name(key) in _SENSITIVE_FIELDS
-                        and _secret_shaped(nested)):
+                        and _sensitive_field_value(key, nested)):
                     add(child_path, "sensitive-field")
                 walk(nested, child_path)
         elif isinstance(current, list):

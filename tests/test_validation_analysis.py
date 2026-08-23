@@ -112,10 +112,12 @@ def test_analysis_rejects_panels_outside_the_preregistered_range(count):
 
 def test_analysis_rejects_missing_or_extra_task_score_ids():
     study = _study()
+    unexpected_id = "private-customer-contract-question"
     del study["configs"][0]["real_task_scores"]["real-0"]
-    study["configs"][0]["real_task_scores"]["real-unregistered"] = 0.1
-    with pytest.raises(StudyError, match="exact registered task ids"):
+    study["configs"][0]["real_task_scores"][unexpected_id] = 0.1
+    with pytest.raises(StudyError, match="1 missing, 1 unexpected") as exc:
         analyze_study(study)
+    assert unexpected_id not in str(exc.value)
 
 
 def test_task_score_maps_are_normalized_by_registered_id_not_json_order():
@@ -125,6 +127,18 @@ def test_task_score_maps_are_normalized_by_registered_id_not_json_order():
         scores = study["configs"][0][key]
         study["configs"][0][key] = dict(reversed(list(scores.items())))
     assert analyze_study(study) == expected
+
+
+def test_invalid_score_errors_do_not_echo_registered_task_ids():
+    study = _study()
+    private_id = "private-customer-contract-question"
+    study["real_task_ids"][0] = private_id
+    for config in study["configs"]:
+        config["real_task_scores"][private_id] = config["real_task_scores"].pop("real-0")
+    study["configs"][0]["real_task_scores"][private_id] = "not-numeric"
+    with pytest.raises(StudyError, match="registered index 0") as exc:
+        analyze_study(study)
+    assert private_id not in str(exc.value)
 
 
 def test_analysis_enforces_the_registered_bootstrap_count():
@@ -173,6 +187,17 @@ def test_top_three_boundary_tie_uses_natural_config_id_order():
     assert result["top_three"]["tie_break"] == "config_id natural ascending"
 
 
+def test_top_three_natural_order_puts_strict_prefix_first():
+    study = _study()
+    study["configs"][2]["id"] = "gpt-4"
+    study["configs"][3]["id"] = "gpt-4-mini"
+    for key in ("tessera_task_scores", "real_task_scores"):
+        study["configs"][3][key] = dict(study["configs"][2][key])
+    result = analyze_study(study)
+    assert result["top_three"]["tessera"] == ["config-0", "config-1", "gpt-4"]
+    assert result["top_three"]["real"] == ["config-0", "config-1", "gpt-4"]
+
+
 def test_markdown_keeps_zero_decisive_denominator_visible():
     result = analyze_study(_study())
     result["decisive_pair_concordance"] = {
@@ -184,6 +209,11 @@ def test_markdown_keeps_zero_decisive_denominator_visible():
 def test_markdown_rejects_malformed_results_as_study_error():
     with pytest.raises(StudyError, match="analysis result"):
         render_markdown({})
+
+    result = analyze_study(_study())
+    result["primary"]["kendall_tau_b"] = "not-a-number"
+    with pytest.raises(StudyError, match="analysis result"):
+        render_markdown(result)
 
 
 def test_cli_emits_json_and_returns_two_for_invalid_input(tmp_path, capsys):
@@ -201,15 +231,30 @@ def test_cli_emits_json_and_returns_two_for_invalid_input(tmp_path, capsys):
 def test_cli_reports_output_write_failures(tmp_path, capsys):
     source = tmp_path / "study.json"
     source.write_text(json.dumps(_study()))
-    assert main([str(source), "-o", str(tmp_path)]) == 2
-    assert "cannot analyze study" in capsys.readouterr().err
+    assert main([str(source), "-o", str(tmp_path)]) == 1
+    error = capsys.readouterr().err
+    assert "cannot write output" in error
+    assert "cannot analyze study" not in error
+
+
+def test_cli_reports_input_read_failures_separately(tmp_path, capsys):
+    missing = tmp_path / "missing.json"
+    assert main([str(missing)]) == 1
+    error = capsys.readouterr().err
+    assert "cannot read study" in error
+    assert "cannot analyze study" not in error
 
 
 def test_cli_rejects_duplicate_json_keys_before_analysis(tmp_path, capsys):
     source = tmp_path / "study.json"
-    source.write_text('{"study_id": "first", "study_id": "second"}')
+    private_key = "private-customer-question"
+    source.write_text(
+        "{" + json.dumps(private_key) + ": 1, " + json.dumps(private_key) + ": 2}"
+    )
     assert main([str(source)]) == 2
-    assert "duplicate JSON key: study_id" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "duplicate JSON object key" in error
+    assert private_key not in error
 
 
 def test_documented_validation_study_example_is_executable():
@@ -217,3 +262,8 @@ def test_documented_validation_study_example_is_executable():
     result = analyze_study(json.loads(path.read_text()))
     assert len(result["configurations"]) == 7
     assert result["bootstrap"] == {"draws": 10_000, "valid_tau_draws": 10_000, "seed": 42}
+    assert all(
+        config[suite]["interval_95"][0] < config[suite]["interval_95"][1]
+        for config in result["configurations"]
+        for suite in ("tessera", "real")
+    )
