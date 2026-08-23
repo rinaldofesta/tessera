@@ -1,0 +1,35 @@
+{
+  "artifact_version": 1,
+  "reviewed_on": "2026-08-23",
+  "eval": {
+    "path": "examples/first-contact.eval",
+    "sha256": "38bd2551b847a36c337c3dd635a1fe711b72742b71af8752485e7f4e259038b3"
+  },
+  "report": {
+    "path": "examples/first-contact-report.md",
+    "sha256": "feaa74ff3a47d7b0e251f18c1091d8167b747744f571e60664b967370f0bbdc9"
+  },
+  "run": {
+    "created": "2026-06-04T18:26:20+00:00",
+    "model": "anthropic/claude-sonnet-4-6",
+    "grader": "openai/gpt-4o",
+    "task": "tessera_probes",
+    "task_args": {"judge": "llm"},
+    "epochs": 3,
+    "inspect_ai": "0.3.232",
+    "git_revision": "ef30645",
+    "git_dirty": true
+  },
+  "toy_org": {
+    "builder": "tessera.examples.toy_org.build_toy_blueprint",
+    "canonical_blueprint_sha256": "b52cfc1d356a851ba980df537f2901c5b98b49821ffd4b4ab95e3682f7cbe83d",
+    "compiled_artifacts_sha256": "78c9ef835483880fa169c7add76cd2390a1580045135a892f0a89fde5962da71"
+  },
+  "publication_review": {
+    "credential_and_identity_scan": "passed; only the public Git remote matched the identity scan",
+    "anthropic_terms": "https://www.anthropic.com/legal/commercial-terms",
+    "openai_terms": "https://openai.com/en-GB/policies/services-agreement/",
+    "terms_basis": "Both commercial terms state that the customer owns model output. The artifact contains synthetic inputs only.",
+    "limitation": "The producing Git tree was dirty. The test suite proves that every logged probe, expected behavior, answer, and source matches the current pinned toy blueprint, but it cannot reconstruct the uncommitted producing tree byte for byte."
+  }
+}

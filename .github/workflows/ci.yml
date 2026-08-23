@@ -37,6 +37,27 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # Public proof path: the README commands must work from a clean checkout with no key.
+  quickstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - run: uv venv
+      - run: uv pip install -e .
+      - run: .venv/bin/tessera-report examples/first-contact.eval -o /tmp/first-contact.md
+      - run: .venv/bin/tessera-variant export --seed 42 --out /tmp/tessera-demo
+      - run: .venv/bin/tessera-validate-transfer --help
+      - name: Verify proof artifacts and leave the checkout clean
+        run: |
+          test -s /tmp/first-contact.md
+          test -s /tmp/tessera-demo/meridian-seed42.blueprint.json
+          test -s /tmp/tessera-demo/meridian-seed42.answers.json
+          git diff --exit-code
+
   # The single-contract gate: regenerate openapi.json + the SPA's generated types
   # and fail if they differ from what's committed. fastapi/pydantic are pinned to
   # the versions the committed schema was generated with — schema emission details
