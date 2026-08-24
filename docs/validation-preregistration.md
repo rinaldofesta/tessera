@@ -81,7 +81,8 @@ Freeze record, completed before registration:
 The primary statistic is Kendall's tau-b between the two configuration rankings. The
 confirmatory gate passes when a one-sided bootstrap-over-tasks 95% lower bound is above zero.
 
-- Draw 10,000 bootstrap samples with the registered seed.
+- Draw 10,000 bootstrap samples with the registered seed. Both values are mandatory analyzer
+  inputs; neither defaults when absent.
 - Resample tasks independently within each suite and use the same sampled task indices for
   every configuration in that suite.
 - Exclude a draw only when tau-b is undefined because a sampled suite has no rank variance.
@@ -101,7 +102,9 @@ The public claim is bound before the run:
 ## Registered secondary outputs
 
 - Top-three overlap, descriptive only. Exactly three configurations are returned; a score tie
-  at the boundary is disclosed and broken by ascending configuration ID.
+  at the boundary is disclosed and broken by natural ascending configuration ID, with numeric
+  runs compared as integers (`config-9` precedes `config-10`). Reported ranks use standard
+  competition ranking (`1, 1, 3` after a tie).
 - Decisive-pair concordance. A pair is decisive **if and only if its two-sided 95% score
   intervals are disjoint on both suites**. The concordant count, decisive denominator, rate,
   and pair list are always reported, including a denominator of zero.

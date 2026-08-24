@@ -37,7 +37,9 @@ personal data. Aggregate publication does not remove the purpose-authorization r
    bind the public sentence before the run.
 6. **Builder diagnostics stay secondary.** Top-three overlap is descriptive. A pair enters
    decisive-pair concordance only when its two-sided 95% score intervals are disjoint on both
-   suites; its count and denominator are always published.
+   suites; its count and denominator are always published. Score inputs are task-ID keyed,
+   ranks use standard competition placement, and a boundary tie uses natural ascending
+   configuration ID.
 7. **`fac-1` stays sealed.** No production-derived fragmentation pattern changes the generator
    before this study. Such patterns may inform `fac-2` afterward and require another holdout.
 

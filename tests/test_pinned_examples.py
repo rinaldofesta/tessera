@@ -8,13 +8,13 @@ Pure local file reads through the exact shared pipeline behind the CLI and the A
 
 import hashlib
 import json
-import re
 from pathlib import Path
 
 import pytest
 from inspect_ai.log import read_eval_log
 
 from tessera.compiler import build_artifacts
+from tessera.credential_scan import find_credential_like_values
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.report.log_adapter import eval_log_to_records
 from tessera.report.serialize import report_to_dict
@@ -83,27 +83,14 @@ def test_first_contact_receipt_pins_files_and_semantically_matches_toy_org():
         assert record.expected_sources == tuple(probe.expected_sources)
 
 
-def test_first_contact_log_contains_no_credential_like_strings():
+@pytest.mark.parametrize("eval_path", sorted(EXAMPLES.glob("*.eval")), ids=lambda path: path.name)
+def test_committed_eval_logs_contain_no_credential_like_values(eval_path):
+    log = read_eval_log(str(eval_path), resolve_attachments=True)
+    assert find_credential_like_values(log.model_dump(mode="json")) == []
+
+
+def test_first_contact_log_pins_public_origin():
     log = read_eval_log(str(EXAMPLES / "first-contact.eval"), resolve_attachments=True)
-    pattern = re.compile(
-        r"api[_-]?key|authorization|bearer\s+[A-Za-z0-9]|sk-[A-Za-z0-9]|"
-        r"session[_-]?token|cookie|client_secret|private_key",
-        re.IGNORECASE,
-    )
-    matches = []
-
-    def walk(value, path="$"):
-        if isinstance(value, dict):
-            for key, nested in value.items():
-                walk(nested, f"{path}.{key}")
-        elif isinstance(value, list):
-            for index, nested in enumerate(value):
-                walk(nested, f"{path}[{index}]")
-        elif isinstance(value, str) and pattern.search(value):
-            matches.append(path)
-
-    walk(log.model_dump(mode="json"))
-    assert matches == []
     assert log.eval.revision.origin == "https://github.com/rinaldofesta/tessera.git"
 
 

@@ -39,6 +39,12 @@ def _task_ids(value: Any, label: str) -> tuple[str, ...]:
     return result
 
 
+def _required(mapping: dict[str, Any], key: str, label: str | None = None) -> Any:
+    if key not in mapping:
+        raise StudyError(f"{label or key} is required")
+    return mapping[key]
+
+
 def _mean(values: Sequence[float]) -> float:
     return sum(values) / len(values)
 
@@ -89,34 +95,70 @@ def _percentile(values: Sequence[float], quantile: float) -> float:
     return ordered[lower] * (1 - fraction) + ordered[upper] * fraction
 
 
-def _scores(value: Any, label: str) -> tuple[float, ...]:
-    if not isinstance(value, list) or not value:
-        raise StudyError(f"{label} must be a non-empty list")
-    result = []
-    for score in value:
-        if isinstance(score, bool) or not isinstance(score, (int, float)):
-            raise StudyError(f"{label} contains a non-numeric score")
-        score = float(score)
-        if not math.isfinite(score) or not 0 <= score <= 1:
-            raise StudyError(f"{label} scores must be finite values in [0, 1]")
-        result.append(score)
-    return tuple(result)
+def _score(value: Any, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise StudyError(f"{label} must be numeric")
+    result = float(value)
+    if not math.isfinite(result) or not 0 <= result <= 1:
+        raise StudyError(f"{label} must be a finite value in [0, 1]")
+    return result
+
+
+def _task_scores(value: Any, task_ids: Sequence[str], label: str) -> tuple[float, ...]:
+    if not isinstance(value, dict) or not value:
+        raise StudyError(f"{label} must be a non-empty object keyed by task id")
+    if not all(isinstance(key, str) for key in value):
+        raise StudyError(f"{label} keys must be task ids")
+    expected = set(task_ids)
+    provided = set(value)
+    missing = [task_id for task_id in task_ids if task_id not in provided]
+    unexpected = provided - expected
+    if missing or unexpected:
+        details = []
+        if missing:
+            details.append(f"{len(missing)} missing")
+        if unexpected:
+            details.append(f"{len(unexpected)} unexpected")
+        raise StudyError(
+            f"{label} must contain the exact registered task ids ({', '.join(details)})"
+        )
+    return tuple(
+        _score(value[task_id], f"{label}[registered index {index}]")
+        for index, task_id in enumerate(task_ids)
+    )
+
+
+def _natural_id_key(value: str) -> tuple[tuple[Any, ...], ...]:
+    """Sort ASCII identifiers with numeric runs compared as integers."""
+    tokens: list[tuple[Any, ...]] = []
+    for chunk in re.split(r"(\d+)", value):
+        if not chunk:
+            continue
+        if chunk.isdigit():
+            tokens.append((1, int(chunk), len(chunk)))
+        else:
+            tokens.append((0, chunk.casefold(), chunk))
+    return tuple(tokens)
 
 
 def _rank_rows(ids: Sequence[str], scores: Sequence[float]) -> list[dict[str, Any]]:
-    ordered_scores = sorted(set(scores), reverse=True)
-    rank_for = {score: index + 1 for index, score in enumerate(ordered_scores)}
+    rank_for: dict[float, int] = {}
+    for placement, score in enumerate(sorted(scores, reverse=True), start=1):
+        rank_for.setdefault(score, placement)
     rows = [
         {"config_id": config_id, "score": score, "rank": rank_for[score]}
         for config_id, score in zip(ids, scores, strict=True)
     ]
-    return sorted(rows, key=lambda row: (-row["score"], row["config_id"]))
+    return sorted(rows, key=lambda row: (-row["score"], _natural_id_key(row["config_id"])))
 
 
 def _top_three(ids: Sequence[str], scores: Sequence[float]) -> list[str]:
     # The pre-registration fixes exactly three entries. A boundary tie is disclosed in
-    # the output; lexical config_id order is the deterministic tie-break.
-    ordered = sorted(zip(ids, scores, strict=True), key=lambda item: (-item[1], item[0]))
+    # the output; natural config_id order is the deterministic tie-break.
+    ordered = sorted(
+        zip(ids, scores, strict=True),
+        key=lambda item: (-item[1], _natural_id_key(item[0])),
+    )
     return [config_id for config_id, _ in ordered[:3]]
 
 
@@ -166,6 +208,27 @@ def _boundary_tie(scores: Sequence[float]) -> bool:
     return len(ordered) > 3 and ordered[2] == ordered[3]
 
 
+def _dropped_configs(value: Any, active_ids: Sequence[str]) -> list[dict[str, str]]:
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise StudyError("dropped must be a list of objects")
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(value):
+        config_id = _identifier(item.get("id"), f"dropped[{index}].id")
+        if config_id in seen:
+            raise StudyError(f"duplicate dropped configuration id: {config_id}")
+        if config_id in active_ids:
+            raise StudyError(f"configuration {config_id} cannot be both active and dropped")
+        reason = item.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise StudyError(f"dropped[{index}].reason must be a non-empty string")
+        if "\n" in reason or "\r" in reason:
+            raise StudyError(f"dropped[{index}].reason must be a single line")
+        seen.add(config_id)
+        result.append({"id": config_id, "reason": reason.strip()})
+    return result
+
+
 def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
     """Analyze a frozen 7-10 configuration study and return JSON-native results."""
     if not isinstance(study, dict):
@@ -187,25 +250,22 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
         if config_id in ids:
             raise StudyError(f"duplicate configuration id: {config_id}")
         ids.append(config_id)
-        tessera_tasks.append(_scores(config.get("tessera_task_scores"),
-                                     f"configs[{index}].tessera_task_scores"))
-        real_tasks.append(_scores(config.get("real_task_scores"),
-                                  f"configs[{index}].real_task_scores"))
+        tessera_tasks.append(_task_scores(
+            config.get("tessera_task_scores"), tessera_task_ids,
+            f"configs[{index}].tessera_task_scores",
+        ))
+        real_tasks.append(_task_scores(
+            config.get("real_task_scores"), real_task_ids,
+            f"configs[{index}].real_task_scores",
+        ))
 
-    tessera_lengths = {len(scores) for scores in tessera_tasks}
-    real_lengths = {len(scores) for scores in real_tasks}
-    if len(tessera_lengths) != 1 or len(real_lengths) != 1:
-        raise StudyError("every configuration must be scored on the same tasks within a suite")
-    if tessera_lengths != {len(tessera_task_ids)}:
-        raise StudyError("tessera task scores must align with tessera_task_ids")
-    if real_lengths != {len(real_task_ids)}:
-        raise StudyError("real task scores must align with real_task_ids")
+    dropped = _dropped_configs(study.get("dropped", []), ids)
 
-    bootstrap = study.get("bootstrap", {})
+    bootstrap = _required(study, "bootstrap")
     if not isinstance(bootstrap, dict):
         raise StudyError("bootstrap must be an object")
-    draws = bootstrap.get("draws", 10_000)
-    seed = bootstrap.get("seed", 20_260_823)
+    draws = _required(bootstrap, "draws", "bootstrap.draws")
+    seed = _required(bootstrap, "seed", "bootstrap.seed")
     if isinstance(draws, bool) or not isinstance(draws, int) or draws != 10_000:
         raise StudyError("bootstrap.draws must be the pre-registered value 10000")
     if isinstance(seed, bool) or not isinstance(seed, int):
@@ -270,16 +330,6 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
             },
         })
 
-    dropped = study.get("dropped", [])
-    if not isinstance(dropped, list) or not all(isinstance(item, dict) for item in dropped):
-        raise StudyError("dropped must be a list of objects")
-    for index, item in enumerate(dropped):
-        _identifier(item.get("id"), f"dropped[{index}].id")
-        if not isinstance(item.get("reason"), str) or not item["reason"].strip():
-            raise StudyError(f"dropped[{index}].reason must be a non-empty string")
-        if "\n" in item["reason"] or "\r" in item["reason"]:
-            raise StudyError(f"dropped[{index}].reason must be a single line")
-
     return {
         "study_id": study_id,
         "configurations": config_results,
@@ -299,7 +349,7 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
             "overlap": len(set(top_tessera) & set(top_real)),
             "tessera_boundary_tie": _boundary_tie(tessera_point),
             "real_boundary_tie": _boundary_tie(real_point),
-            "tie_break": "config_id ascending",
+            "tie_break": "config_id natural ascending",
         },
         "decisive_pair_concordance": _decisive_pairs(
             ids, tessera_point, real_point, tessera_intervals, real_intervals),
@@ -311,7 +361,7 @@ def _pct(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 100:.1f}%"
 
 
-def render_markdown(result: dict[str, Any]) -> str:
+def _render_markdown(result: dict[str, Any]) -> str:
     """Render the public result without any underlying task content."""
     primary = result["primary"]
     pair = result["decisive_pair_concordance"]
@@ -327,7 +377,9 @@ def render_markdown(result: dict[str, Any]) -> str:
         "| config | Tessera score | rank | Real score | rank |",
         "|---|---:|---:|---:|---:|",
     ]
-    for config in sorted(result["configurations"], key=lambda item: item["id"]):
+    for config in sorted(
+        result["configurations"], key=lambda item: _natural_id_key(item["id"])
+    ):
         lines.append(
             f"| {config['id']} | {_pct(config['tessera']['score'])} | "
             f"{config['tessera']['rank']} | {_pct(config['real']['score'])} | "
@@ -351,3 +403,11 @@ def render_markdown(result: dict[str, Any]) -> str:
         for item in result["dropped"]:
             lines.append(f"- {item.get('id', '?')}: {item.get('reason', 'reason not recorded')}")
     return "\n".join(lines) + "\n"
+
+
+def render_markdown(result: dict[str, Any]) -> str:
+    """Render a validated analysis result, reporting malformed input as ``StudyError``."""
+    try:
+        return _render_markdown(result)
+    except (KeyError, TypeError, IndexError, ValueError) as exc:
+        raise StudyError(f"analysis result is malformed: {exc}") from None

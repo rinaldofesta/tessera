@@ -26,7 +26,8 @@
     "compiled_artifacts_sha256": "78c9ef835483880fa169c7add76cd2390a1580045135a892f0a89fde5962da71"
   },
   "publication_review": {
-    "credential_and_identity_scan": "passed; only the public Git remote matched the identity scan",
+    "credential_scan": "passed with tessera.credential_scan.find_credential_like_values; CI scans every committed examples/*.eval log and reports paths and credential kinds without echoing values",
+    "identity_check": "the log contains the public Git origin and no production identity data",
     "anthropic_terms": "https://www.anthropic.com/legal/commercial-terms",
     "openai_terms": "https://openai.com/en-GB/policies/services-agreement/",
     "terms_basis": "Both commercial terms state that the customer owns model output. The artifact contains synthetic inputs only.",
