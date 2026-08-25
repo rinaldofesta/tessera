@@ -12,6 +12,7 @@ import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button";
 import { SHELL_COPY } from "@/copy";
 import { useApiHealth } from "@/hooks";
+import { DEV_API_HOST } from "@/lib/backend";
 import { cn } from "@/lib/utils";
 
 // one chunk per view: recharts (Dashboard's trend line) stays out of the others
@@ -37,9 +38,9 @@ const NAV = [
 export default function App() {
   const healthy = useApiHealth();
   const navigate = useNavigate();
-  // the SPA only ever calls a same-origin /api (vite proxies it to the backend in
-  // dev), so the origin serving this page is the origin the API answers on
-  const apiOrigin = window.location.host;
+  // in dev the SPA runs on vite's port and proxies /api to the backend; in the
+  // shipped app FastAPI serves this page itself, so the origin is already the backend's
+  const apiOrigin = import.meta.env.DEV ? DEV_API_HOST : window.location.host;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -70,6 +71,9 @@ export default function App() {
         <Button
           size="lg"
           className="mt-6 w-full justify-start gap-2 shadow-sm shadow-primary/10"
+          // it renders an anchor, not a <button> — base-ui needs telling, or it
+          // strips the link's native semantics
+          nativeButton={false}
           render={<NavLink to="/new" />}
         >
           <Plus aria-hidden="true" />

@@ -16,7 +16,7 @@ export const SHELL_COPY = {
   },
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
-  apiOriginHint: "The API answers on this origin",
+  apiOriginHint: "The backend this app is talking to",
   shortcuts: "Keyboard: 1–4 switch views",
   help: "Help & docs",
 } as const;
