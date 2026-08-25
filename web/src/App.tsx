@@ -1,24 +1,46 @@
 import { Suspense, lazy, useEffect } from "react";
+import {
+  CircleHelp,
+  ExternalLink,
+  Home,
+  Library,
+  ListChecks,
+  Plus,
+  Trophy,
+} from "lucide-react";
 import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { SHELL_COPY } from "@/copy";
 import { useApiHealth } from "@/hooks";
+import { DEV_API_HOST } from "@/lib/backend";
 import { cn } from "@/lib/utils";
 
 // one chunk per view: recharts (Dashboard's trend line) stays out of the others
 const Dashboard = lazy(() => import("@/views/Dashboard"));
 const Datasets = lazy(() => import("@/views/Datasets"));
+const Leaderboard = lazy(() => import("@/views/Leaderboard"));
 const Results = lazy(() => import("@/views/Results"));
 const Run = lazy(() => import("@/views/Run"));
 
 const NAV = [
-  { to: "/dashboard", key: "1", label: "dashboard" },
-  { to: "/datasets", key: "2", label: "datasets" },
-  { to: "/run", key: "3", label: "run" },
-  { to: "/results", key: "4", label: "results" },
-];
+  { to: "/", key: "1", label: SHELL_COPY.navItems.home, icon: Home, end: true },
+  { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
+  { to: "/suites", key: "3", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  {
+    to: "/leaderboard",
+    key: "4",
+    label: SHELL_COPY.navItems.leaderboard,
+    icon: Trophy,
+    end: false,
+  },
+] as const;
 
 export default function App() {
   const healthy = useApiHealth();
   const navigate = useNavigate();
+  // in dev the SPA runs on vite's port and proxies /api to the backend; in the
+  // shipped app FastAPI serves this page itself, so the origin is already the backend's
+  const apiOrigin = import.meta.env.DEV ? DEV_API_HOST : window.location.host;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -40,86 +62,115 @@ export default function App() {
   }, [navigate]);
 
   return (
-    <div className="flex h-screen flex-col">
-      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-4 text-xs">
-        <span className="font-bold">
-          tessera<span className="font-normal text-muted-foreground">@local</span>
-        </span>
-        <span className="hidden text-muted-foreground sm:inline">· enterprise agent reliability</span>
-        <span className="ml-auto tabular-nums">
-          {healthy ? (
-            <span>[● api:online]</span>
-          ) : (
-            <span className="bg-foreground px-1 font-bold text-background">[○ api:offline]</span>
-          )}
-        </span>
-      </header>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card px-4 py-5">
+        <div className="px-2 font-display text-2xl font-bold tracking-[-0.04em] text-foreground">
+          {SHELL_COPY.brand}
+        </div>
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-44 shrink-0 flex-col border-r border-border p-2">
-          <nav className="space-y-px" aria-label="views">
-            {NAV.map((n) => (
+        <Button
+          size="lg"
+          className="mt-6 w-full justify-start gap-2 shadow-sm shadow-primary/10"
+          // it renders an anchor, not a <button> — base-ui needs telling, or it
+          // strips the link's native semantics
+          nativeButton={false}
+          render={<NavLink to="/new" />}
+        >
+          <Plus aria-hidden="true" />
+          {SHELL_COPY.newEvaluation}
+        </Button>
+
+        <nav className="mt-7 space-y-1" aria-label={SHELL_COPY.navLabel}>
+          {NAV.map((item) => {
+            const Icon = item.icon;
+            return (
               <NavLink
-                key={n.to}
-                to={n.to}
+                key={item.to}
+                to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-1.5 px-2 py-1.5 text-[13px]",
+                    "relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:opacity-0",
                     isActive
-                      ? "bg-foreground font-bold text-background"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-primary/10 font-semibold text-primary before:opacity-100"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <span className="w-3 select-none">{isActive ? "▸" : " "}</span>
-                    <span className="flex-1">{n.label}</span>
-                    <span className="text-[10px] opacity-50">[{n.key}]</span>
-                  </>
-                )}
+                <Icon aria-hidden="true" className="size-4" />
+                <span>{item.label}</span>
               </NavLink>
-            ))}
-          </nav>
-          <div className="mt-auto space-y-1 px-2 pb-1 text-[10px] leading-relaxed text-muted-foreground">
-            <div>[1–4] switch view</div>
-            <div>★ pinned example run</div>
-            <div className="border-t border-border pt-1">
-              a score counts only if every repeat passed (pass^k) · citations are checked
-              against real tool calls
-            </div>
-            <a
-              href="/learn"
-              target="_blank"
-              rel="noreferrer"
-              className="block underline-offset-2 hover:text-foreground hover:underline"
-            >
-              ? how this works — plain-language guide
-            </a>
-          </div>
-        </aside>
+            );
+          })}
+        </nav>
 
-        <main className="min-w-0 flex-1 overflow-auto">
-          <div className="mx-auto max-w-6xl p-5">
-            <Suspense
-              fallback={
-                <div className="text-xs text-muted-foreground">
-                  <span className="select-none">$ </span>loading view…
-                </div>
-              }
-            >
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/datasets" element={<Datasets />} />
-                <Route path="/run" element={<Run />} />
-                <Route path="/results" element={<Results />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </Suspense>
+        <div className="mt-auto border-t border-border px-2 pt-5">
+          <div
+            className={cn(
+              "flex items-start gap-2 text-xs",
+              healthy ? "text-muted-foreground" : "font-medium text-verdict-unreliable",
+            )}
+            aria-live="polite"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "mt-1 size-2 shrink-0 rounded-full",
+                healthy ? "bg-verdict-reliable" : "bg-verdict-unreliable",
+              )}
+            />
+            <span>
+              {healthy ? SHELL_COPY.apiConnected : SHELL_COPY.apiDisconnected}
+              <span aria-hidden="true"> · </span>
+              <span
+                title={SHELL_COPY.apiOriginHint}
+                className={cn("font-mono text-[11px]", healthy && "text-faint")}
+              >
+                {apiOrigin}
+              </span>
+            </span>
           </div>
-        </main>
-      </div>
+
+          <p className="mt-4 text-[11px] text-faint">{SHELL_COPY.shortcuts}</p>
+
+          <a
+            href="/learn"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <CircleHelp aria-hidden="true" className="size-4" />
+            <span>{SHELL_COPY.help}</span>
+            <ExternalLink aria-hidden="true" className="ml-auto size-3.5" />
+          </a>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl p-8">
+          <Suspense
+            fallback={
+              <div className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
+                Loading view…
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/runs" element={<Results />} />
+              <Route path="/suites" element={<Datasets />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/new" element={<Run />} />
+
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/datasets" element={<Navigate to="/suites" replace />} />
+              <Route path="/run" element={<Navigate to="/new" replace />} />
+              <Route path="/results" element={<Navigate to="/runs" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </main>
     </div>
   );
 }

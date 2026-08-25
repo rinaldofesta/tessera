@@ -1,41 +1,57 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
-/* Tessera terminal theme — strict monochrome. Semantics are carried by
-   weight, inversion, and dashing — never by hue. */
+/* Tessera graphite theme. Iris is reserved for brand and actions; verdict
+   colors communicate evaluation outcomes. */
 :root {
-  --background: oklch(0 0 0);
-  --foreground: oklch(0.93 0 0);
-  --card: oklch(0.13 0 0);
-  --card-foreground: oklch(0.93 0 0);
-  --popover: oklch(0.11 0 0);
-  --popover-foreground: oklch(0.93 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.2 0 0);
-  --secondary-foreground: oklch(0.93 0 0);
-  --muted: oklch(0.19 0 0);
-  --muted-foreground: oklch(0.63 0 0);
-  --accent: oklch(0.23 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.93 0 0);
-  --destructive-foreground: oklch(0.1 0 0);
-  --border: oklch(1 0 0 / 16%);
-  --input: oklch(1 0 0 / 22%);
-  --ring: oklch(0.55 0 0);
-  --chart-1: oklch(0.93 0 0);
-  --chart-2: oklch(0.7 0 0);
-  --chart-3: oklch(0.5 0 0);
-  --chart-4: oklch(0.35 0 0);
-  --chart-5: oklch(0.25 0 0);
-  --radius: 0rem;
+  color-scheme: dark;
+  --panel: #1c1f26;
+  --raised: #232732;
+  --line: #2e3340;
+  --faint: #6b7280;
+  --verdict-reliable: #4ade80;
+  --verdict-inconsistent: #fbbf24;
+  --verdict-unreliable: #f87171;
+
+  --background: #14161a;
+  --foreground: #e8eaf0;
+  --card: var(--panel);
+  --card-foreground: #e8eaf0;
+  --popover: var(--panel);
+  --popover-foreground: #e8eaf0;
+  --primary: #8b93ff;
+  --primary-foreground: #14161a;
+  --secondary: var(--raised);
+  --secondary-foreground: #e8eaf0;
+  --muted: var(--raised);
+  --muted-foreground: #9aa1b0;
+  --accent: var(--raised);
+  --accent-foreground: #e8eaf0;
+  --destructive: var(--verdict-unreliable);
+  --destructive-foreground: #14161a;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: #8b93ff;
+  --chart-1: #8b93ff;
+  --chart-2: var(--verdict-reliable);
+  --chart-3: var(--verdict-inconsistent);
+  --chart-4: var(--verdict-unreliable);
+  --chart-5: var(--faint);
+  --radius: 0.875rem;
 }
 
 @theme inline {
-  --font-sans: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -60,6 +76,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-faint: var(--faint);
+  --color-verdict-reliable: var(--verdict-reliable);
+  --color-verdict-inconsistent: var(--verdict-inconsistent);
+  --color-verdict-unreliable: var(--verdict-unreliable);
   --radius-xs: calc(var(--radius) * 0.5);
   --radius-sm: calc(var(--radius) * 0.75);
   --radius-md: calc(var(--radius) * 0.875);
@@ -77,10 +97,10 @@
     height: 100%;
   }
   body {
-    @apply bg-background font-mono text-[13px] text-foreground antialiased;
+    @apply bg-background font-sans text-sm text-foreground antialiased;
   }
   ::selection {
-    @apply bg-foreground text-background;
+    @apply bg-primary text-primary-foreground;
   }
   ::-webkit-scrollbar {
     width: 10px;
@@ -90,8 +110,19 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 18%);
-    border: 2px solid oklch(0 0 0);
+    background: var(--line);
+    border: 2px solid var(--background);
+    border-radius: var(--radius);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
 
