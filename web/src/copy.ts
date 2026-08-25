@@ -4,6 +4,23 @@
 
 import type { ProbeDef } from "./types";
 
+export const SHELL_COPY = {
+  brand: "tessera",
+  newEvaluation: "New evaluation",
+  navLabel: "Primary navigation",
+  navItems: {
+    home: "Home",
+    runs: "Runs",
+    suites: "Test suites",
+    leaderboard: "Leaderboard",
+  },
+  apiConnected: "API connected",
+  apiDisconnected: "API disconnected",
+  apiOriginHint: "The API answers on this origin",
+  shortcuts: "Keyboard: 1–4 switch views",
+  help: "Help & docs",
+} as const;
+
 export const CONFLICT: Record<string, { label: string; behavior: "answer" | "refuse"; desc: string }> = {
   none: {
     label: "sources agree",
