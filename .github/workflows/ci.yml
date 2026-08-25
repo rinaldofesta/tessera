@@ -51,13 +51,16 @@ jobs:
       - run: .venv/bin/tessera-report examples/first-contact.eval -o /tmp/first-contact.md
       - run: .venv/bin/tessera-variant export --seed 42 --out /tmp/tessera-demo
       - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json -o /tmp/transfer-validation.md
+      - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json --json -o /tmp/transfer-validation.json
       - name: Verify proof artifacts and leave the checkout clean
         run: |
           test -s /tmp/first-contact.md
           test -s /tmp/transfer-validation.md
+          .venv/bin/python -m json.tool /tmp/transfer-validation.json > /dev/null
           test -s /tmp/tessera-demo/meridian-seed42.blueprint.json
           test -s /tmp/tessera-demo/meridian-seed42.answers.json
           git diff --exit-code
+          test -z "$(git status --porcelain)" || { git status --porcelain; exit 1; }
 
   # The single-contract gate: regenerate openapi.json + the SPA's generated types
   # and fail if they differ from what's committed. fastapi/pydantic are pinned to

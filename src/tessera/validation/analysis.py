@@ -233,10 +233,11 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
     """Analyze a frozen 7-10 configuration study and return JSON-native results."""
     if not isinstance(study, dict):
         raise StudyError("study input must be a JSON object")
-    study_id = _identifier(study.get("study_id"), "study_id")
-    tessera_task_ids = _task_ids(study.get("tessera_task_ids"), "tessera_task_ids")
-    real_task_ids = _task_ids(study.get("real_task_ids"), "real_task_ids")
-    configs = study.get("configs")
+    study_id = _identifier(_required(study, "study_id"), "study_id")
+    tessera_task_ids = _task_ids(
+        _required(study, "tessera_task_ids"), "tessera_task_ids")
+    real_task_ids = _task_ids(_required(study, "real_task_ids"), "real_task_ids")
+    configs = _required(study, "configs")
     if not isinstance(configs, list) or not 7 <= len(configs) <= 10:
         raise StudyError("the frozen panel must contain 7 to 10 configurations")
 

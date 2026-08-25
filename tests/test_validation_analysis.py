@@ -148,6 +148,15 @@ def test_analysis_enforces_the_registered_bootstrap_count():
         analyze_study(study)
 
 
+@pytest.mark.parametrize(
+    "missing", ["study_id", "tessera_task_ids", "real_task_ids", "configs"])
+def test_analysis_requires_the_top_level_study_fields(missing):
+    study = _study()
+    del study[missing]
+    with pytest.raises(StudyError, match=f"{missing} is required"):
+        analyze_study(study)
+
+
 @pytest.mark.parametrize("missing", ["bootstrap", "draws", "seed"])
 def test_analysis_requires_the_frozen_bootstrap_contract(missing):
     study = _study()
