@@ -43,7 +43,7 @@ def _write(dir_path: Path, name: str, log) -> None:
     write_eval_log(log, str(dir_path / name))
 
 
-def _client(tmp_path, *, eval_runner=None):
+def _client(tmp_path, *, eval_runner=None, discovery_cache=None):
     examples = tmp_path / "examples"
     logs = tmp_path / "logs"
     _write(examples, "first-contact.eval", _eval_log([_answer("q1", 1)]))
@@ -53,6 +53,7 @@ def _client(tmp_path, *, eval_runner=None):
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
         run_store=RunStore(tmp_path / "runs.db"),
+        discovery_cache=discovery_cache,
     )
     return TestClient(app)
 
@@ -143,7 +144,7 @@ def test_eval_setup_defaults_use_the_resolved_model_list(tmp_path):
     }
 
 
-def test_eval_setup_model_readiness(tmp_path, monkeypatch):
+def test_eval_setup_custom_models_start_unverified(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_MODELS", "anthropic/sonnet,openai/gpt,mlx/foo,ollama/x")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -151,10 +152,18 @@ def test_eval_setup_model_readiness(tmp_path, monkeypatch):
     r = _client(tmp_path).get("/api/eval-setup")
     assert r.status_code == 200
     assert r.json()["models"] == [
-        {"id": "anthropic/sonnet", "label": "sonnet", "provider": "anthropic", "readiness": "ready"},
-        {"id": "openai/gpt", "label": "gpt", "provider": "openai", "readiness": "missing_credentials"},
-        {"id": "mlx/foo", "label": "foo", "provider": "mlx", "readiness": "unknown"},
-        {"id": "ollama/x", "label": "x", "provider": "ollama", "readiness": "ready"},
+        {"id": "anthropic/sonnet", "label": "sonnet", "provider": "anthropic",
+         "readiness": "unverified", "group": "benchmark",
+         "detail": "Custom model; availability has not been verified"},
+        {"id": "openai/gpt", "label": "gpt", "provider": "openai",
+         "readiness": "unverified", "group": "benchmark",
+         "detail": "Custom model; availability has not been verified"},
+        {"id": "mlx/foo", "label": "foo", "provider": "mlx",
+         "readiness": "unverified", "group": "benchmark",
+         "detail": "Custom model; availability has not been verified"},
+        {"id": "ollama/x", "label": "x", "provider": "ollama",
+         "readiness": "unverified", "group": "benchmark",
+         "detail": "Custom model; availability has not been verified"},
     ]
 
 
@@ -219,6 +228,90 @@ def test_eval_setup_never_discloses_credential_values(tmp_path, monkeypatch):
     r = _client(tmp_path).get("/api/eval-setup")
     assert r.status_code == 200
     assert sentinel not in r.text
+
+
+def test_eval_setup_and_rescan_survive_dead_runtimes_with_no_keys(tmp_path):
+    import httpx
+
+    from tessera.api.discovery.cache import DiscoveryCache
+    from tessera.api.discovery.service import discover_snapshot, initial_snapshot
+
+    env = {
+        "OLLAMA_HOST": "http://ollama.test",
+        "MLX_BASE_URL": "http://mlx.test:8090",
+    }
+
+    class DeadClient:
+        def get(self, url, *, headers=None, timeout=None):
+            raise httpx.ConnectError("down", request=httpx.Request("GET", url))
+
+    cache = DiscoveryCache(
+        lambda: discover_snapshot(DeadClient(), env, tmp_path, timeout=0.01),
+        initial_snapshot(env),
+    )
+    client = _client(tmp_path, discovery_cache=cache)
+
+    setup = client.get("/api/eval-setup")
+    assert setup.status_code == 200
+    assert len(setup.json()["models"]) == 6
+    assert {m["readiness"] for m in setup.json()["models"]} <= {
+        "needs_key", "offline", "unverified",
+    }
+
+    rescan = client.post("/api/model-discovery/rescan")
+    assert rescan.status_code == 200
+    assert {s["status"] for s in rescan.json()["sources"]} >= {
+        "needs_key", "unreachable",
+    }
+
+
+def test_discovery_setup_and_rescan_never_disclose_credential_values(tmp_path):
+    import httpx
+
+    from tessera.api.discovery.cache import DiscoveryCache
+    from tessera.api.discovery.service import discover_snapshot, initial_snapshot
+
+    sentinel = "sk-SENTINEL-DISCOVERY"
+    env = {
+        "ANTHROPIC_API_KEY": sentinel,
+        "OLLAMA_HOST": "http://ollama.test",
+        "MLX_BASE_URL": "http://mlx.test:8090",
+    }
+
+    class DeadClient:
+        def get(self, url, *, headers=None, timeout=None):
+            raise httpx.ConnectError("down", request=httpx.Request("GET", url))
+
+    cache = DiscoveryCache(
+        lambda: discover_snapshot(DeadClient(), env, tmp_path, timeout=0.01),
+        initial_snapshot(env),
+    )
+    client = _client(tmp_path, discovery_cache=cache)
+
+    setup = client.get("/api/eval-setup")
+    rescan = client.post("/api/model-discovery/rescan")
+
+    assert setup.status_code == 200 and rescan.status_code == 200
+    assert sentinel not in setup.text and sentinel not in rescan.text
+
+
+def test_discovery_refresh_starts_in_background_without_a_setup_request(tmp_path):
+    from threading import Event
+
+    from tessera.api.discovery.cache import DiscoveryCache
+    from tessera.api.discovery.models import DiscoverySnapshot
+
+    refreshed = Event()
+    snapshot = DiscoverySnapshot((), ())
+    cache = DiscoveryCache(
+        lambda: refreshed.set() or snapshot,
+        snapshot,
+        ttl_seconds=60,
+    )
+    client = _client(tmp_path, discovery_cache=cache)
+
+    with client:
+        assert refreshed.wait(timeout=1)
 
 
 def test_every_api_route_declares_a_response_model(tmp_path):

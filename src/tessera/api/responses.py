@@ -198,7 +198,13 @@ class BlueprintDeleted(BaseModel):
 
 # ----- eval setup (launcher vocabulary) -----
 
-ModelReadiness = Literal["ready", "missing_credentials", "unknown"]
+ModelReadiness = Literal[
+    "ready", "needs_key", "needs_server", "offline", "unverified"
+]
+ModelGroup = Literal["benchmark", "discovered"]
+DiscoverySourceStatus = Literal[
+    "ready", "needs_key", "degraded", "unreachable", "offline"
+]
 SuiteKind = Literal["builtin", "custom"]
 
 
@@ -214,6 +220,14 @@ class EvalSetupModel(BaseModel):
     label: str
     provider: str
     readiness: ModelReadiness
+    group: ModelGroup
+    detail: str | None
+
+
+class DiscoverySource(BaseModel):
+    source: str
+    status: DiscoverySourceStatus
+    detail: str | None
 
 
 class EvalSetupSuite(BaseModel):
@@ -227,4 +241,10 @@ class EvalSetupSuite(BaseModel):
 class EvalSetup(BaseModel):
     defaults: EvalSetupDefaults
     models: list[EvalSetupModel]
+    sources: list[DiscoverySource]
     suites: list[EvalSetupSuite]
+
+
+class ModelDiscoveryPayload(BaseModel):
+    models: list[EvalSetupModel]
+    sources: list[DiscoverySource]

@@ -2,56 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 
 from fastapi import APIRouter, Request
 
 from tessera.api import blueprint_store
 from tessera.api import responses as R
+from tessera.api.discovery.merge import resolved_model_ids
 
 router = APIRouter()
-
-# The canonical model list — the ONE source the UI (React Run view) reads via
-# GET /api/models, so the choices can never drift from the backend.
-_MODELS = [
-    "anthropic/claude-sonnet-4-6",
-    "openai/gpt-4o",
-    "anthropic/claude-opus-4-8",
-    "anthropic/claude-haiku-4-5",
-    "openai/gpt-4o-mini",
-    "ollama/qwen3.5:latest",
-]
-
-_CREDENTIAL_ENV = {
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google": "GOOGLE_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "mistral": "MISTRAL_API_KEY",
-    "xai": "XAI_API_KEY",
-    "grok": "XAI_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-}
 
 
 def _resolved_models() -> list[str]:
     """Resolve the canonical model list shared by /api/models and the launcher setup."""
-    env = os.environ.get("TESSERA_MODELS", "")
-    models = [model.strip() for model in env.split(",") if model.strip()]
-    return models or _MODELS
-
-
-def _model_details(model_id: str) -> dict[str, str]:
-    provider, separator, label = model_id.partition("/")
-    if not separator:
-        return {"id": model_id, "label": model_id, "provider": "unknown", "readiness": "unknown"}
-    if provider == "ollama":
-        readiness = "ready"
-    elif credential_env := _CREDENTIAL_ENV.get(provider):
-        readiness = "ready" if os.environ.get(credential_env) else "missing_credentials"
-    else:
-        readiness = "unknown"
-    return {"id": model_id, "label": label, "provider": provider, "readiness": readiness}
+    # Keep this legacy endpoint aligned with the benchmark/configured group. The richer
+    # launcher contract reads the cached discovery snapshot below.
+    return resolved_model_ids(os.environ)
 
 
 @router.get("/api/orgs", response_model=list[str])
@@ -113,9 +80,25 @@ def eval_setup(request: Request):
             "questions": blueprint["probes"],
         }
 
-    models = _resolved_models()
+    discovery = request.app.state.discovery_cache.snapshot()
+    models = [model.as_dict() for model in discovery.models]
     return {
-        "defaults": {"engine": "deterministic", "repeats": 3, "model": models[0], "grader": None},
-        "models": [_model_details(model_id) for model_id in models],
+        "defaults": {
+            "engine": "deterministic",
+            "repeats": 3,
+            "model": models[0]["id"],
+            "grader": None,
+        },
+        "models": models,
+        "sources": [source.as_dict() for source in discovery.sources],
         "suites": [suites[name] for name in sorted(suites)],
     }
+
+
+@router.post("/api/model-discovery/rescan", response_model=R.ModelDiscoveryPayload)
+async def rescan_models(request: Request):
+    """Force one bounded discovery refresh; normal setup reads never perform I/O."""
+    cache = request.app.state.discovery_cache
+    cache.invalidate()
+    discovery = await asyncio.to_thread(cache.refresh)
+    return discovery.as_dict()

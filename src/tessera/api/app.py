@@ -4,7 +4,9 @@ Endpoints
   GET  /api/logs                 list pinned (examples/) + run (logs/) .eval files
   GET  /api/logs/{id}/report     full report JSON for one log
   POST /api/reports              upload an .eval, get report JSON back
-  GET  /api/orgs · /api/models   vocabulary for the Run form (orgs, model choices)
+  GET  /api/eval-setup           cached launcher models, readiness, and suites
+  POST /api/model-discovery/rescan  bounded live refresh of model sources
+  GET  /api/orgs · /api/models   legacy vocabulary for the current Run form
   *    /api/blueprints…          dataset CRUD + validate + compile-preview (key-free)
   POST /api/runs                 start a gated live eval run
   GET  /api/runs[/{job_id}]      history / poll one run (+ /events for SSE)
@@ -19,12 +21,14 @@ web/src/api-types.gen.ts is generated from.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 
 from tessera.api import routes_blueprints, routes_meta, routes_reports, routes_runs
+from tessera.api.discovery import DiscoveryCache, create_default_cache
 from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner
 
@@ -43,13 +47,15 @@ _LESSON = Path("docs/tessera-lesson.html")
 
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
-               blueprint_dir: Path | None = None) -> FastAPI:
+               blueprint_dir: Path | None = None,
+               discovery_cache: DiscoveryCache | None = None) -> FastAPI:
     app = FastAPI(title="Tessera Reliability Explorer")
     app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
+    app.state.discovery_cache = discovery_cache or create_default_cache()
 
     # Registration order IS the OpenAPI path order — the schema is the committed
     # contract (scripts/gen-types.sh), so keep this order stable.
@@ -57,6 +63,30 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
+
+    async def refresh_discovery() -> None:
+        cache = app.state.discovery_cache
+        while True:
+            try:
+                await asyncio.to_thread(cache.refresh_if_stale)
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 — last good snapshot remains available
+                pass
+            await asyncio.sleep(cache.ttl_seconds)
+
+    async def start_discovery() -> None:
+        app.state.discovery_task = asyncio.create_task(refresh_discovery())
+
+    async def stop_discovery() -> None:
+        task = getattr(app.state, "discovery_task", None)
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    app.router.add_event_handler("startup", start_discovery)
+    app.router.add_event_handler("shutdown", stop_discovery)
 
     _mount_learn(app)
     _mount_spa(app)

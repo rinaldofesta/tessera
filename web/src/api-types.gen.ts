@@ -66,6 +66,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/model-discovery/rescan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rescan Models
+         * @description Force one bounded discovery refresh; normal setup reads never perform I/O.
+         */
+        post: operations["rescan_models_api_model_discovery_rescan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/blueprints": {
         parameters: {
             query?: never;
@@ -357,6 +377,18 @@ export interface components {
          * @enum {string}
          */
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
+        /** DiscoverySource */
+        DiscoverySource: {
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "needs_key" | "degraded" | "unreachable" | "offline";
+            /** Detail */
+            detail: string | null;
+        };
         /** DocFile */
         DocFile: {
             /** Path */
@@ -369,6 +401,8 @@ export interface components {
             defaults: components["schemas"]["EvalSetupDefaults"];
             /** Models */
             models: components["schemas"]["EvalSetupModel"][];
+            /** Sources */
+            sources: components["schemas"]["DiscoverySource"][];
             /** Suites */
             suites: components["schemas"]["EvalSetupSuite"][];
         };
@@ -398,7 +432,14 @@ export interface components {
              * Readiness
              * @enum {string}
              */
-            readiness: "ready" | "missing_credentials" | "unknown";
+            readiness: "ready" | "needs_key" | "needs_server" | "offline" | "unverified";
+            /**
+             * Group
+             * @enum {string}
+             */
+            group: "benchmark" | "discovered";
+            /** Detail */
+            detail: string | null;
         };
         /** EvalSetupSuite */
         EvalSetupSuite: {
@@ -460,6 +501,13 @@ export interface components {
             artifact: string;
             /** Locator */
             locator: string;
+        };
+        /** ModelDiscoveryPayload */
+        ModelDiscoveryPayload: {
+            /** Models */
+            models: components["schemas"]["EvalSetupModel"][];
+            /** Sources */
+            sources: components["schemas"]["DiscoverySource"][];
         };
         /**
          * Probe
@@ -815,6 +863,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvalSetup"];
+                };
+            };
+        };
+    };
+    rescan_models_api_model_discovery_rescan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelDiscoveryPayload"];
                 };
             };
         };

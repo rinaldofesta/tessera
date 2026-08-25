@@ -70,6 +70,25 @@
         }
       }
     },
+    "/api/model-discovery/rescan": {
+      "post": {
+        "summary": "Rescan Models",
+        "description": "Force one bounded discovery refresh; normal setup reads never perform I/O.",
+        "operationId": "rescan_models_api_model_discovery_rescan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelDiscoveryPayload"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/blueprints": {
       "get": {
         "summary": "List Blueprints",
@@ -852,6 +871,43 @@
         "title": "ConflictType",
         "description": "The four-way taxonomy at the heart of the eval: what kind of disagreement (if\nany) the silos hold for a probe. It decides whether the right move is to answer or\nto refuse, and `unresolvable` is the column that actually separates reliable agents\nfrom confident fabricators."
       },
+      "DiscoverySource": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "needs_key",
+              "degraded",
+              "unreachable",
+              "offline"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "detail"
+        ],
+        "title": "DiscoverySource"
+      },
       "DocFile": {
         "properties": {
           "path": {
@@ -882,6 +938,13 @@
             "type": "array",
             "title": "Models"
           },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoverySource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
           "suites": {
             "items": {
               "$ref": "#/components/schemas/EvalSetupSuite"
@@ -894,6 +957,7 @@
         "required": [
           "defaults",
           "models",
+          "sources",
           "suites"
         ],
         "title": "EvalSetup"
@@ -952,10 +1016,31 @@
             "type": "string",
             "enum": [
               "ready",
-              "missing_credentials",
-              "unknown"
+              "needs_key",
+              "needs_server",
+              "offline",
+              "unverified"
             ],
             "title": "Readiness"
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "benchmark",
+              "discovered"
+            ],
+            "title": "Group"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
           }
         },
         "type": "object",
@@ -963,7 +1048,9 @@
           "id",
           "label",
           "provider",
-          "readiness"
+          "readiness",
+          "group",
+          "detail"
         ],
         "title": "EvalSetupModel"
       },
@@ -1125,6 +1212,30 @@
           "locator"
         ],
         "title": "ManifestEntry"
+      },
+      "ModelDiscoveryPayload": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/EvalSetupModel"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoverySource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "sources"
+        ],
+        "title": "ModelDiscoveryPayload"
       },
       "Probe": {
         "properties": {
