@@ -41,6 +41,18 @@ def test_common_live_credential_shapes_are_detected_without_echoing_values():
     assert all("AKIA" not in repr(finding) and "ghp_" not in repr(finding) for finding in findings)
 
 
+def test_auth_token_and_secret_key_field_names_are_flagged():
+    payload = {
+        "auth_token": "aB3_" * 6,
+        "secret_key": "cD4_" * 6,
+    }
+    findings = find_credential_like_values(payload)
+    assert {(finding.path, finding.kind) for finding in findings} == {
+        ("$.auth_token", "sensitive-field"),
+        ("$.secret_key", "sensitive-field"),
+    }
+
+
 def test_sensitive_fields_and_inline_assignments_require_secret_shaped_values():
     payload = {
         "client_secret": "aB3_" * 6,

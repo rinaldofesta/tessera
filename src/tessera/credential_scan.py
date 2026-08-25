@@ -58,7 +58,7 @@ _VALUE_PATTERNS = (
 _SENSITIVE_FIELDS = {
     "apikey", "xapikey", "clientsecret", "sessiontoken", "accesstoken",
     "refreshtoken", "awssecretaccesskey", "authorization", "cookie", "setcookie",
-    "password", "privatekey",
+    "password", "privatekey", "authtoken", "secretkey",
 }
 _SAFE_VALUES = {
     "", "none", "null", "redacted", "<redacted>", "[redacted]", "not set", "unset",
@@ -98,10 +98,12 @@ def _sensitive_field_value(field: str, value: str) -> bool:
 def find_credential_like_values(value: Any) -> list[CredentialFinding]:
     """Return high-confidence credential locations without returning secret material."""
     findings: list[CredentialFinding] = []
+    seen: set[CredentialFinding] = set()
 
     def add(path: str, kind: str) -> None:
         finding = CredentialFinding(path=path, kind=kind)
-        if finding not in findings:
+        if finding not in seen:
+            seen.add(finding)
             findings.append(finding)
 
     def walk(current: Any, path: str = "$") -> None:

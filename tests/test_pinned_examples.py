@@ -8,6 +8,7 @@ Pure local file reads through the exact shared pipeline behind the CLI and the A
 
 import hashlib
 import json
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -22,8 +23,13 @@ from tessera.report.serialize import report_to_dict
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 
 
+@lru_cache(maxsize=None)
+def _load_log(path: str):
+    return read_eval_log(path, resolve_attachments=True)
+
+
 def _report(name: str) -> dict:
-    return report_to_dict(read_eval_log(str(EXAMPLES / name), resolve_attachments=True))
+    return report_to_dict(_load_log(str(EXAMPLES / name)))
 
 
 def test_first_contact_pinned_headline_numbers():
@@ -68,7 +74,7 @@ def test_first_contact_receipt_pins_files_and_semantically_matches_toy_org():
     # The run identifies a dirty Git tree, so byte-for-byte source reconstruction is not
     # possible. Pin the stronger claim the evidence supports: its full scoring contract is
     # object-for-object equal to today's committed toy blueprint.
-    log = read_eval_log(str(eval_path), resolve_attachments=True)
+    log = _load_log(str(eval_path))
     assert log.eval.revision.commit == receipt["run"]["git_revision"]
     assert log.eval.revision.dirty is receipt["run"]["git_dirty"]
     _, records = eval_log_to_records(log)
@@ -85,12 +91,12 @@ def test_first_contact_receipt_pins_files_and_semantically_matches_toy_org():
 
 @pytest.mark.parametrize("eval_path", sorted(EXAMPLES.glob("*.eval")), ids=lambda path: path.name)
 def test_committed_eval_logs_contain_no_credential_like_values(eval_path):
-    log = read_eval_log(str(eval_path), resolve_attachments=True)
+    log = _load_log(str(eval_path))
     assert find_credential_like_values(log.model_dump(mode="json")) == []
 
 
 def test_first_contact_log_pins_public_origin():
-    log = read_eval_log(str(EXAMPLES / "first-contact.eval"), resolve_attachments=True)
+    log = _load_log(str(EXAMPLES / "first-contact.eval"))
     assert log.eval.revision.origin == "https://github.com/rinaldofesta/tessera.git"
 
 
