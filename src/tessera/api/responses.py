@@ -194,3 +194,37 @@ class BlueprintId(BaseModel):
 
 class BlueprintDeleted(BaseModel):
     deleted: str
+
+
+# ----- eval setup (launcher vocabulary) -----
+
+ModelReadiness = Literal["ready", "missing_credentials", "unknown"]
+SuiteKind = Literal["builtin", "custom"]
+
+
+class EvalSetupDefaults(BaseModel):
+    engine: Literal["deterministic"]
+    repeats: int
+    model: str
+    grader: str | None
+
+
+class EvalSetupModel(BaseModel):
+    id: str
+    label: str
+    provider: str
+    readiness: ModelReadiness
+
+
+class EvalSetupSuite(BaseModel):
+    id: str
+    kind: SuiteKind
+    editable: bool
+    claims: int
+    questions: int
+
+
+class EvalSetup(BaseModel):
+    defaults: EvalSetupDefaults
+    models: list[EvalSetupModel]
+    suites: list[EvalSetupSuite]

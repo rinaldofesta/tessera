@@ -131,6 +131,77 @@ def test_list_models_env_whitespace_falls_back_to_default(tmp_path, monkeypatch)
     assert r.status_code == 200 and "anthropic/claude-sonnet-4-6" in r.json()
 
 
+def test_eval_setup_defaults_use_the_resolved_model_list(tmp_path):
+    r = _client(tmp_path).get("/api/eval-setup")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["defaults"] == {
+        "engine": "deterministic",
+        "repeats": 3,
+        "model": _client(tmp_path).get("/api/models").json()[0],
+        "grader": None,
+    }
+
+
+def test_eval_setup_model_readiness(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_MODELS", "anthropic/sonnet,openai/gpt,mlx/foo,ollama/x")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    r = _client(tmp_path).get("/api/eval-setup")
+    assert r.status_code == 200
+    assert r.json()["models"] == [
+        {"id": "anthropic/sonnet", "label": "sonnet", "provider": "anthropic", "readiness": "ready"},
+        {"id": "openai/gpt", "label": "gpt", "provider": "openai", "readiness": "missing_credentials"},
+        {"id": "mlx/foo", "label": "foo", "provider": "mlx", "readiness": "unknown"},
+        {"id": "ollama/x", "label": "x", "provider": "ollama", "readiness": "ready"},
+    ]
+
+
+def test_eval_setup_lists_builtin_and_stored_suites(tmp_path):
+    from tessera.api import blueprint_store
+    from tessera.orgs import get_blueprint
+
+    client = _client(tmp_path)
+    blueprint_store.save_blueprint(tmp_path / "blueprints", "mine", get_blueprint("toy"))
+
+    r = client.get("/api/eval-setup")
+    assert r.status_code == 200
+    suites = {suite["id"]: suite for suite in r.json()["suites"]}
+    toy = get_blueprint("toy")
+    # Everything is editable in this product: builtins are materialized into the store as
+    # editable JSON on first touch (seed_from_orgs). Only `kind` encodes origin.
+    assert suites["toy"] == {
+        "id": "toy", "kind": "builtin", "editable": True,
+        "claims": len(toy.claims), "questions": len(toy.probes),
+    }
+    assert suites["mine"] == {
+        "id": "mine", "kind": "custom", "editable": True,
+        "claims": len(toy.claims), "questions": len(toy.probes),
+    }
+
+
+def test_eval_setup_builtin_kind_survives_store_seeding(tmp_path):
+    # /api/orgs (seed=True) materializes every builtin into the store; the setup
+    # endpoint must still report those suites as kind "builtin", not "custom".
+    client = _client(tmp_path)
+    client.get("/api/orgs")
+
+    r = client.get("/api/eval-setup")
+    suites = {suite["id"]: suite for suite in r.json()["suites"]}
+    assert suites["toy"]["kind"] == "builtin"
+    assert all(s["kind"] == "builtin" for s in suites.values() if s["id"] in ("toy", "meridian"))
+
+
+def test_eval_setup_never_discloses_credential_values(tmp_path, monkeypatch):
+    sentinel = "sk-SENTINEL-123"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", sentinel)
+
+    r = _client(tmp_path).get("/api/eval-setup")
+    assert r.status_code == 200
+    assert sentinel not in r.text
+
+
 def test_every_api_route_declares_a_response_model(tmp_path):
     # The OpenAPI schema is the single contract the SPA types are generated from:
     # a route without a response_model publishes `unknown` and silently re-opens

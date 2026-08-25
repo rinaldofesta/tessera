@@ -46,6 +46,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/eval-setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Eval Setup
+         * @description Return the typed, credential-safe vocabulary and defaults for the eval launcher.
+         */
+        get: operations["eval_setup_api_eval_setup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/blueprints": {
         parameters: {
             query?: never;
@@ -343,6 +363,58 @@ export interface components {
             path: string;
             /** Content */
             content: string;
+        };
+        /** EvalSetup */
+        EvalSetup: {
+            defaults: components["schemas"]["EvalSetupDefaults"];
+            /** Models */
+            models: components["schemas"]["EvalSetupModel"][];
+            /** Suites */
+            suites: components["schemas"]["EvalSetupSuite"][];
+        };
+        /** EvalSetupDefaults */
+        EvalSetupDefaults: {
+            /**
+             * Engine
+             * @constant
+             */
+            engine: "deterministic";
+            /** Repeats */
+            repeats: number;
+            /** Model */
+            model: string;
+            /** Grader */
+            grader: string | null;
+        };
+        /** EvalSetupModel */
+        EvalSetupModel: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Readiness
+             * @enum {string}
+             */
+            readiness: "ready" | "missing_credentials" | "unknown";
+        };
+        /** EvalSetupSuite */
+        EvalSetupSuite: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "builtin" | "custom";
+            /** Editable */
+            editable: boolean;
+            /** Claims */
+            claims: number;
+            /** Questions */
+            questions: number;
         };
         /**
          * ExpectedBehavior
@@ -723,6 +795,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    eval_setup_api_eval_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalSetup"];
                 };
             };
         };
