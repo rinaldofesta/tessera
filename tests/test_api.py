@@ -193,6 +193,25 @@ def test_eval_setup_builtin_kind_survives_store_seeding(tmp_path):
     assert all(s["kind"] == "builtin" for s in suites.values() if s["id"] in ("toy", "meridian"))
 
 
+def test_eval_setup_builtin_counts_match_the_runnable_store_copy(tmp_path, monkeypatch):
+    from tessera.api import blueprint_store
+    from tessera.models import Blueprint
+    from tessera.orgs import get_blueprint
+
+    store = tmp_path / "blueprints"
+    original = get_blueprint("toy")
+    edited = Blueprint(
+        claims=original.claims[:-2],
+        probes=[*original.probes[:2], original.probes[-1]],
+    )
+    blueprint_store.save_blueprint(store, "toy", edited)
+    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(store))
+
+    suites = {suite["id"]: suite for suite in _client(tmp_path).get("/api/eval-setup").json()["suites"]}
+    assert suites["toy"]["claims"] == len(edited.claims)
+    assert suites["toy"]["questions"] == len(edited.probes)
+
+
 def test_eval_setup_never_discloses_credential_values(tmp_path, monkeypatch):
     sentinel = "sk-SENTINEL-123"
     monkeypatch.setenv("ANTHROPIC_API_KEY", sentinel)

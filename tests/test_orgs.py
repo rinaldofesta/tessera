@@ -43,3 +43,18 @@ def test_get_blueprint_falls_back_to_saved_json(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
     bp = get_blueprint("custom_ds")
     assert bp.claims and bp.probes
+
+
+def test_get_blueprint_prefers_edited_builtin_at_seed_zero(tmp_path, monkeypatch):
+    """A builtin materialized by the UI becomes its runnable seed-zero source of truth."""
+    from tessera.api import blueprint_store as bs
+
+    original = get_blueprint("toy")
+    edited = Blueprint(
+        claims=original.claims[:-2],
+        probes=[*original.probes[:2], original.probes[-1]],
+    )
+    bs.save_blueprint(tmp_path, "toy", edited)
+    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+
+    assert get_blueprint("toy") == edited
