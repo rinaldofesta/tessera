@@ -51,6 +51,25 @@
         }
       }
     },
+    "/api/eval-setup": {
+      "get": {
+        "summary": "Eval Setup",
+        "description": "Return the typed, credential-safe vocabulary and defaults for the eval launcher.",
+        "operationId": "eval_setup_api_eval_setup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalSetup"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/blueprints": {
       "get": {
         "summary": "List Blueprints",
@@ -850,6 +869,140 @@
           "content"
         ],
         "title": "DocFile"
+      },
+      "EvalSetup": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/EvalSetupDefaults"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/EvalSetupModel"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "suites": {
+            "items": {
+              "$ref": "#/components/schemas/EvalSetupSuite"
+            },
+            "type": "array",
+            "title": "Suites"
+          }
+        },
+        "type": "object",
+        "required": [
+          "defaults",
+          "models",
+          "suites"
+        ],
+        "title": "EvalSetup"
+      },
+      "EvalSetupDefaults": {
+        "properties": {
+          "engine": {
+            "type": "string",
+            "const": "deterministic",
+            "title": "Engine"
+          },
+          "repeats": {
+            "type": "integer",
+            "title": "Repeats"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine",
+          "repeats",
+          "model",
+          "grader"
+        ],
+        "title": "EvalSetupDefaults"
+      },
+      "EvalSetupModel": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "readiness": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "missing_credentials",
+              "unknown"
+            ],
+            "title": "Readiness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "provider",
+          "readiness"
+        ],
+        "title": "EvalSetupModel"
+      },
+      "EvalSetupSuite": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Kind"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable"
+          },
+          "claims": {
+            "type": "integer",
+            "title": "Claims"
+          },
+          "questions": {
+            "type": "integer",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "editable",
+          "claims",
+          "questions"
+        ],
+        "title": "EvalSetupSuite"
       },
       "ExpectedBehavior": {
         "type": "string",
