@@ -87,7 +87,8 @@ _LESSON = Path("docs/tessera-lesson.html")
 
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
-               blueprint_dir: Path | None = None, env_file: Path | None = None) -> FastAPI:
+               blueprint_dir: Path | None = None, env_file: Path | None = None,
+               discovery_cache=None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -108,7 +109,10 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
     app.state.env_file = _resolve_env_file(env_file)
-    app.state.discovery_cache = _build_discovery_cache()
+    # Injected like every other dependency: the default reaches the network and the
+    # filesystem, so tests must be able to supply a deterministic one or the
+    # key-free/network-free invariant is only aspirational.
+    app.state.discovery_cache = discovery_cache or _build_discovery_cache()
 
     @app.exception_handler(RequestValidationError)
     def _sanitized_validation_error(request: Request, exc: RequestValidationError):

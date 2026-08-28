@@ -653,6 +653,95 @@
           }
         }
       }
+    },
+    "/api/providers": {
+      "get": {
+        "summary": "List Providers",
+        "operationId": "list_providers_api_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array",
+                  "title": "Response List Providers Api Providers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/providers/{provider_id}": {
+      "put": {
+        "summary": "Save Provider",
+        "operationId": "save_provider_api_providers__provider_id__put",
+        "parameters": [
+          {
+            "name": "provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/model-discovery/rescan": {
+      "post": {
+        "summary": "Rescan",
+        "operationId": "rescan_api_model_discovery_rescan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RescanResult"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -888,13 +977,21 @@
             },
             "type": "array",
             "title": "Suites"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
           }
         },
         "type": "object",
         "required": [
           "defaults",
           "models",
-          "suites"
+          "suites",
+          "sources"
         ],
         "title": "EvalSetup"
       },
@@ -952,10 +1049,31 @@
             "type": "string",
             "enum": [
               "ready",
-              "missing_credentials",
-              "unknown"
+              "needs_config",
+              "needs_server",
+              "offline",
+              "unverified"
             ],
             "title": "Readiness"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "curated": {
+            "type": "boolean",
+            "title": "Curated"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
           }
         },
         "type": "object",
@@ -963,7 +1081,9 @@
           "id",
           "label",
           "provider",
-          "readiness"
+          "readiness",
+          "source",
+          "curated"
         ],
         "title": "EvalSetupModel"
       },
@@ -1187,6 +1307,93 @@
         ],
         "title": "Probe",
         "description": "A question that references claims and declares expected behavior."
+      },
+      "Provider": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "readiness": {
+            "type": "string",
+            "enum": [
+              "configured",
+              "needs_config"
+            ],
+            "title": "Readiness"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "configured",
+          "readiness",
+          "fields"
+        ],
+        "title": "Provider"
+      },
+      "ProviderField": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "env_var": {
+            "type": "string",
+            "title": "Env Var"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "env_var",
+          "configured"
+        ],
+        "title": "ProviderField"
+      },
+      "ProviderUpdate": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProviderUpdate"
       },
       "Render": {
         "properties": {
@@ -1612,6 +1819,27 @@
         ],
         "title": "ReportProbe"
       },
+      "RescanResult": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "model_count": {
+            "type": "integer",
+            "title": "Model Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "model_count"
+        ],
+        "title": "RescanResult"
+      },
       "ResolutionRule": {
         "type": "string",
         "enum": [
@@ -1838,6 +2066,41 @@
           "asserted_at"
         ],
         "title": "SiloField"
+      },
+      "SourceStatus": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "offline",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "detail"
+        ],
+        "title": "SourceStatus"
       },
       "StartRunResult": {
         "properties": {

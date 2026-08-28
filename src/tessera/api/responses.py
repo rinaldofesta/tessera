@@ -213,7 +213,10 @@ class EvalSetupModel(BaseModel):
     id: str
     label: str
     provider: str
-    readiness: ModelReadiness | Literal["missing_credentials", "unknown"]
+    readiness: ModelReadiness
+    source: str
+    curated: bool
+    detail: str | None = None
 
 
 class EvalSetupSuite(BaseModel):
@@ -228,6 +231,7 @@ class EvalSetup(BaseModel):
     defaults: EvalSetupDefaults
     models: list[EvalSetupModel]
     suites: list[EvalSetupSuite]
+    sources: list[SourceStatus]
 
 
 # ----- providers (credential configuration) -----

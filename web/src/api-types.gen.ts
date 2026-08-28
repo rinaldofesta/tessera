@@ -272,6 +272,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Providers */
+        get: operations["list_providers_api_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/providers/{provider_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Provider */
+        put: operations["save_provider_api_providers__provider_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/model-discovery/rescan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rescan */
+        post: operations["rescan_api_model_discovery_rescan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -371,6 +422,8 @@ export interface components {
             models: components["schemas"]["EvalSetupModel"][];
             /** Suites */
             suites: components["schemas"]["EvalSetupSuite"][];
+            /** Sources */
+            sources: components["schemas"]["SourceStatus"][];
         };
         /** EvalSetupDefaults */
         EvalSetupDefaults: {
@@ -398,7 +451,13 @@ export interface components {
              * Readiness
              * @enum {string}
              */
-            readiness: "ready" | "missing_credentials" | "unknown";
+            readiness: "ready" | "needs_config" | "needs_server" | "offline" | "unverified";
+            /** Source */
+            source: string;
+            /** Curated */
+            curated: boolean;
+            /** Detail */
+            detail?: string | null;
         };
         /** EvalSetupSuite */
         EvalSetupSuite: {
@@ -479,6 +538,36 @@ export interface components {
             expected_answer?: string | null;
             /** Expected Sources */
             expected_sources?: string[];
+        };
+        /** Provider */
+        Provider: {
+            /** Id */
+            id: string;
+            /** Configured */
+            configured: boolean;
+            /**
+             * Readiness
+             * @enum {string}
+             */
+            readiness: "configured" | "needs_config";
+            /** Fields */
+            fields: components["schemas"]["ProviderField"][];
+        };
+        /** ProviderField */
+        ProviderField: {
+            /** Id */
+            id: string;
+            /** Env Var */
+            env_var: string;
+            /** Configured */
+            configured: boolean;
+        };
+        /** ProviderUpdate */
+        ProviderUpdate: {
+            /** Api Key */
+            api_key?: string | null;
+            /** Base Url */
+            base_url?: string | null;
         };
         /**
          * Render
@@ -613,6 +702,13 @@ export interface components {
             /** Failures */
             failures: components["schemas"]["ReportFailure"][];
         };
+        /** RescanResult */
+        RescanResult: {
+            /** Sources */
+            sources: components["schemas"]["SourceStatus"][];
+            /** Model Count */
+            model_count: number;
+        };
         /**
          * ResolutionRule
          * @description How a `resolvable` conflict is decided. Note authority can outrank recency: a
@@ -690,6 +786,18 @@ export interface components {
             value: unknown;
             /** Asserted At */
             asserted_at: string | null;
+        };
+        /** SourceStatus */
+        SourceStatus: {
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "offline" | "skipped";
+            /** Detail */
+            detail: string | null;
         };
         /** StartRunResult */
         StartRunResult: {
@@ -1271,6 +1379,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"][];
+                };
+            };
+        };
+    };
+    save_provider_api_providers__provider_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rescan_api_model_discovery_rescan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RescanResult"];
                 };
             };
         };

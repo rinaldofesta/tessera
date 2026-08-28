@@ -22,36 +22,12 @@ _MODELS = [
     "ollama/qwen3.5:latest",
 ]
 
-_CREDENTIAL_ENV = {
-    "anthropic": "ANTHROPIC_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google": "GOOGLE_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "mistral": "MISTRAL_API_KEY",
-    "xai": "XAI_API_KEY",
-    "grok": "XAI_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-}
-
 
 def _resolved_models() -> list[str]:
     """Resolve the canonical model list shared by /api/models and the launcher setup."""
     env = os.environ.get("TESSERA_MODELS", "")
     models = [model.strip() for model in env.split(",") if model.strip()]
     return models or _MODELS
-
-
-def _model_details(model_id: str) -> dict[str, str]:
-    provider, separator, label = model_id.partition("/")
-    if not separator:
-        return {"id": model_id, "label": model_id, "provider": "unknown", "readiness": "unknown"}
-    if provider == "ollama":
-        readiness = "ready"
-    elif credential_env := _CREDENTIAL_ENV.get(provider):
-        readiness = "ready" if os.environ.get(credential_env) else "missing_credentials"
-    else:
-        readiness = "unknown"
-    return {"id": model_id, "label": label, "provider": provider, "readiness": readiness}
 
 
 @router.get("/api/orgs", response_model=list[str])
@@ -113,9 +89,29 @@ def eval_setup(request: Request):
             "questions": blueprint["probes"],
         }
 
-    models = _resolved_models()
+    curated_models = _resolved_models()
+    curated = set(curated_models)
+    models, statuses = request.app.state.discovery_cache.get()
     return {
-        "defaults": {"engine": "deterministic", "repeats": 3, "model": models[0], "grader": None},
-        "models": [_model_details(model_id) for model_id in models],
+        "defaults": {
+            "engine": "deterministic", "repeats": 3,
+            # From the cached list the UI actually renders, not a fresh resolution:
+            # the cache can be up to its TTL stale, so a re-resolved first entry
+            # could name a model absent from `models`.
+            "model": models[0].id if models else curated_models[0],
+            "grader": None,
+        },
+        "models": [
+            {
+                "id": model.id, "label": model.label, "provider": model.provider,
+                "readiness": model.readiness, "source": model.source,
+                "curated": model.id in curated, "detail": model.detail,
+            }
+            for model in models
+        ],
         "suites": [suites[name] for name in sorted(suites)],
+        "sources": [
+            {"source": status.source, "status": status.status, "detail": status.detail}
+            for status in statuses
+        ],
     }
