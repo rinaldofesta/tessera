@@ -49,6 +49,14 @@ export const conflictLabel = (key: string) => CONFLICT[key]?.label ?? key;
 export const engineLabel = (engine: string) =>
   engine === "llm" ? "ai grader" : engine === "deterministic" ? "fixed rules" : engine;
 
+/** Display names for the built-in suites. A custom suite falls back to its id, which is
+ *  the name its author gave it. */
+export const DATASET_LABELS: Record<string, string> = {
+  toy: "Toy starter",
+  meridian: "Meridian",
+  your: "Your organization",
+};
+
 export const DATASET_DESCRIPTIONS: Record<string, string> = {
   toy: "tiny 2-account starter — the fastest way to see a full run",
   meridian: "the 22-question benchmark behind the public leaderboard",
