@@ -198,7 +198,7 @@ class BlueprintDeleted(BaseModel):
 
 # ----- eval setup (launcher vocabulary) -----
 
-ModelReadiness = Literal["ready", "missing_credentials", "unknown"]
+ModelReadiness = Literal["ready", "needs_config", "needs_server", "offline", "unverified"]
 SuiteKind = Literal["builtin", "custom"]
 
 
@@ -213,7 +213,7 @@ class EvalSetupModel(BaseModel):
     id: str
     label: str
     provider: str
-    readiness: ModelReadiness
+    readiness: ModelReadiness | Literal["missing_credentials", "unknown"]
 
 
 class EvalSetupSuite(BaseModel):
@@ -228,3 +228,32 @@ class EvalSetup(BaseModel):
     defaults: EvalSetupDefaults
     models: list[EvalSetupModel]
     suites: list[EvalSetupSuite]
+
+
+# ----- providers (credential configuration) -----
+
+ProviderReadiness = Literal["configured", "needs_config"]
+
+
+class ProviderField(BaseModel):
+    id: str
+    env_var: str
+    configured: bool
+
+
+class Provider(BaseModel):
+    id: str
+    configured: bool
+    readiness: ProviderReadiness
+    fields: list[ProviderField]
+
+
+class SourceStatus(BaseModel):
+    source: str
+    status: Literal["ok", "offline", "skipped"]
+    detail: str | None
+
+
+class RescanResult(BaseModel):
+    sources: list[SourceStatus]
+    model_count: int

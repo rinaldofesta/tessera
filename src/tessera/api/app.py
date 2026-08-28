@@ -27,7 +27,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from tessera.api import routes_blueprints, routes_meta, routes_reports, routes_runs
+from tessera.api import (
+    routes_blueprints,
+    routes_meta,
+    routes_providers,
+    routes_reports,
+    routes_runs,
+)
 from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner
 
@@ -42,6 +48,33 @@ def _resolve_env_file(env_file: Path | None) -> Path:
     override = os.environ.get("TESSERA_ENV_FILE")
     chosen = env_file or (Path(override) if override else _DEFAULT_ENV_FILE)
     return Path(chosen).resolve()
+
+
+def _build_discovery_cache():
+    """Wire the three sources behind one cache. httpx is imported lazily so importing
+    the app stays cheap and the key-free test suite never opens a client it won't use."""
+    from tessera.api.discovery.cache import DiscoveryCache
+    from tessera.api.discovery.cloud import discover_cloud
+    from tessera.api.discovery.merge import merge
+    from tessera.api.discovery.mlx import discover_mlx
+    from tessera.api.discovery.ollama import discover_ollama
+
+    def collect():
+        import httpx
+        hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        with httpx.Client() as client:
+            results = [
+                discover_cloud(client, env=os.environ),
+                discover_ollama(client),
+                discover_mlx(client, hf_home=hf_home,
+                             base_url=os.environ.get("MLX_BASE_URL")),
+            ]
+        # The curated list is routes_meta's TESSERA_MODELS-or-defaults resolution —
+        # imported here rather than duplicated, so the two cannot drift.
+        from tessera.api.routes_meta import _resolved_models
+        return merge(results, curated=_resolved_models())
+
+    return DiscoveryCache(collect=collect)
 
 
 async def _background_schedule(coro) -> None:
@@ -75,6 +108,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
     app.state.env_file = _resolve_env_file(env_file)
+    app.state.discovery_cache = _build_discovery_cache()
 
     @app.exception_handler(RequestValidationError)
     def _sanitized_validation_error(request: Request, exc: RequestValidationError):
@@ -96,6 +130,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
+    app.include_router(routes_providers.router)   # LAST — order is the OpenAPI path order
 
     _mount_learn(app)
     _mount_spa(app)
