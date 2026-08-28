@@ -210,9 +210,8 @@ reliability, the conflict taxonomy, `pass^k`, provenance, and how to author your
 claims & probes, in plain language:
 
 - 🇬🇧 **`docs/tessera-lesson.html`** (English)
-- 🇮🇹 **`docs/tessera-lezione.html`** (Italiano)
 
-With the app running, the English guide is also served at **`/learn`** — linked from the
+With the app running, this guide is also served at **`/learn`** — linked from the
 sidebar ("how this works").
 
 ## The Reliability Explorer (product UI)
