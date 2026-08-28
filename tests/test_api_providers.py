@@ -97,3 +97,15 @@ def test_the_credential_scanner_finds_nothing_in_any_response(tmp_path):
 def test_rescan_reports_each_source_status(tmp_path):
     body = _client(tmp_path).post("/api/model-discovery/rescan").json()
     assert {s["source"] for s in body["sources"]} == {"cloud", "ollama", "mlx"}
+
+
+def test_a_typo_in_a_field_name_is_rejected_rather_than_silently_ignored(tmp_path):
+    # pydantic's default drops unknown members, so {"apikey": ...} returned 200 having
+    # written nothing — the caller walks away believing the credential is stored.
+    env = tmp_path / ".env"
+    env.write_text("EXISTING=1\n")
+    before = env.read_bytes()
+    r = _client(tmp_path).put("/api/providers/openai", json={"apikey": SENTINEL})
+    assert r.status_code == 422
+    assert SENTINEL not in r.text
+    assert env.read_bytes() == before

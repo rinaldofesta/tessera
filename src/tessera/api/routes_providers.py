@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from tessera.api import env_writer, responses as R
 from tessera.api.providers import PROVIDERS, FIELD_BASE_URL, configured_fields, is_configured
@@ -19,6 +19,11 @@ router = APIRouter()
 
 
 class ProviderUpdate(BaseModel):
+    # forbid, not ignore: pydantic's default silently drops unknown members, so a typo
+    # like {"apikey": "..."} returned 200 having written nothing — the worst outcome,
+    # since the caller believes the credential is stored.
+    model_config = ConfigDict(extra="forbid")
+
     api_key: str | None = None
     base_url: str | None = None
 

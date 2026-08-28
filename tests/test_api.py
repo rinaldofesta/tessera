@@ -230,12 +230,24 @@ def test_every_api_route_declares_a_response_model(tmp_path):
     from tessera.api.app import create_app
     from tessera.api.run_store import RunStore
 
+    def api_routes(node):
+        # Walk recursively via original_router: newer FastAPI keeps included routers as
+        # lazy _IncludedRouter entries instead of flattening their routes into
+        # app.routes, so iterating app.routes directly finds ZERO /api/ routes and this
+        # guard silently passes while checking nothing.
+        for route in getattr(node, "routes", []):
+            if isinstance(route, APIRoute):
+                yield route
+            elif (inner := getattr(route, "original_router", None)) is not None:
+                yield from api_routes(inner)
+
     app = create_app(run_store=RunStore(tmp_path / "runs.db"),
                      blueprint_dir=tmp_path / "bp")
     exempt = {"/api/runs/{job_id}/events"}        # SSE stream, not JSON
-    for route in app.routes:
-        if isinstance(route, APIRoute) and route.path.startswith("/api/") and route.path not in exempt:
-            assert route.response_model is not None, f"{route.path} has no response_model"
+    checked = [r for r in api_routes(app) if r.path.startswith("/api/") and r.path not in exempt]
+    assert checked, "found no /api/ routes to check — the guard is inert, not passing"
+    for route in checked:
+        assert route.response_model is not None, f"{route.path} has no response_model"
 
 
 def test_run_rejects_unknown_judge(tmp_path):

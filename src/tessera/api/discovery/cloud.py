@@ -35,13 +35,23 @@ _LIST_URL: dict[str, str] = {
 }
 
 
+def _auth_headers(provider_id: str, env: Mapping[str, str]) -> dict[str, str]:
+    """The provider's own auth scheme. Without these the listing 401s and every model
+    stays `unverified` — the live confirmation the hybrid design depends on can never
+    succeed. Anthropic uses x-api-key plus a version header; the others use Bearer."""
+    key = env.get(PROVIDERS[provider_id].fields[0].env_var, "").strip()
+    if provider_id == "anthropic":
+        return {"x-api-key": key, "anthropic-version": "2023-06-01"}
+    return {"Authorization": f"Bearer {key}"}
+
+
 def _reachable(client, provider_id: str, env: Mapping[str, str], timeout: float) -> set[str] | None:
     """Ids the key can reach, or None when no listing was obtained."""
     url = _LIST_URL.get(provider_id)
     if not url:
         return None
     try:
-        response = client.get(url, timeout=timeout)
+        response = client.get(url, timeout=timeout, headers=_auth_headers(provider_id, env))
         if getattr(response, "status_code", 200) != 200:
             return None
         payload = response.json()

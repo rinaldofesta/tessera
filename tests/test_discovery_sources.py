@@ -9,9 +9,11 @@ class _StubClient:
     def __init__(self, *, payload=None, status_code=200, raises=None):
         self.payload, self.status_code, self.raises = payload, status_code, raises
         self.calls: list[str] = []
+        self.headers: list[dict] = []
 
-    def get(self, url, timeout=None):
+    def get(self, url, timeout=None, headers=None):
         self.calls.append(url)
+        self.headers.append(headers or {})
         if self.raises is not None:
             raise self.raises
         return self
@@ -153,3 +155,22 @@ def test_no_response_field_can_carry_the_key_back():
     result = discover_cloud(_StubClient(payload={"data": []}), env={"OPENAI_API_KEY": "sk-" + "a" * 32})
     payload = [m.__dict__ for m in result.models] + [{"detail": result.detail}]
     assert find_credential_like_values(payload) == []
+
+
+def test_the_cloud_listing_is_sent_with_the_provider_credential():
+    # Without auth headers the listing 401s, _reachable returns None, and every model
+    # stays `unverified` — the live confirmation the hybrid design exists for could
+    # never succeed. The key must never appear in the RESULT, only in the request.
+    client = _StubClient(payload={"data": []})
+    discover_cloud(client, env={"OPENAI_API_KEY": "sk-token", "ANTHROPIC_API_KEY": "sk-ant"})
+    sent = {url: h for url, h in zip(client.calls, client.headers)}
+    assert sent["https://api.openai.com/v1/models"]["Authorization"] == "Bearer sk-token"
+    anthropic = sent["https://api.anthropic.com/v1/models"]
+    assert anthropic["x-api-key"] == "sk-ant"
+    assert anthropic["anthropic-version"]
+
+
+def test_no_auth_header_is_sent_for_a_provider_without_a_key():
+    client = _StubClient(payload={"data": []})
+    discover_cloud(client, env={"OPENAI_API_KEY": "sk-token"})
+    assert "https://api.anthropic.com/v1/models" not in client.calls
