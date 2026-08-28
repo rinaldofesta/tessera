@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -31,6 +32,14 @@ from tessera.api.runner import default_eval_runner
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
+_DEFAULT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+
+
+def _resolve_env_file(env_file: Path | None) -> Path:
+    """One authoritative absolute path. Resolved, never read, at construction time."""
+    override = os.environ.get("TESSERA_ENV_FILE")
+    chosen = env_file or (Path(override) if override else _DEFAULT_ENV_FILE)
+    return Path(chosen).resolve()
 
 
 async def _background_schedule(coro) -> None:
@@ -43,13 +52,27 @@ _LESSON = Path("docs/tessera-lesson.html")
 
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
-               blueprint_dir: Path | None = None) -> FastAPI:
-    app = FastAPI(title="Tessera Reliability Explorer")
+               blueprint_dir: Path | None = None, env_file: Path | None = None) -> FastAPI:
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # interpolate=False: dotenv expands ${VAR} inside BOTH quoting styles, which
+        # would corrupt any credential containing "${". Credentials are literals.
+        # override=False: a variable already exported in the shell wins over the file.
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(app.state.env_file, interpolate=False, override=False)
+        except ImportError:
+            pass
+        yield
+
+    app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
     app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
+    app.state.env_file = _resolve_env_file(env_file)
 
     # Registration order IS the OpenAPI path order — the schema is the committed
     # contract (scripts/gen-types.sh), so keep this order stable.
@@ -101,12 +124,6 @@ app = create_app()
 
 def main() -> None:
     import uvicorn
-
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
 
     uvicorn.run("tessera.api.app:app", host="127.0.0.1",
                 port=int(os.environ.get("TESSERA_API_PORT", "8000")))

@@ -50,15 +50,13 @@ def _job_env() -> dict[str, str]:
 
 def default_eval_runner(req: RunRequest):
     """Run a real Tessera eval and return the EvalLog. Imported lazily so the module
-    stays importable (and the API stays testable) without inspect_ai initializing."""
+    stays importable (and the API stays testable) without inspect_ai initializing.
+
+    The environment is loaded once at application startup (app.py); this function
+    reads the process environment and never loads a dotenv file of its own.
+    """
     import inspect_ai
     from inspect_ai.log import read_eval_log
-
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
 
     os.environ.update(_job_env())
 
