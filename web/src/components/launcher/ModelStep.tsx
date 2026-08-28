@@ -1,4 +1,5 @@
 import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { EvalSetupModel, SourceStatus } from "@/types";
 
 const SELECTABLE = new Set<EvalSetupModel["readiness"]>(["ready", "unverified"]);
+const LOCAL = new Set(["mlx", "ollama"]);
 export const CUSTOM = "__custom__";
 
 interface ModelStepProps {
@@ -36,18 +38,31 @@ export function ModelStep({
   onBack,
   onContinue,
 }: ModelStepProps) {
+  const [query, setQuery] = useState("");
   const usable = models.filter((model) => SELECTABLE.has(model.readiness));
-  const hidden = models.length - usable.length;
+  // Local models are the user's own: hiding them means they cannot discover what is on
+  // their machine. Shown, but never selectable until something confirms a server answers —
+  // offering an unserved model is the false-ready bug this phase removed.
+  const local = models.filter(
+    (model) => !SELECTABLE.has(model.readiness) && LOCAL.has(model.provider),
+  );
+  const hidden = models.length - usable.length - local.length;
+  // "discovered" used to mean "local", because cloud was a fixed catalogue. Now that the
+  // cloud list is live, most discovered models are remote — so group by where a model
+  // actually comes from, not by whether we happened to curate it.
+  const needle = query.trim().toLowerCase();
+  const shown = needle ? usable.filter((m) => m.id.toLowerCase().includes(needle)) : usable;
   const groups = [
+    { key: "curated", label: MODEL_COPY.curatedGroup, items: shown.filter((m) => m.curated) },
     {
-      curated: true,
-      label: MODEL_COPY.curatedGroup,
-      items: usable.filter((model) => model.curated),
+      key: "cloud",
+      label: MODEL_COPY.providerGroup,
+      items: shown.filter((m) => !m.curated && !LOCAL.has(m.provider)),
     },
     {
-      curated: false,
-      label: MODEL_COPY.discoveredGroup,
-      items: usable.filter((model) => !model.curated),
+      key: "machine",
+      label: MODEL_COPY.machineGroup,
+      items: shown.filter((m) => !m.curated && LOCAL.has(m.provider)),
     },
   ].filter((group) => group.items.length > 0);
 
@@ -88,13 +103,21 @@ export function ModelStep({
         </div>
       )}
 
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={MODEL_COPY.filterPlaceholder}
+        aria-label={MODEL_COPY.filterPlaceholder}
+        className="mb-3 font-mono text-[12.5px]"
+      />
+
       <div
         role="radiogroup"
         aria-label={WIZARD_COPY.q2}
         className="overflow-hidden rounded-lg border border-[var(--border)]"
       >
         {groups.map((group) => (
-          <div key={String(group.curated)}>
+          <div key={group.key}>
             <p className="border-b border-[var(--border)] bg-[#101216] px-3.5 pt-2.5 pb-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--faint)]">
               {group.label}
             </p>
@@ -142,6 +165,41 @@ export function ModelStep({
             })}
           </div>
         ))}
+
+        {local.length > 0 && (
+          <div>
+            <p className="border-b border-t border-[var(--border)] bg-[#101216] px-3.5 pt-2.5 pb-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--faint)]">
+              {MODEL_COPY.localGroup}
+            </p>
+            {local.map((model) => (
+              <div
+                key={model.id}
+                className="flex items-center gap-3 border-b border-[var(--border)] bg-[#191b21] px-3.5 py-2.5 last:border-b-0"
+              >
+                <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-[var(--faint)]">
+                  {model.label}
+                </span>
+                {model.detail ? (
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(model.detail ?? "")}
+                    className="rounded-md px-1 font-mono text-[10.5px] text-[var(--primary)] outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  >
+                    {MODEL_COPY.copyCommand}
+                  </button>
+                ) : null}
+                <Badge
+                  variant="outline"
+                  className="border-[var(--border)] text-[var(--faint)]"
+                >
+                  {model.readiness === "needs_server"
+                    ? MODEL_COPY.needsServer
+                    : MODEL_COPY.runtimeOffline}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"

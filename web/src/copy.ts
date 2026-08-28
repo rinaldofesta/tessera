@@ -168,7 +168,10 @@ export const WIZARD_COPY = {
 
 export const MODEL_COPY = {
   curatedGroup: "Benchmark set — the models behind the published leaderboard",
-  discoveredGroup: "Found on this machine",
+  providerGroup: "Available from your providers",
+  machineGroup: "On this machine",
+  filterPlaceholder: "Filter models…",
+  noMatch: "No model matches that filter.",
   ready: "ready",
   unchecked: "unchecked",
   hiddenCount: (n: number) => `${n} hidden`,
@@ -176,6 +179,11 @@ export const MODEL_COPY = {
   addProvider: "Add a provider →",
   rescan: "Rescan",
   rescanning: "Rescanning…",
+  localGroup: "On this machine — not currently running",
+  needsServer: "on disk, no server",
+  runtimeOffline: "runtime not running",
+  copyCommand: "Copy start command",
+  copied: "Command copied",
   customRow: "Use a custom model ID…",
   customPlaceholder: "provider/model — e.g. openrouter/meta-llama/llama-4-maverick",
   customHint: "Any model string inspect_ai accepts. Its provider's key must be configured.",
