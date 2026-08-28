@@ -1,14 +1,8 @@
 import type {
-  Artifacts, Blueprint, BlueprintMeta, LogMeta, Report, RunConfig, RunStatus,
-  RunSummary, StartRunResult, TrendPoint, ValidationResult,
+  Artifacts, Blueprint, BlueprintMeta, EvalSetup, LogMeta, Provider, ProviderUpdate,
+  RescanResult, Report, RunConfig, RunStatus, RunSummary, StartRunResult, TrendPoint,
+  ValidationResult,
 } from "./types";
-import type { components } from "./api-types.gen";
-
-type ApiSchema = components["schemas"];
-type EvalSetup = ApiSchema["EvalSetup"];
-type Provider = ApiSchema["Provider"];
-type ProviderUpdate = ApiSchema["ProviderUpdate"];
-type RescanResult = ApiSchema["RescanResult"];
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {

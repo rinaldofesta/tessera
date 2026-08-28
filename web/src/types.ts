@@ -35,3 +35,13 @@ export type BlueprintMeta = S["BlueprintMeta"];
 export type ValidationError = S["ValidationIssue"];
 export type ValidationResult = S["ValidationResult"];
 export type Artifacts = S["Artifacts"];
+
+// ----- eval setup + providers (the guided launcher) -----
+export type EvalSetup = S["EvalSetup"];
+export type EvalSetupModel = S["EvalSetupModel"];
+export type EvalSetupSuite = S["EvalSetupSuite"];
+export type Provider = S["Provider"];
+export type ProviderField = S["ProviderField"];
+export type ProviderUpdate = S["ProviderUpdate"];
+export type SourceStatus = S["SourceStatus"];
+export type RescanResult = S["RescanResult"];

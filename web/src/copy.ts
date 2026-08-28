@@ -125,3 +125,99 @@ export const RECIPES: Record<RecipeKey, { title: string; blurb: string; example:
     example: "a subject with no billing address on file anywhere.",
   },
 };
+
+// ---- launcher rework: the guided three-step flow -----------------------------------
+
+export const MOSAIC_COPY = {
+  caption: (questions: number, repeats: number, total: number) =>
+    `${total} answers — ${questions} question${questions === 1 ? "" : "s"}, ${repeats} repeat${repeats === 1 ? "" : "s"} each`,
+  aria: (questions: number, repeats: number) =>
+    `Answer grid: ${questions} questions by ${repeats} repeats`,
+};
+
+export const WIZARD_COPY = {
+  step1: "Choose a suite",
+  step2: "Choose the model",
+  step3: "Confirm & launch",
+  q1: "What should we test?",
+  q1sub: "Pick the set of questions the model will be asked.",
+  q2: "Which model are we testing?",
+  q2sub: "Only models something has actually confirmed are listed.",
+  q3: "Ready to run",
+  continueToModel: "Continue — choose the model",
+  continueToConfirm: "Continue — confirm & launch",
+  launch: "Run evaluation",
+  back: "Back",
+  cancel: "Cancel",
+  suiteMeta: (questions: number, kind: string) =>
+    `${questions} question${questions === 1 ? "" : "s"} · ${kind}`,
+};
+
+export const MODEL_COPY = {
+  curatedGroup: "Benchmark set — the models behind the published leaderboard",
+  discoveredGroup: "Found on this machine",
+  ready: "ready",
+  unchecked: "unchecked",
+  hiddenCount: (n: number) => `${n} hidden`,
+  hiddenWhy: "Models whose provider isn't set up, or whose runtime isn't running, aren't listed.",
+  addProvider: "Add a provider →",
+  rescan: "Rescan",
+  rescanning: "Rescanning…",
+  customRow: "Use a custom model ID…",
+  customPlaceholder: "provider/model — e.g. openrouter/meta-llama/llama-4-maverick",
+  customHint: "Any model string inspect_ai accepts. Its provider's key must be configured.",
+};
+
+export const CONFIRM_COPY = {
+  summary: (questions: number, repeats: number, judge: string) =>
+    `${questions} question${questions === 1 ? "" : "s"}, asked ${repeats} time${repeats === 1 ? "" : "s"} each, graded by ${judge === "llm" ? "a second model" : "fixed rules"}.`,
+  suite: "Test suite",
+  model: "Model under test",
+  grading: "Grading",
+  repeats: "Repeats",
+  repeatsValue: (n: number) => `${n} · one wrong repeat fails the question`,
+  deterministic: "fixed rules — no second model needed",
+  llm: "ai grader — a second model marks the answers",
+  advanced: "Advanced settings — grading, repeats, grader model",
+  gradingLabel: "Grading engine",
+  graderLabel: "Grader model",
+  graderPlaceholder: "Choose a grader",
+  graderRequired: "The ai grader needs a second model to mark the answers.",
+  selfGrading: "The grader must differ from the model under test — a model can't grade itself.",
+  underTestSuffix: " (under test)",
+  repeatsLabel: "Repeats",
+  repeatsHint: "Each question is asked this many times; one wrong repeat fails it (strict pass^k).",
+  launching: "Starting…",
+};
+
+export const PROVIDER_COPY = {
+  title: "Providers",
+  subtitle: "Keys are written to your local .env and never shown again.",
+  configuredGroup: "Configured",
+  notConfiguredGroup: "Not configured",
+  configured: "configured",
+  notConfigured: "not set",
+  add: "Add key",
+  replace: "Replace",
+  save: "Save",
+  saving: "Saving…",
+  saved: (provider: string) => `${provider} key stored`,
+  savedHint: "Stored, not yet verified — Rescan on the model step confirms what it reaches.",
+  saveFailed: "Couldn't store that key",
+  keyPlaceholder: "paste the key",
+  urlPlaceholder: "http://localhost:8080/v1",
+};
+
+export const MONITOR_COPY = {
+  runningTitle: "Evaluation in progress",
+  doneTitle: (model: string) => `Evaluated ${model}`,
+  status: { running: "running", done: "done", error: "failed" } as Record<string, string>,
+  elapsed: (t: string) => `Running for ${t}`,
+  model: "Model",
+  suite: "Suite",
+  grading: "Grading",
+  failed: "The run failed",
+  safeToLeave: "Safe to leave this page — the run continues on the server. You'll find it under Runs.",
+  allRuns: "All runs",
+  newRun: "New evaluation",
+};
