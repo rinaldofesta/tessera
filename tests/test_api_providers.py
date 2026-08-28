@@ -109,3 +109,37 @@ def test_a_typo_in_a_field_name_is_rejected_rather_than_silently_ignored(tmp_pat
     assert r.status_code == 422
     assert SENTINEL not in r.text
     assert env.read_bytes() == before
+
+
+def test_a_runner_error_cannot_persist_or_return_a_configured_credential(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", SENTINEL)
+
+    def _raise_with_credential(req):
+        raise RuntimeError(f"provider request failed with {SENTINEL}")
+
+    async def _inline_schedule(coro):
+        await coro
+
+    store = RunStore(tmp_path / "runs.db")
+    client = TestClient(create_app(
+        eval_runner=_raise_with_credential,
+        log_dirs={"logs": tmp_path / "logs"},
+        schedule=_inline_schedule,
+        blueprint_dir=tmp_path / "bp",
+        run_store=store,
+        env_file=tmp_path / ".env",
+    ))
+    started = client.post(
+        "/api/runs", json={"model": "openai/gpt-4o", "judge": "deterministic"})
+    assert started.status_code == 200
+    job_id = started.json()["job_id"]
+
+    responses = (client.get("/api/runs"), client.get(f"/api/runs/{job_id}"))
+    for response in responses:
+        assert response.status_code == 200
+        assert SENTINEL not in response.text
+        assert find_credential_like_values(response.json()) == []
+
+    persisted = store.get(job_id)
+    assert persisted is not None
+    assert SENTINEL not in persisted["error"]
