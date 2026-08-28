@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MODEL_COPY, WIZARD_COPY } from "@/copy";
+import { MODEL_COPY, PROVIDER_LABELS, WIZARD_COPY } from "@/copy";
 import { cn } from "@/lib/utils";
 import type { EvalSetupModel, SourceStatus } from "@/types";
 
@@ -120,7 +120,7 @@ export function ModelStep({
                     {model.label}
                   </span>
                   <span className="hidden font-mono text-[10.5px] text-[var(--faint)] sm:inline">
-                    {model.provider}
+                    {PROVIDER_LABELS[model.provider] ?? model.provider}
                   </span>
                   {model.readiness === "unverified" ? (
                     <Badge

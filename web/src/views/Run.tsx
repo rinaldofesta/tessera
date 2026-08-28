@@ -7,6 +7,7 @@ import { StepNav, type StepId } from "@/components/launcher/StepNav";
 import { SuiteStep } from "@/components/launcher/SuiteStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAsync } from "@/hooks";
+import { DATASET_LABELS } from "@/copy";
 
 /** The starter suite if it exists, else the first available. */
 function pickDefaultSuite(suites: { id: string }[]): string {
@@ -89,7 +90,7 @@ export default function Run() {
           <StepNav
             current={step}
             chosen={{
-              suite: step > 1 ? draft.org : undefined,
+              suite: step > 1 ? (DATASET_LABELS[draft.org] ?? draft.org) : undefined,
               model: step > 2 ? effectiveModel : undefined,
             }}
             onJump={setStep}
