@@ -119,3 +119,97 @@ def test_a_secret_that_prefixes_a_longer_secret_does_not_leave_a_tail(monkeypatc
     monkeypatch.setenv("LONG_TOKEN", "sk-commonprefix-and-more-tail")
     out = scrub_error("used sk-commonprefix-and-more-tail here")
     assert "and-more-tail" not in out
+
+
+# --- regressions from the independent privacy review of Task 11 ----------------------
+
+def test_the_userinfo_pattern_stays_linear_on_long_input():
+    # An unbounded scheme run before "://" backtracked quadratically: a multi-megabyte
+    # exception could stall error handling and strand a job as "running".
+    import time
+    from tessera.api.scrub import scrub_error
+    started = time.perf_counter()
+    scrub_error("a" * 500_000)
+    assert time.perf_counter() - started < 2.0
+
+
+def test_a_secret_with_surrounding_whitespace_is_redacted_in_both_forms(monkeypatch):
+    # The length floor was applied to the stripped value, so a quoted .env value whose
+    # raw form met the floor survived because its trimmed core did not.
+    from tessera.api.scrub import scrub_error
+    monkeypatch.setenv("PADDED_TOKEN", "  abcdef  ")
+    assert "abcdef" not in scrub_error("failed with '  abcdef  '")
+
+
+def test_the_store_redacts_even_when_a_caller_forgets(tmp_path, monkeypatch):
+    # Defence in depth at the boundary that persists the text: a future writer that
+    # skips scrub_error must not be able to reopen the leak.
+    from tessera.api.run_store import RunStore
+    from tessera.api.schemas import RunRequest
+    monkeypatch.setenv("SOME_API_KEY", "sk-" + "P" * 30)
+    import os
+    store = RunStore(tmp_path / "runs.db")
+    job_id = store.create(RunRequest(model="m", org="toy"))
+    store.error(job_id, "raw leak: " + os.environ["SOME_API_KEY"])
+    assert os.environ["SOME_API_KEY"] not in str(store.get(job_id))
+
+
+def test_scrubbing_twice_changes_nothing(monkeypatch):
+    # run_eval_job scrubs and RunStore.error scrubs again; the double pass must be inert.
+    from tessera.api.scrub import scrub_error
+    monkeypatch.setenv("SOME_API_KEY", "sk-" + "Q" * 30)
+    import os
+    once = scrub_error("boom " + os.environ["SOME_API_KEY"])
+    assert scrub_error(once) == once
+
+
+def test_scrubbing_survives_the_environment_changing_underneath_it():
+    # os.environ is mutated by apply_updates and by _job_env from other threads. A live
+    # iteration raised (KeyError when a name vanished mid-lookup), and that exception
+    # escaped run_eval_job's except block, so the failure was never recorded and the job
+    # sat at "running" forever.
+    import os
+    import threading
+    import time
+    from tessera.api.scrub import scrub_error
+
+    stop, failures = threading.Event(), []
+
+    def churn():
+        i = 0
+        while not stop.is_set():
+            os.environ[f"TMP_SCRUB_TOKEN_{i}"] = "x" * 20
+            i += 1
+            if i % 200 == 0:
+                for j in range(i - 200, i):
+                    os.environ.pop(f"TMP_SCRUB_TOKEN_{j}", None)
+
+    def scrub():
+        while not stop.is_set():
+            try:
+                scrub_error("boom")
+            except BaseException as exc:      # noqa: BLE001 — any escape is the bug
+                failures.append(type(exc).__name__)
+                stop.set()
+
+    threads = [threading.Thread(target=churn, daemon=True),
+               threading.Thread(target=scrub, daemon=True)]
+    for t in threads:
+        t.start()
+    time.sleep(1.5)
+    stop.set()
+    for t in threads:
+        t.join(timeout=2)
+    for key in [k for k in os.environ if k.startswith("TMP_SCRUB_TOKEN_")]:
+        os.environ.pop(key, None)
+    assert not failures
+
+
+def test_an_authorization_line_is_redacted_to_end_of_line_on_purpose():
+    # Deliberate over-redaction: a SigV4 value contains spaces and commas, so any rule
+    # tight enough to preserve the trailing text leaks part of the signature. Pinned so
+    # the trade stays intentional — context BEFORE the header still survives.
+    from tessera.api.scrub import scrub_error
+    out = scrub_error("call to api.host failed\nAuthorization: Bearer sk-x status 401")
+    assert "call to api.host failed" in out
+    assert "sk-x" not in out and "status 401" not in out

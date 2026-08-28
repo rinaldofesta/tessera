@@ -10,69 +10,14 @@ durable RunStore (see run_store.py).
 from __future__ import annotations
 
 import os
-import re
 import uuid
 from pathlib import Path
 
 import anyio
 
 from tessera.api.schemas import RunRequest
+from tessera.api.scrub import scrub_error
 from tessera.report.serialize import report_to_dict
-
-# Greedy up to the LAST @ before the path: a password may itself contain an @, and
-# stopping at the first one left the rest of it in the message.
-_USERINFO_RE = re.compile(r"(?P<scheme>[a-zA-Z][\w+.-]*://)[^/\s]*@")
-# Any auth scheme, not just Bearer/Basic — AWS SigV4 sends
-# "Authorization: AWS4-HMAC-SHA256 Credential=…, Signature=…".
-_AUTH_HEADER_RE = re.compile(r"(?i)(authorization:\s*)\S.*")
-# Env vars whose NAME says the value is a secret. This is deliberately name-based: it
-# needs no knowledge of each provider's token format, and it covers providers Tessera
-# has never heard of — which matters because RunRequest.model is free text by design,
-# so a run can target any inspect_ai provider, not only the eight in PROVIDERS.
-_SECRET_ENV_NAME = re.compile(r"(?i)key|token|secret|password|credential")
-_MIN_REDACTABLE = 8      # below this a "secret" is likely a flag, and would mangle prose
-
-
-def scrub_error(message: str) -> str:
-    """Make an already-formatted error message fit to store and return.
-
-    Provider errors routinely embed the request URL, and a base URL may embed
-    credentials — so this runs before anything reaches run_store.error(), the API, or
-    the logs. tests/test_runner.py asserts the result against credential_scan.
-
-    Takes the formatted string rather than the exception, deliberately: the two call
-    sites format differently and both shapes are API-visible. Scrubbing is a filter,
-    never a reformat — a message with nothing to redact comes back byte-for-byte.
-
-    Three passes: URL userinfo, Authorization header text of any scheme, and the value
-    of every environment variable whose NAME says it holds a secret.
-
-    That last pass is name-based rather than provider-based on purpose. An earlier
-    version only redacted the eight providers in PROVIDERS, which was wrong because
-    RunRequest.model is deliberately free text — a run can target any inspect_ai
-    provider, so a Bedrock or Azure credential would pass straight through into the
-    run record. Matching on the variable name needs no knowledge of any provider's
-    token format and covers providers this codebase has never heard of.
-
-    It is still not a general credential detector: a secret that is neither in a URL,
-    nor in an auth header, nor in this process's environment passes through. Closing
-    that would mean re-implementing credential_scan's patterns as span matchers —
-    credential_scan reports locations and kinds, not spans, so it is the right test
-    oracle and the wrong redactor. The tests assert against it.
-    """
-    message = _USERINFO_RE.sub(r"\g<scheme>[redacted]@", message)
-    message = _AUTH_HEADER_RE.sub(r"\1[redacted]", message)
-    # Longest first: redacting a short secret that is a prefix of a longer one would
-    # leave the longer one's tail behind.
-    secrets = sorted(
-        (v.strip() for k, v in os.environ.items()
-         if _SECRET_ENV_NAME.search(k) and len(v.strip()) >= _MIN_REDACTABLE),
-        key=len, reverse=True,
-    )
-    for value in secrets:
-        if value in message:
-            message = message.replace(value, "[redacted]")
-    return message
 
 
 def _eval_kwargs(req: RunRequest) -> dict:

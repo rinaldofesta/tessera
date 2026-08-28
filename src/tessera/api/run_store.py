@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tessera.api.schemas import RunRequest
+from tessera.api.scrub import scrub_error
 
 
 def _now() -> str:
@@ -52,6 +53,10 @@ class RunStore:
                       (_now(), json.dumps(report), job_id))
 
     def error(self, job_id: str, message: str) -> None:
+        # Scrubbed here as well as by the caller: this is the boundary that persists the
+        # text, so a future writer that forgets to scrub cannot reopen the leak.
+        # Redaction is idempotent, so the double pass costs nothing.
+        message = scrub_error(message)
         with self._conn() as c:
             c.execute("UPDATE runs SET status='error', finished_at=?, error=? WHERE id=?",
                       (_now(), message, job_id))
