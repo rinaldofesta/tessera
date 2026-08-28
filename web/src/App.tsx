@@ -4,6 +4,7 @@ import {
   ExternalLink,
   Home,
   Library,
+  KeyRound,
   ListChecks,
   Plus,
   Trophy,
@@ -20,6 +21,8 @@ import { cn } from "@/lib/utils";
 const Dashboard = lazy(() => import("@/views/Dashboard"));
 const Datasets = lazy(() => import("@/views/Datasets"));
 const Leaderboard = lazy(() => import("@/views/Leaderboard"));
+const Providers = lazy(() => import("@/views/Providers"));
+const RunMonitor = lazy(() => import("@/views/RunMonitor"));
 const Results = lazy(() => import("@/views/Results"));
 const Run = lazy(() => import("@/views/Run"));
 
@@ -28,8 +31,15 @@ const NAV = [
   { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
   { to: "/suites", key: "3", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
   {
-    to: "/leaderboard",
+    to: "/providers",
     key: "4",
+    label: SHELL_COPY.navItems.providers,
+    icon: KeyRound,
+    end: false,
+  },
+  {
+    to: "/leaderboard",
+    key: "5",
     label: SHELL_COPY.navItems.leaderboard,
     icon: Trophy,
     end: false,
@@ -159,9 +169,11 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/runs" element={<Results />} />
+              <Route path="/runs/:id" element={<RunMonitor />} />
               <Route path="/suites" element={<Datasets />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/new" element={<Run />} />
+              <Route path="/providers" element={<Providers />} />
 
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/datasets" element={<Navigate to="/suites" replace />} />

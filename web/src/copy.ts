@@ -12,12 +12,13 @@ export const SHELL_COPY = {
     home: "Home",
     runs: "Runs",
     suites: "Test suites",
+    providers: "Providers",
     leaderboard: "Leaderboard",
   },
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
   apiOriginHint: "The backend this app is talking to",
-  shortcuts: "Keyboard: 1–4 switch views",
+  shortcuts: "Keyboard: 1–5 switch views",
   help: "Help & docs",
 } as const;
 
@@ -139,6 +140,10 @@ export const RECIPES: Record<RecipeKey, { title: string; blurb: string; example:
 export const MOSAIC_COPY = {
   caption: (questions: number, repeats: number, total: number) =>
     `${total} answers — ${questions} question${questions === 1 ? "" : "s"}, ${repeats} repeat${repeats === 1 ? "" : "s"} each`,
+  // Once tiles carry results the grid needs a key, or it is 12 coloured squares
+  // meaning nothing to the person reading it.
+  resolved: (passed: number, total: number, questions: number, repeats: number) =>
+    `${passed} of ${total} answers passed — ${questions} question${questions === 1 ? "" : "s"}, ${repeats} repeat${repeats === 1 ? "" : "s"} each`,
   aria: (questions: number, repeats: number) =>
     `Answer grid: ${questions} questions by ${repeats} repeats`,
 };
@@ -196,6 +201,20 @@ export const CONFIRM_COPY = {
   repeatsLabel: "Repeats",
   repeatsHint: "Each question is asked this many times; one wrong repeat fails it (strict pass^k).",
   launching: "Starting…",
+};
+
+/** Provider display names. The API returns registry ids ("openai", "xai"); these are
+ *  how the companies write themselves. An unknown id falls back to the id. */
+export const PROVIDER_LABELS: Record<string, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  openrouter: "OpenRouter",
+  google: "Google",
+  groq: "Groq",
+  mistral: "Mistral",
+  xai: "xAI",
+  mlx: "MLX (local server)",
+  ollama: "Ollama",
 };
 
 export const PROVIDER_COPY = {

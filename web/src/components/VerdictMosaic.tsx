@@ -53,7 +53,10 @@ export function VerdictMosaic({
         ))}
       </div>
       <figcaption className="mt-2.5 font-mono text-[11px] text-[var(--faint)]">
-        {MOSAIC_COPY.caption(questions, repeats, total)}
+        {tiles
+          ? MOSAIC_COPY.resolved(
+              states.filter((s) => s === "pass").length, total, questions, repeats)
+          : MOSAIC_COPY.caption(questions, repeats, total)}
       </figcaption>
     </figure>
   );
