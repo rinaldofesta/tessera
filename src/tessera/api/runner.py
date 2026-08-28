@@ -40,13 +40,18 @@ def _job_env() -> dict[str, str]:
     """Per-job environment, resolved BEFORE inspect_ai takes over: inspect runs the task
     with the task file's directory as cwd, so anything cwd-relative must be absolutized
     here or the task won't find it (saved blueprints were unresolvable without this)."""
-    return {
+    env = {
         # Per-job org dir so a future concurrent run can't clobber the compiled fixtures.
         "TESSERA_OUT": os.path.join("/tmp/tessera", f"run-{uuid.uuid4().hex}"),
         "TESSERA_BLUEPRINT_DIR": str(
             Path(os.environ.get("TESSERA_BLUEPRINT_DIR", "blueprints")).resolve()
         ),
     }
+    # inspect_ai's openai-compatible provider raises unless <SERVICE>_API_KEY is set, but
+    # mlx_lm.server is a local process with no auth — there is no key for a user to supply,
+    # so asking for one would be an unanswerable field. Supply a placeholder it ignores.
+    env.setdefault("MLX_API_KEY", os.environ.get("MLX_API_KEY") or "local")
+    return env
 
 
 def default_eval_runner(req: RunRequest):

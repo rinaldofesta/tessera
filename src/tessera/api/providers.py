@@ -1,6 +1,6 @@
 """Canonical provider registry.
 
-A provider is the unit a credential is written to. It is deliberately NOT the same
+A provider is the unit configuration is written to. It is deliberately NOT the same
 thing as a model-string prefix: `xai/` and `grok/` are two prefixes that share one
 credential, and `openai-api/mlx/...` is a prefix whose provider is the service name
 that follows it. Keeping these separate is what lets one provider appear once in the
@@ -53,11 +53,9 @@ PROVIDERS: dict[str, ProviderSpec] = {
     # is required, so it lives here rather than in a second configuration surface.
     "mlx": ProviderSpec(
         id="mlx",
-        fields=(
-            ProviderField(FIELD_API_KEY, "MLX_API_KEY", required=True),
-            ProviderField(FIELD_BASE_URL, "MLX_BASE_URL", required=True),
-        ),
+        fields=(ProviderField(FIELD_BASE_URL, "MLX_BASE_URL", required=True),),
         model_prefixes=("openai-api/mlx/",),
+        # This flag controls Providers-page inclusion; MLX still needs its URL configured.
         needs_credentials=True,
     ),
     "ollama": ProviderSpec(

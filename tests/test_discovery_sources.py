@@ -113,27 +113,29 @@ def test_a_served_id_differing_only_in_case_does_not_duplicate_the_disk_row():
 from tessera.api.discovery.cloud import CATALOG, discover_cloud
 
 
-def test_a_provider_with_no_key_is_needs_config_and_is_never_probed():
+def test_a_provider_with_no_key_contributes_no_models_and_is_never_probed():
     client = _StubClient(payload={"data": []})
     result = discover_cloud(client, env={})
     assert result.status == "ok"
-    assert {m.readiness for m in result.models} == {"needs_config"}
+    assert result.models == ()
     assert client.calls == []            # no key, no request
 
 
-def test_catalog_models_confirmed_by_a_live_listing_are_ready():
-    listed = [{"id": model} for model in CATALOG["openai"]]
+def test_models_from_a_live_listing_are_ready_even_when_not_in_the_catalog():
+    listed = [{"id": "gpt-new-chat-model"}]
     client = _StubClient(payload={"data": listed})
     result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
     openai_models = [m for m in result.models if m.provider == "openai"]
-    assert openai_models and {m.readiness for m in openai_models} == {"ready"}
+    assert [m.id for m in openai_models] == ["openai/gpt-new-chat-model"]
+    assert {m.readiness for m in openai_models} == {"ready"}
 
 
-def test_a_listing_that_omits_a_catalog_model_leaves_it_unverified_not_ready():
+def test_a_successful_listing_replaces_the_fallback_catalog():
     client = _StubClient(payload={"data": [{"id": "some-other-model"}]})
     result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
     openai_models = [m for m in result.models if m.provider == "openai"]
-    assert {m.readiness for m in openai_models} == {"unverified"}
+    assert [m.id for m in openai_models] == ["openai/some-other-model"]
+    assert all(m.id not in CATALOG["openai"] for m in openai_models)
 
 
 def test_a_failed_listing_degrades_to_the_catalog_rather_than_emptying_the_list():
@@ -143,11 +145,25 @@ def test_a_failed_listing_degrades_to_the_catalog_rather_than_emptying_the_list(
     assert {m.readiness for m in openai_models} == {"unverified"}
 
 
-def test_models_outside_the_catalog_never_enter_the_dropdown():
-    # A provider listing includes embeddings and image models; none may reach an eval.
-    client = _StubClient(payload={"data": [{"id": "text-embedding-3-large"}]})
+def test_live_listing_is_filtered_by_shape_not_by_catalog_membership():
+    client = _StubClient(payload={"data": [
+        {"id": "text-embedding-new"},
+        {"id": "whisper-next"},
+        {"id": "gpt-new-chat-model"},
+    ]})
     result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
-    assert all("embedding" not in m.id for m in result.models)
+    assert [m.id for m in result.models] == ["openai/gpt-new-chat-model"]
+
+
+def test_openai_non_chat_models_are_removed_from_a_live_listing():
+    client = _StubClient(payload={"data": [
+        {"id": "text-embedding-3-large"},
+        {"id": "whisper-1"},
+        {"id": "dall-e-3"},
+        {"id": "gpt-5.6-luna"},
+    ]})
+    result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
+    assert [m.id for m in result.models] == ["openai/gpt-5.6-luna"]
 
 
 def test_no_response_field_can_carry_the_key_back():

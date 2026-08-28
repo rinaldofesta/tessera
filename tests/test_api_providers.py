@@ -28,12 +28,14 @@ def test_listing_providers_reports_names_and_booleans_only(tmp_path, monkeypatch
     assert openai["fields"][0] == {"id": "api_key", "env_var": "OPENAI_API_KEY", "configured": True}
 
 
-def test_a_multi_field_provider_reports_each_requirement_separately(tmp_path, monkeypatch):
-    monkeypatch.delenv("MLX_API_KEY", raising=False)
-    monkeypatch.setenv("MLX_BASE_URL", "http://localhost:8080/v1")
+def test_a_provider_reports_each_requirement_separately(tmp_path, monkeypatch):
+    # MLX is a local server: the base URL is the only thing a user supplies, so a
+    # provider's fields list is what says which settings it actually needs.
+    monkeypatch.delenv("MLX_BASE_URL", raising=False)
     mlx = next(p for p in _client(tmp_path).get("/api/providers").json() if p["id"] == "mlx")
     assert mlx["configured"] is False
-    assert {f["id"]: f["configured"] for f in mlx["fields"]} == {"api_key": False, "base_url": True}
+    assert {f["id"]: f["configured"] for f in mlx["fields"]} == {"base_url": False}
+    assert "MLX_API_KEY" not in [f["env_var"] for f in mlx["fields"]]
 
 
 def test_writing_a_key_persists_it_and_reports_configured_without_echoing(tmp_path):

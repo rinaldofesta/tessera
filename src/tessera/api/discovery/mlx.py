@@ -1,7 +1,8 @@
 """MLX source: repos in the HuggingFace cache, plus whatever a server is serving.
 
 inspect_ai has no `mlx` provider. mlx_lm.server speaks the OpenAI API, so models are
-addressed as `openai-api/mlx/<repo>`, which reads MLX_API_KEY and MLX_BASE_URL
+addressed as `openai-api/mlx/<repo>`, which reads MLX_BASE_URL (the API key is a
+placeholder the runner supplies — a local server has no auth)
 (verified in inspect_ai/model/_providers/openai_compatible.py:95-118).
 """
 
