@@ -55,6 +55,37 @@ export const DATASET_DESCRIPTIONS: Record<string, string> = {
   your: "template — copy it to describe your own organization",
 };
 
+export const LAUNCHER_COPY = {
+  customModel: "custom model…",
+  discoveryTitle: "model discovery",
+  discoveryLoading: "checking cached model status…",
+  discoveryHealthy: "all model sources are available",
+  discoveryUnavailable: (detail: string) => `model discovery unavailable: ${detail}`,
+  sourceStatus: (source: string, detail: string) => `${source}: ${detail}`,
+  rescan: "rescan",
+  rescanning: "rescanning…",
+  rescanFailed: (detail: string) => `rescan failed: ${detail}`,
+  curatedGroup: "curated — published leaderboard set",
+  discoveredGroup: "discovered — available beyond the curated set",
+  missingConfiguration: (envVars: string[]) =>
+    envVars.length > 0 ? `missing ${envVars.join(", ")}` : "configuration missing",
+  awaitingRescan: "configuration stored — rescan to verify",
+  noServer: "no server running",
+  runtimeUnreachable: "runtime unreachable",
+  unchecked: "unchecked",
+  underTest: "under test",
+  providersTitle: "provider configuration",
+  providersIntro: "Store missing provider settings here. Values are never shown again.",
+  providersUnavailable: (detail: string) => `provider configuration unavailable: ${detail}`,
+  configuredField: "already stored — leave blank to keep it",
+  missingField: "enter a value",
+  saveProvider: "store configuration",
+  savingProvider: "storing…",
+  providerSaved: (provider: string) =>
+    `${provider}: value stored but unverified — Rescan confirms reachability.`,
+  providerSaveFailed: (detail: string) => `couldn't store configuration: ${detail}`,
+} as const;
+
 // The scenario wizard's 5 authoring recipes (docs/tessera-lesson.html, module 5).
 // expected_behavior is never asked in the wizard — it's derived from CONFLICT[...].behavior.
 export type RecipeKey = "agree" | "recency" | "authority" | "disagreement" | "void";

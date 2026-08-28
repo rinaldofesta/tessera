@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/api";
+import type { components } from "@/api-types.gen";
 import { Field } from "@/components/form";
+import { ProviderConfig } from "@/components/ProviderConfig";
 import { RunsTable } from "@/components/RunsTable";
 import { Scorecard } from "@/components/Scorecard";
 import { ErrLine, Panel, ViewHeader } from "@/components/term";
@@ -8,14 +10,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { DATASET_DESCRIPTIONS, LAUNCHER_COPY } from "@/copy";
 import { useAsync } from "@/hooks";
 import type { Report, RunConfig } from "@/types";
-import { DATASET_DESCRIPTIONS } from "../copy";
 
-// Offline fallback only — the canonical list lives server-side at GET /api/models.
-const FALLBACK_MODELS = ["anthropic/claude-sonnet-4-6", "openai/gpt-4o", "anthropic/claude-opus-4-8"];
+type ApiSchema = components["schemas"];
+type EvalSetupModel = ApiSchema["EvalSetupModel"];
+type Provider = ApiSchema["Provider"];
+type SourceStatus = ApiSchema["SourceStatus"];
+
+// Offline fallback only — the canonical list lives server-side at GET /api/eval-setup.
+const FALLBACK_MODEL_IDS = [
+  "anthropic/claude-sonnet-4-6",
+  "openai/gpt-4o",
+  "anthropic/claude-opus-4-8",
+];
+const FALLBACK_MODELS: EvalSetupModel[] = FALLBACK_MODEL_IDS.map((id) => ({
+  id,
+  label: id.split("/").pop() ?? id,
+  provider: id.split("/", 1)[0],
+  readiness: "unverified",
+  source: "curated",
+  curated: true,
+  detail: null,
+}));
 const CUSTOM = "__custom__";
 const CUSTOM_PLACEHOLDER = "provider/model — e.g. openrouter/meta-llama/llama-4-maverick";
 type Engine = RunConfig["judge"];
@@ -24,22 +44,113 @@ const ENGINES: { value: Engine; label: string }[] = [
   { value: "deterministic", label: "fixed rules — no second model, no extra key (deterministic)" },
 ];
 const MAX_POLL_FAILURES = 5;
+const SELECTABLE = new Set<EvalSetupModel["readiness"]>(["ready", "unverified"]);
 
 const clampEpochs = (s: string) => Math.max(1, Math.min(10, parseInt(s, 10) || 3));
+
+const isSelectable = (model: EvalSetupModel) => SELECTABLE.has(model.readiness);
+
+function modelHint(
+  model: EvalSetupModel,
+  providers: Provider[],
+  sources: SourceStatus[],
+  excludeId?: string,
+) {
+  if (model.id === excludeId) return LAUNCHER_COPY.underTest;
+  if (model.readiness === "unverified") return LAUNCHER_COPY.unchecked;
+  if (model.readiness === "needs_server") return model.detail ?? LAUNCHER_COPY.noServer;
+  if (model.readiness === "offline") {
+    const source = sources.find((status) => status.source === model.source);
+    return model.detail ?? source?.detail ?? LAUNCHER_COPY.runtimeUnreachable;
+  }
+  if (model.readiness === "needs_config") {
+    const provider = providers.find((candidate) => candidate.id === model.provider);
+    const missing = provider?.fields
+      .filter((field) => !field.configured)
+      .map((field) => field.env_var) ?? [];
+    if (missing.length > 0) return LAUNCHER_COPY.missingConfiguration(missing);
+    if (provider?.configured) return LAUNCHER_COPY.awaitingRescan;
+
+    const source = sources.find(
+      (status) => status.source === model.source || status.source === model.provider,
+    );
+    return source?.detail ?? model.detail ?? LAUNCHER_COPY.missingConfiguration([]);
+  }
+  return undefined;
+}
+
+function modelOptionLabel(
+  model: EvalSetupModel,
+  providers: Provider[],
+  sources: SourceStatus[],
+  excludeId?: string,
+) {
+  const hint = modelHint(model, providers, sources, excludeId);
+  return hint ? `${model.id} — ${hint}` : model.id;
+}
+
+function ModelOptions({
+  models,
+  providers,
+  sources,
+  excludeId,
+}: {
+  models: EvalSetupModel[];
+  providers: Provider[];
+  sources: SourceStatus[];
+  excludeId?: string;
+}) {
+  const groups = [
+    { curated: true, label: LAUNCHER_COPY.curatedGroup },
+    { curated: false, label: LAUNCHER_COPY.discoveredGroup },
+  ];
+
+  return (
+    <>
+      {groups.map((group) => {
+        const groupedModels = models.filter((model) => model.curated === group.curated);
+        if (groupedModels.length === 0) return null;
+        return (
+          <SelectGroup key={String(group.curated)}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {groupedModels.map((model) => (
+              <SelectItem
+                key={model.id}
+                value={model.id}
+                disabled={!isSelectable(model) || model.id === excludeId}
+              >
+                {modelOptionLabel(model, providers, sources, excludeId)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        );
+      })}
+      <SelectItem value={CUSTOM}>{LAUNCHER_COPY.customModel}</SelectItem>
+    </>
+  );
+}
 
 export default function Run() {
   const orgs = useAsync(() => api.listOrgs().catch(() => ["toy"]), []);
   const orgList = orgs.data ?? ["toy"];
-  const models = useAsync(() => api.listModels().catch(() => FALLBACK_MODELS), []);
-  const modelList = models.data ?? FALLBACK_MODELS;
+  const setup = useAsync(() => api.evalSetup(), []);
+  const providers = useAsync(() => api.listProviders(), []);
+  const modelList = setup.data?.models.length ? setup.data.models : FALLBACK_MODELS;
+  const providerList = providers.data ?? [];
+  const sourceList = setup.data?.sources ?? [];
+  const sourceIssues = sourceList.filter((source) => source.status !== "ok");
+  const providersNeedingConfig = providerList.filter((provider) => !provider.configured);
 
-  const [model, setModel] = useState(FALLBACK_MODELS[0]);
+  const [model, setModel] = useState(FALLBACK_MODEL_IDS[0]);
   const [engine, setEngine] = useState<Engine>("llm");
-  const [grader, setGrader] = useState(FALLBACK_MODELS[1]);
+  const [grader, setGrader] = useState(FALLBACK_MODEL_IDS[1]);
   const [org, setOrg] = useState("toy");
   const [epochsStr, setEpochsStr] = useState("3");
   const [customModel, setCustomModel] = useState("");
   const [customGrader, setCustomGrader] = useState("");
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanError, setRescanError] = useState<string | null>(null);
+  const [providerNotice, setProviderNotice] = useState<string | null>(null);
 
   // effective values: the typed custom string when "custom model…" is selected,
   // the picked list value otherwise — launch(), the console echo, and the
@@ -68,10 +179,20 @@ export default function Run() {
 
   // reconcile selections when the fetched model list arrives
   useEffect(() => {
-    if (!modelList.length) return;
-    if (!modelList.includes(model)) setModel(modelList[0]);
-    if (!modelList.includes(grader)) setGrader(modelList.find((m) => m !== model) ?? modelList[0]);
-  }, [models.data]); // eslint-disable-line react-hooks/exhaustive-deps
+    const selectable = modelList.filter(isSelectable);
+    let nextModel = model;
+    if (model !== CUSTOM && !selectable.some((candidate) => candidate.id === model)) {
+      const preferred = selectable.find((candidate) => candidate.id === setup.data?.defaults.model);
+      nextModel = preferred?.id ?? selectable[0]?.id ?? CUSTOM;
+      setModel(nextModel);
+    }
+    if (
+      grader !== CUSTOM &&
+      (!selectable.some((candidate) => candidate.id === grader) || grader === nextModel)
+    ) {
+      setGrader(selectable.find((candidate) => candidate.id !== nextModel)?.id ?? CUSTOM);
+    }
+  }, [setup.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const elapsed = () => Math.floor((Date.now() - startedAt.current) / 1000);
   const log = (s: string) => setLines((l) => [...l, s]);
@@ -199,8 +320,31 @@ export default function Run() {
     // custom-vs-custom equality is caught by the effective-string check at launch,
     // not by this list-only convenience reassignment
     if (engine === "llm" && v !== CUSTOM && grader === v) {
-      setGrader(modelList.find((m) => m !== v) ?? modelList[0]);
+      setGrader(
+        modelList.find((candidate) => isSelectable(candidate) && candidate.id !== v)?.id ?? CUSTOM,
+      );
     }
+  }
+
+  async function rescanModels() {
+    setRescanning(true);
+    setRescanError(null);
+    try {
+      await api.rescan();
+      setup.reload();
+      providers.reload();
+      setProviderNotice(null);
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : String(caught);
+      setRescanError(LAUNCHER_COPY.rescanFailed(detail));
+    } finally {
+      setRescanning(false);
+    }
+  }
+
+  function providerSaved(providerId: string) {
+    setProviderNotice(LAUNCHER_COPY.providerSaved(providerId));
+    providers.reload();
   }
 
   return (
@@ -211,6 +355,35 @@ export default function Run() {
       />
 
       {orgs.error && <ErrLine msg={`couldn't load datasets (a custom dataset may be broken): ${orgs.error}`} />}
+
+      <Panel
+        title={LAUNCHER_COPY.discoveryTitle}
+        right={
+          <Button variant="ghost" size="xs" onClick={rescanModels} disabled={rescanning}>
+            {rescanning ? LAUNCHER_COPY.rescanning : LAUNCHER_COPY.rescan}
+          </Button>
+        }
+        bodyClassName="space-y-1 py-2"
+      >
+        {setup.loading && !setup.data ? (
+          <div className="text-[11px] text-muted-foreground">{LAUNCHER_COPY.discoveryLoading}</div>
+        ) : setup.error ? (
+          <div className="text-[11px] text-muted-foreground">
+            {LAUNCHER_COPY.discoveryUnavailable(setup.error)}
+          </div>
+        ) : sourceIssues.length > 0 ? (
+          sourceIssues.map((source) => (
+            <div key={source.source} className="text-[11px] text-muted-foreground">
+              {LAUNCHER_COPY.sourceStatus(source.source, source.detail ?? source.status)}
+            </div>
+          ))
+        ) : (
+          <div className="text-[11px] text-muted-foreground">
+            {LAUNCHER_COPY.discoveryHealthy}
+          </div>
+        )}
+        {rescanError && <div className="text-[11px] text-foreground">{rescanError}</div>}
+      </Panel>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Panel title="configure" className="lg:col-span-2">
@@ -238,14 +411,21 @@ export default function Run() {
               <Select
                 value={model}
                 onValueChange={(v) => onModelChange(v as string)}
-                items={[...modelList.map((m) => ({ value: m, label: m })), { value: CUSTOM, label: "custom model…" }]}
+                items={[
+                  ...modelList.map((candidate) => ({
+                    value: candidate.id,
+                    label: modelOptionLabel(candidate, providerList, sourceList),
+                  })),
+                  { value: CUSTOM, label: LAUNCHER_COPY.customModel },
+                ]}
               >
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {modelList.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                  <SelectItem value={CUSTOM}>custom model…</SelectItem>
+                <SelectContent align="start" className="w-auto max-w-[calc(100vw-2rem)]">
+                  <ModelOptions
+                    models={modelList}
+                    providers={providerList}
+                    sources={sourceList}
+                  />
                 </SelectContent>
               </Select>
               {model === CUSTOM && (
@@ -287,16 +467,22 @@ export default function Run() {
                 <Select
                   value={grader}
                   onValueChange={(v) => setGrader(v as string)}
-                  items={[...modelList.map((m) => ({ value: m, label: m })), { value: CUSTOM, label: "custom model…" }]}
+                  items={[
+                    ...modelList.map((candidate) => ({
+                      value: candidate.id,
+                      label: modelOptionLabel(candidate, providerList, sourceList, model),
+                    })),
+                    { value: CUSTOM, label: LAUNCHER_COPY.customModel },
+                  ]}
                 >
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {modelList.map((m) => (
-                      <SelectItem key={m} value={m} disabled={m === model}>
-                        {m}{m === model ? " (under test)" : ""}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value={CUSTOM}>custom model…</SelectItem>
+                  <SelectContent align="start" className="w-auto max-w-[calc(100vw-2rem)]">
+                    <ModelOptions
+                      models={modelList}
+                      providers={providerList}
+                      sources={sourceList}
+                      excludeId={model === CUSTOM ? undefined : model}
+                    />
                   </SelectContent>
                 </Select>
                 <div className="text-[10px] text-muted-foreground">
@@ -372,6 +558,25 @@ export default function Run() {
           </div>
         </Panel>
       </div>
+
+      {(providersNeedingConfig.length > 0 || providers.error || providerNotice) && (
+        <Panel title={LAUNCHER_COPY.providersTitle} bodyClassName="space-y-3">
+          <div className="text-[11px] text-muted-foreground">{LAUNCHER_COPY.providersIntro}</div>
+          {providers.error && <ErrLine msg={LAUNCHER_COPY.providersUnavailable(providers.error)} />}
+          {providerNotice && (
+            <div className="border border-border bg-background px-3 py-2 text-xs">
+              {providerNotice}
+            </div>
+          )}
+          {providersNeedingConfig.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {providersNeedingConfig.map((provider) => (
+                <ProviderConfig key={provider.id} provider={provider} onSaved={providerSaved} />
+              ))}
+            </div>
+          )}
+        </Panel>
+      )}
 
       {error && (
         <div className="space-y-2">

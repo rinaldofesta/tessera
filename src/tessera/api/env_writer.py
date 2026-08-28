@@ -43,9 +43,16 @@ class EnvValueError(ValueError):
 
 
 def validate_secret(value: str) -> str:
-    """Reject anything that could open a second assignment in the file."""
+    """Reject anything that could open a second assignment, and return it trimmed.
+
+    Trimming is not cosmetic: a pasted credential often carries leading or trailing
+    whitespace, and storing it padded made the provider report itself configured while
+    every API call failed with an opaque auth error that pointed nowhere near the cause.
+    Surrounding whitespace is never part of a credential or a URL.
+    """
     if not value or not value.strip():
         raise EnvValueError("value must not be empty")
+    value = value.strip()
     if any(ch in value for ch in _FORBIDDEN):
         raise EnvValueError("value must not contain NUL or any line separator")
     try:
@@ -70,7 +77,7 @@ def validate_key(key: str) -> str:
 
 
 def validate_base_url(value: str) -> str:
-    validate_secret(value)
+    value = validate_secret(value)
     try:
         parsed = urlparse(value)
     except ValueError:
@@ -160,11 +167,11 @@ def apply_updates(
     """
     if not updates:
         return
-    for key, value in updates.items():
-        validate_key(key)
-        validate_secret(value)
+    # Write what validation returned, not what was passed: validate_secret trims, and
+    # ignoring its result would store the padded original.
+    cleaned = {validate_key(key): validate_secret(value) for key, value in updates.items()}
     with _LOCK:
         existing = env_file.read_text() if env_file.exists() else ""
-        _write_atomic(env_file, _merge(existing, updates))
-        os.environ.update(updates)
+        _write_atomic(env_file, _merge(existing, cleaned))
+        os.environ.update(cleaned)
         invalidate()

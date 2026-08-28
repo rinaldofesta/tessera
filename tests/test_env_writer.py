@@ -212,3 +212,29 @@ def test_a_url_that_makes_urlparse_itself_raise_becomes_a_validation_error():
     # Callers catch EnvValueError to build a 422, so a bare ValueError would be a 500.
     with pytest.raises(EnvValueError):
         validate_base_url("http://[bad/v1")
+
+
+@pytest.mark.parametrize("padded", ["  sk-abc123def456  ", "\tsk-abc123def456\t", " sk-abc123def456"])
+def test_a_pasted_value_is_stored_without_surrounding_whitespace(tmp_path, padded):
+    # A padded key passed validation and was stored verbatim, so the provider reported
+    # itself configured while every API call failed with an opaque auth error that
+    # pointed nowhere near the cause.
+    from dotenv import dotenv_values
+    env = tmp_path / ".env"
+    env.write_text("")
+    apply_updates(env, {"OPENAI_API_KEY": padded}, invalidate=_noop)
+    assert dotenv_values(env, interpolate=False)["OPENAI_API_KEY"] == "sk-abc123def456"
+
+
+def test_a_newline_is_still_rejected_rather_than_trimmed(tmp_path):
+    # Trimming must not become a way to sneak a line separator past validation.
+    env = tmp_path / ".env"
+    env.write_text("EXISTING=1\n")
+    before = env.read_bytes()
+    with pytest.raises(EnvValueError):
+        apply_updates(env, {"OPENAI_API_KEY": "sk-abc\nINJECTED=1"}, invalidate=_noop)
+    assert env.read_bytes() == before
+
+
+def test_a_base_url_with_surrounding_whitespace_is_accepted_and_trimmed():
+    assert validate_base_url("  http://localhost:8080/v1  ") == "http://localhost:8080/v1"

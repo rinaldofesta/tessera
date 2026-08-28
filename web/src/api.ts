@@ -2,6 +2,13 @@ import type {
   Artifacts, Blueprint, BlueprintMeta, LogMeta, Report, RunConfig, RunStatus,
   RunSummary, StartRunResult, TrendPoint, ValidationResult,
 } from "./types";
+import type { components } from "./api-types.gen";
+
+type ApiSchema = components["schemas"];
+type EvalSetup = ApiSchema["EvalSetup"];
+type Provider = ApiSchema["Provider"];
+type ProviderUpdate = ApiSchema["ProviderUpdate"];
+type RescanResult = ApiSchema["RescanResult"];
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -31,6 +38,16 @@ export const api = {
   // orgs + models + runs
   listOrgs: () => fetch("/api/orgs").then(j<string[]>),
   listModels: () => fetch("/api/models").then(j<string[]>),
+  evalSetup: () => fetch("/api/eval-setup").then(j<EvalSetup>),
+  listProviders: () => fetch("/api/providers").then(j<Provider[]>),
+  saveProvider: (id: string, body: ProviderUpdate) =>
+    fetch(`/api/providers/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(j<Provider>),
+  rescan: () =>
+    fetch("/api/model-discovery/rescan", { method: "POST" }).then(j<RescanResult>),
   startRun: (cfg: RunConfig) =>
     fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
       .then(j<StartRunResult>),
