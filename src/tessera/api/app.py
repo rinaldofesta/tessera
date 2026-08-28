@@ -23,7 +23,9 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from tessera.api import routes_blueprints, routes_meta, routes_reports, routes_runs
 from tessera.api.run_store import RunStore
@@ -73,6 +75,20 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
     app.state.env_file = _resolve_env_file(env_file)
+
+    @app.exception_handler(RequestValidationError)
+    def _sanitized_validation_error(request: Request, exc: RequestValidationError):
+        # pydantic puts the rejected value in `input` (and sometimes `ctx`), so the
+        # default 422 hands a submitted credential straight back. Keep the location
+        # and the reason; drop anything derived from the submission itself.
+        return JSONResponse(
+            status_code=422,
+            content={"detail": [
+                {"type": err.get("type", ""), "loc": list(err.get("loc", ())),
+                 "msg": err.get("msg", "")}
+                for err in exc.errors()
+            ]},
+        )
 
     # Registration order IS the OpenAPI path order — the schema is the committed
     # contract (scripts/gen-types.sh), so keep this order stable.
