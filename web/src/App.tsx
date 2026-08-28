@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import { SHELL_COPY } from "@/copy";
 import { useApiHealth } from "@/hooks";
 import { DEV_API_HOST } from "@/lib/backend";
@@ -171,6 +172,7 @@ export default function App() {
           </Suspense>
         </div>
       </main>
+      <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
 }
