@@ -219,3 +219,17 @@ def test_no_auth_header_is_sent_for_a_provider_without_a_key():
     client = _StubClient(payload={"data": []})
     discover_cloud(client, env={"OPENAI_API_KEY": "sk-token"})
     assert "https://api.anthropic.com/v1/models" not in client.calls
+
+
+def test_a_configured_provider_with_no_sdk_is_needs_config_and_never_probed(monkeypatch):
+    # A key alone cannot run a model: without the SDK the eval dies mid-run with a
+    # ModuleNotFoundError. Discovery says so up front and skips the probe, whose
+    # result could not change the answer.
+    monkeypatch.setattr("tessera.api.discovery.cloud.missing_sdk",
+                        lambda provider_id: "anthropic" if provider_id == "anthropic" else None)
+    client = _StubClient(payload={"data": [{"id": "claude-opus-5"}]})
+    result = discover_cloud(client, env={"ANTHROPIC_API_KEY": "sk-x"})
+    anthropic = [m for m in result.models if m.provider == "anthropic"]
+    assert anthropic and {m.readiness for m in anthropic} == {"needs_config"}
+    assert all("pip install" in (m.detail or "") for m in anthropic)
+    assert not any("anthropic" in url for url in client.calls)

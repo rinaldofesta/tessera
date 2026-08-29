@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from datetime import date, datetime, timezone
 
-from tessera.api.providers import PROVIDERS, is_configured
+from tessera.api.providers import PROVIDERS, is_configured, missing_sdk
 
 from .types import DiscoveredModel, SourceResult
 
@@ -106,6 +106,20 @@ def discover_cloud(client, *, env: Mapping[str, str], timeout: float = 4.0) -> S
     for provider_id, catalog in CATALOG.items():
         spec = PROVIDERS[provider_id]
         if not is_configured(spec, env):
+            continue
+
+        # A key without the SDK cannot run anything: the eval dies later with a bare
+        # ModuleNotFoundError. Say so up front, and skip the probe — its result could
+        # not change the answer.
+        package = missing_sdk(provider_id)
+        if package:
+            detail = f"needs the {package} package — pip install 'tessera[providers]'"
+            for model_id in catalog:
+                _, _, label = model_id.rpartition("/")
+                models.append(DiscoveredModel(
+                    id=model_id, label=label, provider=provider_id,
+                    readiness="needs_config", source="cloud", detail=detail,
+                ))
             continue
 
         reachable = _reachable(client, provider_id, env, timeout)

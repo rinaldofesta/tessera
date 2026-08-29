@@ -73,6 +73,32 @@ _BY_PREFIX: tuple[tuple[str, ProviderSpec], ...] = tuple(
 )
 
 
+# The Python module inspect_ai imports per provider (verified against its _providers
+# sources), and the pip package that supplies it. A configured key is not enough to run
+# a model: without the SDK the run dies later with a bare ModuleNotFoundError.
+_SDK_REQUIREMENTS: dict[str, tuple[str, str]] = {
+    "anthropic": ("anthropic", "anthropic"),
+    "openai": ("openai", "openai"),
+    "openrouter": ("openai", "openai"),      # inspect_ai's openrouter rides the openai SDK
+    "mlx": ("openai", "openai"),             # openai-compatible provider, same SDK
+    "groq": ("groq", "groq"),
+    "mistral": ("mistralai", "mistralai"),
+    "google": ("google.genai", "google-genai"),
+    "xai": ("grpc", "grpcio"),
+}
+
+
+def missing_sdk(provider_id: str) -> str | None:
+    """The pip package a provider still needs, or None when its SDK is importable."""
+    import importlib.util
+
+    requirement = _SDK_REQUIREMENTS.get(provider_id)
+    if requirement is None:
+        return None
+    module, package = requirement
+    return None if importlib.util.find_spec(module.split(".")[0]) else package
+
+
 def provider_for_model(model_id: str) -> ProviderSpec | None:
     """The provider a model string belongs to, or None for an unknown prefix."""
     for prefix, spec in _BY_PREFIX:

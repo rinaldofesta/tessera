@@ -19,6 +19,7 @@ web/src/api-types.gen.ts is generated from.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -109,6 +110,22 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         except ImportError:
             pass
         app.state.workbench_store.recover_interrupted()
+        # Say at startup which configured providers cannot actually run: a key without
+        # its SDK fails mid-eval with a bare ModuleNotFoundError, long after the
+        # launcher promised the model. Discovery marks the models too; this is the
+        # operator-facing copy of the same fact.
+        from tessera.api.providers import PROVIDERS, is_configured, missing_sdk
+        missing = sorted({
+            package
+            for provider_id, spec in PROVIDERS.items()
+            if spec.needs_credentials and is_configured(spec, os.environ)
+            and (package := missing_sdk(provider_id))
+        })
+        if missing:
+            logging.getLogger("tessera").warning(
+                "configured providers missing their SDK: %s — pip install 'tessera[providers]'",
+                ", ".join(missing),
+            )
         yield
 
     app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)

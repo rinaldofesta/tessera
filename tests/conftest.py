@@ -39,3 +39,12 @@ def _offline_discovery(monkeypatch):
     """Default every app built during tests to a stub cache."""
     from tessera.api import app as app_module
     monkeypatch.setattr(app_module, "_build_discovery_cache", lambda: _QuietCache())
+
+
+@pytest.fixture(autouse=True)
+def _sdks_present(monkeypatch):
+    """Pretend every provider SDK is installed. missing_sdk() consults the real
+    interpreter, so without this the suite's results would depend on what happens to
+    be pip-installed on the machine running it. Tests for the missing-SDK path
+    override this explicitly."""
+    monkeypatch.setattr("tessera.api.discovery.cloud.missing_sdk", lambda provider_id: None)
