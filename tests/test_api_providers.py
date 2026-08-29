@@ -90,7 +90,10 @@ def test_a_url_embedding_credentials_is_rejected_without_echoing_it(tmp_path):
 def test_the_credential_scanner_finds_nothing_in_any_response(tmp_path):
     client = _client(tmp_path)
     client.put("/api/providers/openai", json={"api_key": SENTINEL})
-    for path in ("/api/providers", "/api/eval-setup", "/api/runs", "/api/models"):
+    for path in (
+        "/api/providers", "/api/eval-setup", "/api/runs", "/api/models",
+        "/api/evaluations", "/api/experiments",
+    ):
         response = client.get(path)
         assert SENTINEL not in response.text, path
         assert find_credential_like_values(response.json()) == [], path

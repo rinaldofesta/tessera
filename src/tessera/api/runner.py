@@ -17,6 +17,7 @@ import anyio
 
 from tessera.api.schemas import RunRequest
 from tessera.api.scrub import scrub_error
+from tessera.api.receipts import canonical_sha256, file_sha256, receipt_from_log
 from tessera.report.serialize import report_to_dict
 
 
@@ -27,7 +28,10 @@ def _eval_kwargs(req: RunRequest) -> dict:
     pass_k reducer, so count and k would diverge — the task owns both."""
     kwargs = {
         "model": req.model,
-        "task_args": {"judge": req.judge, "org": req.org, "k": req.epochs},
+        "task_args": {
+            "judge": req.judge, "org": req.org, "k": req.epochs,
+            "scaffold": req.scaffold, "seed": req.seed,
+        },
         "log_dir": "logs",
         "display": "none",
     }
@@ -71,13 +75,46 @@ def default_eval_runner(req: RunRequest):
     return read_eval_log(logs[0].location, resolve_attachments=True)
 
 
-async def run_eval_job(job_id: str, req: RunRequest, store, eval_runner) -> None:
+def _blueprint_sha256(req: RunRequest) -> str | None:
+    try:
+        from tessera.orgs import get_blueprint
+        blueprint = get_blueprint(req.org, seed=req.seed)
+        return canonical_sha256(blueprint.model_dump(mode="json", by_alias=True))
+    except Exception:  # noqa: BLE001 — provenance absence must not fail a paid run
+        return None
+
+
+async def run_eval_job(job_id: str, req: RunRequest, store, eval_runner,
+                       workbench_store=None) -> None:
     """Drive one job to completion. eval_runner runs in a worker thread (no running loop
     there), keeping inspect_ai's runtime clear of the server's event loop. `store` is any
     object with complete(job_id, report) / error(job_id, message)."""
     try:
         log = await anyio.to_thread.run_sync(eval_runner, req)
-        store.complete(job_id, report_to_dict(log))
+        report = report_to_dict(log)
+        artifact_path = str(getattr(log, "location", "") or "")
+        try:
+            artifact_sha256 = file_sha256(artifact_path) if artifact_path and Path(artifact_path).is_file() else None
+        except OSError:
+            artifact_sha256 = None
+        receipt = receipt_from_log(
+            log, report, requested_model=req.model,
+            blueprint_sha256=_blueprint_sha256(req), artifact_sha256=artifact_sha256,
+        )
+        store.complete(job_id, report, receipt)
+        if workbench_store is not None:
+            # This indexing step runs after the job is already durably "done" — a
+            # failure here (e.g. a locked workbench db) must not flip a successful run
+            # back to "error" and hide its report; sync_library() reconciles the index
+            # from run_store on the next read regardless, so it's safe to just skip it.
+            try:
+                workbench_store.record_evaluation(
+                    evaluation_id=f"run:{job_id}", kind="run", source="api",
+                    source_ref=f"run:{job_id}", status="done", report=report, receipt=receipt,
+                    artifact_path=artifact_path or None, artifact_sha256=artifact_sha256,
+                )
+            except Exception:  # noqa: BLE001 — the run already succeeded; indexing can retry later
+                pass
     except ValueError as exc:            # self-grading guard, bad model id, ...
         store.error(job_id, scrub_error(str(exc)))
     except Exception as exc:             # noqa: BLE001 — surface any runtime failure to the UI

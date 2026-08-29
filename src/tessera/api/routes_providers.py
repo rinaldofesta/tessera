@@ -71,10 +71,11 @@ def save_provider(provider_id: str, body: ProviderUpdate, request: Request):
     except env_writer.EnvValueError as exc:
         raise HTTPException(422, str(exc)) from None      # `from None`: no value in the chain
 
-    env_writer.apply_updates(
-        request.app.state.env_file, updates,
-        invalidate=request.app.state.discovery_cache.invalidate,
-    )
+    def invalidate() -> None:
+        request.app.state.discovery_cache.invalidate()
+        request.app.state.preflight_cache.invalidate()
+
+    env_writer.apply_updates(request.app.state.env_file, updates, invalidate=invalidate)
     return _view(provider_id)
 
 

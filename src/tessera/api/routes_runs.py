@@ -29,7 +29,10 @@ async def start_run(req: RunRequest, request: Request):
     store = request.app.state.run_store
     job_id = store.create(req)
     await request.app.state.schedule(
-        run_eval_job(job_id, req, store, request.app.state.eval_runner))
+        run_eval_job(
+            job_id, req, store, request.app.state.eval_runner,
+            request.app.state.workbench_store,
+        ))
     job = store.get(job_id)
     return {"job_id": job_id, "status": job["status"] if job else "running"}
 

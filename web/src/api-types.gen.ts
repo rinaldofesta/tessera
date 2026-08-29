@@ -323,6 +323,177 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Evaluations */
+        get: operations["list_evaluations_api_evaluations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluations/{evaluation_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluation Report */
+        get: operations["evaluation_report_api_evaluations__evaluation_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Evaluation */
+        post: operations["import_evaluation_api_evaluations_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comparisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Comparison */
+        post: operations["create_comparison_api_comparisons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluations/{evaluation_id}/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluation Diagnostics */
+        get: operations["evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/preflights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Preflight */
+        post: operations["run_preflight_api_preflights_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Experiments */
+        get: operations["list_experiments_api_experiments_get"];
+        put?: never;
+        /** Start Experiment */
+        post: operations["start_experiment_api_experiments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Experiment */
+        get: operations["get_experiment_api_experiments__experiment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Experiment */
+        post: operations["resume_experiment_api_experiments__experiment_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}/comparisons/{variant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment Comparison */
+        get: operations["experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -373,10 +544,36 @@ export interface components {
             /** Probes */
             probes: number;
         };
+        /** Body_import_evaluation_api_evaluations_import_post */
+        Body_import_evaluation_api_evaluations_import_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_report_api_reports_post */
         Body_upload_report_api_reports_post: {
             /** File */
             file: string;
+        };
+        /** CategoryPairCounts */
+        CategoryPairCounts: {
+            /** Matched */
+            matched: number;
+            /** A Wins */
+            a_wins: number;
+            /** B Wins */
+            b_wins: number;
+            /** Both Pass */
+            both_pass: number;
+            /** Both Fail */
+            both_fail: number;
+            /** Discordant */
+            discordant: number;
+            /** P Value */
+            p_value: number;
+            /** Dropped */
+            dropped: string[];
+            /** Key */
+            key: string;
         };
         /**
          * Claim
@@ -399,6 +596,41 @@ export interface components {
             authority?: number | null;
             render: components["schemas"]["Render"];
         };
+        /** ComparisonDiagnostics */
+        ComparisonDiagnostics: {
+            /** A */
+            a: components["schemas"]["Diagnostic"][];
+            /** B */
+            b: components["schemas"]["Diagnostic"][];
+        };
+        /** ComparisonRequest */
+        ComparisonRequest: {
+            /** Evaluation A */
+            evaluation_a: string;
+            /** Evaluation B */
+            evaluation_b: string;
+            /**
+             * Intervention
+             * @default model
+             * @enum {string}
+             */
+            intervention: "model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness";
+        };
+        /** ComparisonResult */
+        ComparisonResult: {
+            /** Compatible */
+            compatible: boolean;
+            /** Intervention */
+            intervention: string;
+            /** Changed Dimensions */
+            changed_dimensions: string[];
+            /** Unexpected Dimensions */
+            unexpected_dimensions: string[];
+            overall: components["schemas"]["PairCounts"];
+            /** Categories */
+            categories: components["schemas"]["CategoryPairCounts"][];
+            diagnostics: components["schemas"]["ComparisonDiagnostics"];
+        };
         /**
          * ConflictType
          * @description The four-way taxonomy at the heart of the eval: what kind of disagreement (if
@@ -408,6 +640,15 @@ export interface components {
          * @enum {string}
          */
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
+        /** Diagnostic */
+        Diagnostic: {
+            /** Kind */
+            kind: string;
+            /** Signature */
+            signature: string;
+            /** Count */
+            count: number;
+        };
         /** DocFile */
         DocFile: {
             /** Path */
@@ -477,12 +718,193 @@ export interface components {
             /** Questions */
             questions: number;
         };
+        /** EvaluationSummary */
+        EvaluationSummary: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "run" | "log" | "pinned" | "import";
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "done" | "error";
+            /** Created At */
+            created_at: string;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string | null;
+            /** Engine */
+            engine: string;
+            /** Grader */
+            grader: string | null;
+            /** Epochs */
+            epochs: number;
+            /** Pass K Rate */
+            pass_k_rate: number | null;
+            /** Mean Rate */
+            mean_rate: number | null;
+            /** Artifact Path */
+            artifact_path: string | null;
+            /** Artifact Sha256 */
+            artifact_sha256: string | null;
+            /** Protocol Hash */
+            protocol_hash: string;
+            /** Execution Hash */
+            execution_hash: string;
+            receipt: components["schemas"]["RunReceipt"];
+        };
         /**
          * ExpectedBehavior
          * @description What a correct agent does on this probe — the outcome the scorer grades against.
          * @enum {string}
          */
         ExpectedBehavior: "answer" | "refuse";
+        /** Experiment */
+        Experiment: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "done" | "error" | "stopped";
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Baseline Variant */
+            baseline_variant: string;
+            request: components["schemas"]["ExperimentRequest"];
+            /** Error */
+            error: string | null;
+            /** Total Cost */
+            total_cost: number | null;
+            /** Cells */
+            cells: components["schemas"]["ExperimentCell"][];
+        };
+        /** ExperimentCell */
+        ExperimentCell: {
+            /** Id */
+            id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Variant Id */
+            variant_id: string;
+            /** Repeat Index */
+            repeat_index: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "done" | "error" | "skipped";
+            /** Run Id */
+            run_id: string | null;
+            /** Error */
+            error: string | null;
+        };
+        /** ExperimentComparison */
+        ExperimentComparison: {
+            /** Compatible */
+            compatible: boolean;
+            /** Intervention */
+            intervention: string;
+            /** Changed Dimensions */
+            changed_dimensions: string[];
+            /** Unexpected Dimensions */
+            unexpected_dimensions: string[];
+            overall: components["schemas"]["PairCounts"];
+            /** Categories */
+            categories: components["schemas"]["CategoryPairCounts"][];
+            diagnostics: components["schemas"]["ComparisonDiagnostics"];
+            /** Paired Repeats */
+            paired_repeats: number[];
+            /** Dropped Repeats */
+            dropped_repeats: number[];
+        };
+        /** ExperimentRequest */
+        ExperimentRequest: {
+            /** Name */
+            name: string;
+            /** Baseline Variant */
+            baseline_variant: string;
+            /**
+             * Intervention
+             * @default model
+             * @enum {string}
+             */
+            intervention: "model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness";
+            /** Variants */
+            variants: components["schemas"]["ExperimentVariant"][];
+            /**
+             * Repeats
+             * @default 1
+             */
+            repeats: number;
+            /** Max Cost */
+            max_cost?: number | null;
+            /**
+             * Max Consecutive Errors
+             * @default 3
+             */
+            max_consecutive_errors: number;
+        };
+        /** ExperimentStarted */
+        ExperimentStarted: {
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "done" | "error" | "stopped";
+        };
+        /** ExperimentVariant */
+        ExperimentVariant: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Model */
+            model: string;
+            /** Grader */
+            grader?: string | null;
+            /**
+             * Judge
+             * @default deterministic
+             * @enum {string}
+             */
+            judge: "llm" | "deterministic";
+            /**
+             * Org
+             * @default toy
+             */
+            org: string;
+            /**
+             * Epochs
+             * @default 3
+             */
+            epochs: number;
+            /**
+             * Scaffold
+             * @default baseline
+             * @enum {string}
+             */
+            scaffold: "baseline" | "refuse-aware";
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -521,6 +943,71 @@ export interface components {
             artifact: string;
             /** Locator */
             locator: string;
+        };
+        /** PairCounts */
+        PairCounts: {
+            /** Matched */
+            matched: number;
+            /** A Wins */
+            a_wins: number;
+            /** B Wins */
+            b_wins: number;
+            /** Both Pass */
+            both_pass: number;
+            /** Both Fail */
+            both_fail: number;
+            /** Discordant */
+            discordant: number;
+            /** P Value */
+            p_value: number;
+            /** Dropped */
+            dropped: string[];
+        };
+        /** PreflightRequest */
+        PreflightRequest: {
+            /** Model */
+            model: string;
+            /**
+             * Require Tools
+             * @default true
+             */
+            require_tools: boolean;
+            /**
+             * Refresh
+             * @default false
+             */
+            refresh: boolean;
+        };
+        /** PreflightResult */
+        PreflightResult: {
+            /** Model */
+            model: string;
+            /** Effective Model */
+            effective_model: string | null;
+            /** Tool Call */
+            tool_call: boolean;
+            /** Ok */
+            ok: boolean;
+            /** Error */
+            error: string | null;
+            /** Latency Seconds */
+            latency_seconds: number;
+            /** Checked At */
+            checked_at: string;
+            /** Cached */
+            cached: boolean;
+            usage: components["schemas"]["PreflightUsage"];
+        };
+        /** PreflightUsage */
+        PreflightUsage: {
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Total Tokens */
+            total_tokens: number;
+            /** Billed Cost */
+            billed_cost: number | null;
         };
         /**
          * Probe
@@ -570,6 +1057,71 @@ export interface components {
             api_key?: string | null;
             /** Base Url */
             base_url?: string | null;
+        };
+        /** ReceiptArtifact */
+        ReceiptArtifact: {
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string | null;
+        };
+        /** ReceiptProtocol */
+        ReceiptProtocol: {
+            /** Org */
+            org: string | null;
+            /** Blueprint Sha256 */
+            blueprint_sha256: string | null;
+            /** Scaffold */
+            scaffold: string | null;
+            /** Seed */
+            seed: number | null;
+            /** Harness */
+            harness: string | null;
+            /** Engine */
+            engine: string;
+            /** Grader */
+            grader: string | null;
+            /** Epochs */
+            epochs: number;
+            /** Scorer Version */
+            scorer_version: string | null;
+        };
+        /** ReceiptRuntime */
+        ReceiptRuntime: {
+            /** Requested Model */
+            requested_model: string;
+            /** Reported Model */
+            reported_model: string;
+            /** Effective Models */
+            effective_models: string[];
+            /** Inspect Ai Version */
+            inspect_ai_version: string | null;
+            /** Tessera Version */
+            tessera_version: string | null;
+            /** Git Revision */
+            git_revision: string | null;
+            /** Git Dirty */
+            git_dirty: boolean | null;
+        };
+        /** ReceiptTiming */
+        ReceiptTiming: {
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Duration Seconds */
+            duration_seconds: number | null;
+        };
+        /** ReceiptUsage */
+        ReceiptUsage: {
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Total Tokens */
+            total_tokens: number;
+            /** Billed Cost */
+            billed_cost: number | null;
         };
         /**
          * Render
@@ -718,6 +1270,18 @@ export interface components {
          * @enum {string}
          */
         ResolutionRule: "recency_wins" | "authority_wins";
+        /** RunReceipt */
+        RunReceipt: {
+            /** Protocol Hash */
+            protocol_hash: string;
+            /** Execution Hash */
+            execution_hash: string;
+            protocol: components["schemas"]["ReceiptProtocol"];
+            runtime: components["schemas"]["ReceiptRuntime"];
+            artifact: components["schemas"]["ReceiptArtifact"];
+            timing: components["schemas"]["ReceiptTiming"];
+            usage: components["schemas"]["ReceiptUsage"];
+        };
         /** RunRequest */
         RunRequest: {
             /** Model */
@@ -740,6 +1304,17 @@ export interface components {
              * @default 3
              */
             epochs: number;
+            /**
+             * Scaffold
+             * @default baseline
+             * @enum {string}
+             */
+            scaffold: "baseline" | "refuse-aware";
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
         };
         /** RunStatus */
         RunStatus: {
@@ -1456,6 +2031,336 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RescanResult"];
+                };
+            };
+        };
+    };
+    list_evaluations_api_evaluations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationSummary"][];
+                };
+            };
+        };
+    };
+    evaluation_report_api_evaluations__evaluation_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_evaluation_api_evaluations_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_evaluation_api_evaluations_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_comparison_api_comparisons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparisonRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Diagnostic"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_preflight_api_preflights_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreflightResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_experiments_api_experiments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Experiment"][];
+                };
+            };
+        };
+    };
+    start_experiment_api_experiments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_experiment_api_experiments__experiment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Experiment"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_experiment_api_experiments__experiment_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get: {
+        parameters: {
+            query?: {
+                intervention?: ("model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness") | null;
+            };
+            header?: never;
+            path: {
+                experiment_id: string;
+                variant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

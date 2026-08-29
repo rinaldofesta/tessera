@@ -16,6 +16,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from tessera.api.schemas import ExperimentRequest
+
 RunState = Literal["running", "done", "error"]
 
 
@@ -144,6 +146,174 @@ class TrendPoint(BaseModel):
     mean_rate: float
     categories: dict[str, float]     # conflict-type key -> pass^k
     axes: ReportAxes
+
+
+# ----- evaluation library + receipts -----
+
+class ReceiptProtocol(BaseModel):
+    org: str | None
+    blueprint_sha256: str | None
+    scaffold: str | None
+    seed: int | None
+    harness: str | None
+    engine: str
+    grader: str | None
+    epochs: int
+    scorer_version: str | None
+
+
+class ReceiptRuntime(BaseModel):
+    requested_model: str
+    reported_model: str
+    effective_models: list[str]
+    inspect_ai_version: str | None
+    tessera_version: str | None
+    git_revision: str | None
+    git_dirty: bool | None
+
+
+class ReceiptArtifact(BaseModel):
+    path: str
+    sha256: str | None
+
+
+class ReceiptTiming(BaseModel):
+    started_at: str | None
+    completed_at: str | None
+    duration_seconds: float | None
+
+
+class ReceiptUsage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    billed_cost: float | None
+
+
+class RunReceipt(BaseModel):
+    protocol_hash: str
+    execution_hash: str
+    protocol: ReceiptProtocol
+    runtime: ReceiptRuntime
+    artifact: ReceiptArtifact
+    timing: ReceiptTiming
+    usage: ReceiptUsage
+
+
+class EvaluationSummary(BaseModel):
+    id: str
+    kind: Literal["run", "log", "pinned", "import"]
+    source: str
+    status: Literal["done", "error"]
+    created_at: str
+    model: str
+    org: str | None
+    engine: str
+    grader: str | None
+    epochs: int
+    pass_k_rate: float | None
+    mean_rate: float | None
+    artifact_path: str | None
+    artifact_sha256: str | None
+    protocol_hash: str
+    execution_hash: str
+    receipt: RunReceipt
+
+
+class PairCounts(BaseModel):
+    matched: int
+    a_wins: int
+    b_wins: int
+    both_pass: int
+    both_fail: int
+    discordant: int
+    p_value: float
+    dropped: list[str]
+
+
+class CategoryPairCounts(PairCounts):
+    key: str
+
+
+class Diagnostic(BaseModel):
+    kind: str
+    signature: str
+    count: int
+
+
+class ComparisonDiagnostics(BaseModel):
+    a: list[Diagnostic]
+    b: list[Diagnostic]
+
+
+class ComparisonResult(BaseModel):
+    compatible: bool
+    intervention: str
+    changed_dimensions: list[str]
+    unexpected_dimensions: list[str]
+    overall: PairCounts
+    categories: list[CategoryPairCounts]
+    diagnostics: ComparisonDiagnostics
+
+
+# ----- paid capability preflight -----
+
+class PreflightUsage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    billed_cost: float | None
+
+
+class PreflightResult(BaseModel):
+    model: str
+    effective_model: str | None
+    tool_call: bool
+    ok: bool
+    error: str | None
+    latency_seconds: float
+    checked_at: str
+    cached: bool
+    usage: PreflightUsage
+
+
+# ----- experiments -----
+
+ExperimentState = Literal["running", "done", "error", "stopped"]
+CellState = Literal["pending", "running", "done", "error", "skipped"]
+
+
+class ExperimentCell(BaseModel):
+    id: str
+    experiment_id: str
+    variant_id: str
+    repeat_index: int
+    status: CellState
+    run_id: str | None
+    error: str | None
+
+
+class Experiment(BaseModel):
+    id: str
+    name: str
+    status: ExperimentState
+    created_at: str
+    updated_at: str
+    baseline_variant: str
+    request: ExperimentRequest
+    error: str | None
+    total_cost: float | None
+    cells: list[ExperimentCell]
+
+
+class ExperimentStarted(BaseModel):
+    experiment_id: str
+    status: ExperimentState
+
+
+class ExperimentComparison(ComparisonResult):
+    paired_repeats: list[int]
+    dropped_repeats: list[int]
 
 
 # ----- blueprints (datasets) -----

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import {
   CircleHelp,
   ExternalLink,
+  FlaskConical,
   Home,
   Library,
   KeyRound,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 // one chunk per view: recharts (Dashboard's trend line) stays out of the others
 const Dashboard = lazy(() => import("@/views/Dashboard"));
 const Datasets = lazy(() => import("@/views/Datasets"));
+const Experiments = lazy(() => import("@/views/Experiments"));
 const Leaderboard = lazy(() => import("@/views/Leaderboard"));
 const Providers = lazy(() => import("@/views/Providers"));
 const RunMonitor = lazy(() => import("@/views/RunMonitor"));
@@ -29,17 +31,18 @@ const Run = lazy(() => import("@/views/Run"));
 const NAV = [
   { to: "/", key: "1", label: SHELL_COPY.navItems.home, icon: Home, end: true },
   { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
-  { to: "/suites", key: "3", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  { to: "/experiments", key: "3", label: SHELL_COPY.navItems.experiments, icon: FlaskConical, end: false },
+  { to: "/suites", key: "4", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
   {
     to: "/providers",
-    key: "4",
+    key: "5",
     label: SHELL_COPY.navItems.providers,
     icon: KeyRound,
     end: false,
   },
   {
     to: "/leaderboard",
-    key: "5",
+    key: "6",
     label: SHELL_COPY.navItems.leaderboard,
     icon: Trophy,
     end: false,
@@ -170,6 +173,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/runs" element={<Results />} />
               <Route path="/runs/:id" element={<RunMonitor />} />
+              <Route path="/experiments" element={<Experiments />} />
               <Route path="/suites" element={<Datasets />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/new" element={<Run />} />

@@ -11,6 +11,7 @@ export const SHELL_COPY = {
   navItems: {
     home: "Home",
     runs: "Runs",
+    experiments: "Experiments",
     suites: "Test suites",
     providers: "Providers",
     leaderboard: "Leaderboard",
@@ -18,7 +19,7 @@ export const SHELL_COPY = {
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
   apiOriginHint: "The backend this app is talking to",
-  shortcuts: "Keyboard: 1–5 switch views",
+  shortcuts: "Keyboard: 1–6 switch views",
   help: "Help & docs",
 } as const;
 

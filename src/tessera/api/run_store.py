@@ -31,6 +31,12 @@ class RunStore:
                     created_at TEXT, finished_at TEXT,
                     model TEXT, org TEXT, judge TEXT, grader TEXT, epochs INTEGER,
                     report TEXT, error TEXT)""")
+            columns = {row[1] for row in c.execute("PRAGMA table_info(runs)")}
+            for name, kind in (
+                ("receipt", "TEXT"), ("experiment_id", "TEXT"), ("cell_id", "TEXT"),
+            ):
+                if name not in columns:
+                    c.execute(f"ALTER TABLE runs ADD COLUMN {name} {kind}")
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -38,19 +44,23 @@ class RunStore:
         return conn
 
     # ---- write ----
-    def create(self, req: RunRequest) -> str:
+    def create(self, req: RunRequest, *, experiment_id: str | None = None,
+               cell_id: str | None = None) -> str:
         job_id = uuid.uuid4().hex
         with self._conn() as c:
             c.execute(
-                "INSERT INTO runs(id,status,created_at,model,org,judge,grader,epochs) "
-                "VALUES(?,?,?,?,?,?,?,?)",
-                (job_id, "running", _now(), req.model, req.org, req.judge, req.grader, req.epochs))
+                "INSERT INTO runs(id,status,created_at,model,org,judge,grader,epochs,experiment_id,cell_id) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (job_id, "running", _now(), req.model, req.org, req.judge, req.grader,
+                 req.epochs, experiment_id, cell_id))
         return job_id
 
-    def complete(self, job_id: str, report: dict) -> None:
+    def complete(self, job_id: str, report: dict, receipt: dict | None = None) -> None:
         with self._conn() as c:
-            c.execute("UPDATE runs SET status='done', finished_at=?, report=? WHERE id=?",
-                      (_now(), json.dumps(report), job_id))
+            c.execute(
+                "UPDATE runs SET status='done', finished_at=?, report=?, receipt=? WHERE id=?",
+                (_now(), json.dumps(report), json.dumps(receipt) if receipt else None, job_id),
+            )
 
     def error(self, job_id: str, message: str) -> None:
         # Scrubbed here as well as by the caller: this is the boundary that persists the
@@ -69,6 +79,8 @@ class RunStore:
             "error": r["error"], "model": r["model"], "org": r["org"],
             "judge": r["judge"], "grader": r["grader"], "epochs": r["epochs"],
             "created_at": r["created_at"], "finished_at": r["finished_at"],
+            "receipt": json.loads(r["receipt"]) if r["receipt"] else None,
+            "experiment_id": r["experiment_id"], "cell_id": r["cell_id"],
         }
 
     def get(self, job_id: str) -> dict | None:

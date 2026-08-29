@@ -6,7 +6,10 @@ from tessera.api.schemas import RunRequest
 
 def test_eval_kwargs_passes_k_to_the_task_not_to_eval():
     kw = _eval_kwargs(RunRequest(model="m", grader="g", judge="llm", org="acme", epochs=5))
-    assert kw["task_args"] == {"judge": "llm", "org": "acme", "k": 5}
+    assert kw["task_args"] == {
+        "judge": "llm", "org": "acme", "k": 5,
+        "scaffold": "baseline", "seed": 0,
+    }
     # regression: an eval-level epochs kwarg overrides the COUNT but keeps the
     # task's pass_k(3) reducer — k<3 hard-errored, k>3 mislabeled. The task owns
     # count and reducer together, so eval must not pass epochs at all.

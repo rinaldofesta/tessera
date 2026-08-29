@@ -29,17 +29,23 @@ from fastapi.responses import JSONResponse
 
 from tessera.api import (
     routes_blueprints,
+    routes_experiments,
     routes_meta,
+    routes_preflight,
     routes_providers,
     routes_reports,
     routes_runs,
+    routes_workbench,
 )
+from tessera.api.preflight import PreflightCache, default_preflight_runner
 from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner
+from tessera.api.workbench_store import WorkbenchStore
 
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
+_DEFAULT_IMPORT_DIR = Path("imports")
 _DEFAULT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
@@ -88,7 +94,9 @@ _LESSON = Path("docs/tessera-lesson.html")
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
                blueprint_dir: Path | None = None, env_file: Path | None = None,
-               discovery_cache=None) -> FastAPI:
+               discovery_cache=None, workbench_store: WorkbenchStore | None = None,
+               import_dir: Path | None = None, preflight_runner=default_preflight_runner,
+               preflight_cache: PreflightCache | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -100,19 +108,25 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             load_dotenv(app.state.env_file, interpolate=False, override=False)
         except ImportError:
             pass
+        app.state.workbench_store.recover_interrupted()
         yield
 
     app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
     app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
+    app.state.workbench_store = workbench_store or WorkbenchStore(app.state.run_store.db_path)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
+    app.state.import_dir = import_dir or (
+        Path(app.state.run_store.db_path).parent / _DEFAULT_IMPORT_DIR
+    )
     app.state.env_file = _resolve_env_file(env_file)
     # Injected like every other dependency: the default reaches the network and the
     # filesystem, so tests must be able to supply a deterministic one or the
     # key-free/network-free invariant is only aspirational.
     app.state.discovery_cache = discovery_cache or _build_discovery_cache()
+    app.state.preflight_cache = preflight_cache or PreflightCache(preflight_runner)
 
     @app.exception_handler(RequestValidationError)
     def _sanitized_validation_error(request: Request, exc: RequestValidationError):
@@ -134,7 +148,12 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
-    app.include_router(routes_providers.router)   # LAST — order is the OpenAPI path order
+    app.include_router(routes_providers.router)
+    # New routers append AFTER every pre-existing one: registration order is the OpenAPI
+    # path order, so inserting mid-list reshuffles paths the contract already committed.
+    app.include_router(routes_workbench.router)
+    app.include_router(routes_preflight.router)
+    app.include_router(routes_experiments.router)
 
     _mount_learn(app)
     _mount_spa(app)

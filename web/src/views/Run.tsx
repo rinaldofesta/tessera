@@ -69,6 +69,8 @@ export default function Run() {
         judge: draft.judge,
         org: draft.org,
         epochs: draft.epochs,
+        scaffold: "baseline",
+        seed: 0,
         ...(draft.judge === "llm" && draft.grader ? { grader: draft.grader } : {}),
       });
       navigate(`/runs/${job_id}`);

@@ -25,6 +25,16 @@ export type TrendPoint = S["TrendPoint"];
 export type StartRunResult = S["StartRunResult"];
 export type RunStatus = S["RunStatus"];
 export type RunConfig = S["RunRequest"];
+export type RunReceipt = S["RunReceipt"];
+export type EvaluationSummary = S["EvaluationSummary"];
+export type ComparisonResult = S["ComparisonResult"];
+export type Diagnostic = S["Diagnostic"];
+export type ComparisonIntervention = NonNullable<S["ComparisonRequest"]["intervention"]>;
+export type PreflightResult = S["PreflightResult"];
+export type Experiment = S["Experiment"];
+export type ExperimentRequest = S["ExperimentRequest"];
+export type ExperimentStarted = S["ExperimentStarted"];
+export type ExperimentComparison = S["ExperimentComparison"];
 
 // ----- blueprints (datasets) -----
 export type Render = S["Render"];
