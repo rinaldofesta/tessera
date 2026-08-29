@@ -1,4 +1,4 @@
-"""Vocabulary for the Run form: runnable orgs and the canonical model list."""
+"""Vocabulary for the Run form: runnable orgs and published model provenance."""
 
 from __future__ import annotations
 
@@ -11,23 +11,29 @@ from tessera.api import responses as R
 
 router = APIRouter()
 
-# The canonical model list — the ONE source the UI (React Run view) reads via
-# GET /api/models, so the choices can never drift from the backend.
-_MODELS = [
+# Models with published single-model leaderboard rows. This provenance set is the
+# ONE source the UI reads via GET /api/models, so it cannot drift within the app.
+_PUBLISHED_MODELS = [
     "anthropic/claude-sonnet-4-6",
     "openai/gpt-4o",
     "anthropic/claude-opus-4-8",
     "anthropic/claude-haiku-4-5",
     "openai/gpt-4o-mini",
     "ollama/qwen3.5:latest",
+    "anthropic/claude-fable-5",
+    "anthropic/claude-sonnet-5",
 ]
 
 
-def _resolved_models() -> list[str]:
-    """Resolve the canonical model list shared by /api/models and the launcher setup."""
+def published_models() -> list[str]:
+    """Resolve the published set shared by /api/models and the launcher setup."""
     env = os.environ.get("TESSERA_MODELS", "")
     models = [model.strip() for model in env.split(",") if model.strip()]
-    return models or _MODELS
+    return models or _PUBLISHED_MODELS
+
+
+# The default discovery collector still imports the prior private name from app.py.
+# Keep that out-of-scope caller working until it can move to the public helper.
 
 
 @router.get("/api/orgs", response_model=list[str])
@@ -47,10 +53,11 @@ def list_orgs(request: Request):
 
 @router.get("/api/models", response_model=list[str])
 def list_models():
-    """The canonical model choices for the Run form (model under test + grader)."""
-    # TESSERA_MODELS (comma-separated inspect_ai model strings) replaces the defaults —
-    # set it in .env or the shell; credentials for each provider live in .env too.
-    return _resolved_models()
+    """The published model set displayed by the Run form."""
+    # TESSERA_MODELS (comma-separated inspect_ai model strings) overrides the
+    # published set shown at the top of the picker. Set it in .env or the shell;
+    # credentials for each provider live in .env too.
+    return published_models()
 
 
 @router.get("/api/eval-setup", response_model=R.EvalSetup)
@@ -89,23 +96,19 @@ def eval_setup(request: Request):
             "questions": blueprint["probes"],
         }
 
-    curated_models = _resolved_models()
-    curated = set(curated_models)
+    published = set(published_models())
     models, statuses = request.app.state.discovery_cache.get()
     return {
         "defaults": {
             "engine": "deterministic", "repeats": 3,
-            # From the cached list the UI actually renders, not a fresh resolution:
-            # the cache can be up to its TTL stale, so a re-resolved first entry
-            # could name a model absent from `models`.
-            "model": models[0].id if models else curated_models[0],
             "grader": None,
         },
         "models": [
             {
                 "id": model.id, "label": model.label, "provider": model.provider,
                 "readiness": model.readiness, "source": model.source,
-                "curated": model.id in curated, "detail": model.detail,
+                "published": model.id in published, "released": model.released,
+                "retired": model.retired, "detail": model.detail,
             }
             for model in models
         ],

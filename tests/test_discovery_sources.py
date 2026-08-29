@@ -130,6 +130,35 @@ def test_models_from_a_live_listing_are_ready_even_when_not_in_the_catalog():
     assert {m.readiness for m in openai_models} == {"ready"}
 
 
+def test_openai_listing_populates_release_date_and_retired_status():
+    client = _StubClient(payload={"data": [
+        {"id": "gpt-active", "created": 0, "shutdown_date": None},
+        {"id": "gpt-retired", "created": 86400, "shutdown_date": "2026-09-01"},
+    ]})
+
+    result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
+    models = {model.id: model for model in result.models}
+
+    assert models["openai/gpt-active"].released == "1970-01-01"
+    assert models["openai/gpt-active"].retired is False
+    assert models["openai/gpt-retired"].released == "1970-01-02"
+    assert models["openai/gpt-retired"].retired is True
+
+
+def test_anthropic_listing_populates_display_name_and_release_date():
+    client = _StubClient(payload={"data": [{
+        "id": "claude-new",
+        "display_name": "Claude New",
+        "created_at": "2026-08-28T12:34:56Z",
+    }]})
+
+    result = discover_cloud(client, env={"ANTHROPIC_API_KEY": "sk-ant"})
+
+    assert [(model.id, model.label, model.released) for model in result.models] == [
+        ("anthropic/claude-new", "Claude New", "2026-08-28"),
+    ]
+
+
 def test_a_successful_listing_replaces_the_fallback_catalog():
     client = _StubClient(payload={"data": [{"id": "some-other-model"}]})
     result = discover_cloud(client, env={"OPENAI_API_KEY": "sk-x"})
@@ -155,7 +184,7 @@ def test_live_listing_is_filtered_by_shape_not_by_catalog_membership():
     assert [m.id for m in result.models] == ["openai/gpt-new-chat-model"]
 
 
-def test_openai_non_chat_models_are_removed_from_a_live_listing():
+def test_openai_obviously_non_evaluable_models_are_removed_from_a_live_listing():
     client = _StubClient(payload={"data": [
         {"id": "text-embedding-3-large"},
         {"id": "whisper-1"},

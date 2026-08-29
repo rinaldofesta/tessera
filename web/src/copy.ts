@@ -167,11 +167,12 @@ export const WIZARD_COPY = {
 };
 
 export const MODEL_COPY = {
-  curatedGroup: "Benchmark set — the models behind the published leaderboard",
+  publishedGroup: "Published benchmark set — models with a leaderboard run",
   providerGroup: "Available from your providers",
   machineGroup: "On this machine",
   filterPlaceholder: "Filter models…",
   noMatch: "No model matches that filter.",
+  retired: "retired",
   ready: "ready",
   unchecked: "unchecked",
   hiddenCount: (n: number) => `${n} hidden`,

@@ -51,18 +51,20 @@ export function ModelStep({
   // cloud list is live, most discovered models are remote — so group by where a model
   // actually comes from, not by whether we happened to curate it.
   const needle = query.trim().toLowerCase();
-  const shown = needle ? usable.filter((m) => m.id.toLowerCase().includes(needle)) : usable;
+  const matches = (m: EvalSetupModel) => !needle || m.id.toLowerCase().includes(needle);
+  const shown = usable.filter(matches);
+  const shownLocal = local.filter(matches);
   const groups = [
-    { key: "curated", label: MODEL_COPY.curatedGroup, items: shown.filter((m) => m.curated) },
+    { key: "published", label: MODEL_COPY.publishedGroup, items: shown.filter((m) => m.published) },
     {
       key: "cloud",
       label: MODEL_COPY.providerGroup,
-      items: shown.filter((m) => !m.curated && !LOCAL.has(m.provider)),
+      items: shown.filter((m) => !m.published && !LOCAL.has(m.provider)),
     },
     {
       key: "machine",
       label: MODEL_COPY.machineGroup,
-      items: shown.filter((m) => !m.curated && LOCAL.has(m.provider)),
+      items: shown.filter((m) => !m.published && LOCAL.has(m.provider)),
     },
   ].filter((group) => group.items.length > 0);
 
@@ -145,6 +147,14 @@ export function ModelStep({
                   <span className="hidden font-mono text-[10.5px] text-[var(--faint)] sm:inline">
                     {PROVIDER_LABELS[model.provider] ?? model.provider}
                   </span>
+                  {model.retired ? (
+                    <Badge
+                      variant="outline"
+                      className="border-[var(--border)] text-[var(--faint)]"
+                    >
+                      {MODEL_COPY.retired}
+                    </Badge>
+                  ) : null}
                   {model.readiness === "unverified" ? (
                     <Badge
                       variant="outline"
@@ -166,12 +176,12 @@ export function ModelStep({
           </div>
         ))}
 
-        {local.length > 0 && (
+        {shownLocal.length > 0 && (
           <div>
             <p className="border-b border-t border-[var(--border)] bg-[#101216] px-3.5 pt-2.5 pb-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--faint)]">
               {MODEL_COPY.localGroup}
             </p>
-            {local.map((model) => (
+            {shownLocal.map((model) => (
               <div
                 key={model.id}
                 className="flex items-center gap-3 border-b border-[var(--border)] bg-[#191b21] px-3.5 py-2.5 last:border-b-0"
@@ -199,6 +209,12 @@ export function ModelStep({
               </div>
             ))}
           </div>
+        )}
+
+        {groups.length === 0 && shownLocal.length === 0 && (
+          <p className="border-b border-[var(--border)] bg-[var(--card)] px-3.5 py-4 text-center text-[12.5px] text-[var(--muted-foreground)]">
+            {MODEL_COPY.noMatch}
+          </p>
         )}
 
         <button

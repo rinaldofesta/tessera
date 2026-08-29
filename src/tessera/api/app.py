@@ -69,10 +69,10 @@ def _build_discovery_cache():
                 discover_mlx(client, hf_home=hf_home,
                              base_url=os.environ.get("MLX_BASE_URL")),
             ]
-        # The curated list is routes_meta's TESSERA_MODELS-or-defaults resolution —
-        # imported here rather than duplicated, so the two cannot drift.
-        from tessera.api.routes_meta import _resolved_models
-        return merge(results, curated=_resolved_models())
+        # The published set is routes_meta's TESSERA_MODELS-or-leaderboard resolution —
+        # imported rather than duplicated, so the two cannot drift.
+        from tessera.api.routes_meta import published_models
+        return merge(results, published=published_models())
 
     return DiscoveryCache(collect=collect)
 

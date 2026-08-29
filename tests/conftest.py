@@ -23,12 +23,12 @@ _QUIET_SOURCES = (
 
 
 class _QuietCache:
-    """Reports every source as reachable-but-empty, so merge yields curated placeholders."""
+    """Reports every source as reachable-but-empty, yielding published placeholders."""
 
     def get(self):
         from tessera.api.discovery.merge import merge
-        from tessera.api.routes_meta import _resolved_models
-        return merge(_QUIET_SOURCES, curated=_resolved_models())
+        from tessera.api.routes_meta import published_models
+        return merge(_QUIET_SOURCES, published=published_models())
 
     def invalidate(self):
         pass

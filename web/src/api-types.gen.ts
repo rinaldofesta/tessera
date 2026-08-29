@@ -35,7 +35,7 @@ export interface paths {
         };
         /**
          * List Models
-         * @description The canonical model choices for the Run form (model under test + grader).
+         * @description The published model set displayed by the Run form.
          */
         get: operations["list_models_api_models_get"];
         put?: never;
@@ -434,8 +434,6 @@ export interface components {
             engine: "deterministic";
             /** Repeats */
             repeats: number;
-            /** Model */
-            model: string;
             /** Grader */
             grader: string | null;
         };
@@ -454,8 +452,12 @@ export interface components {
             readiness: "ready" | "needs_config" | "needs_server" | "offline" | "unverified";
             /** Source */
             source: string;
-            /** Curated */
-            curated: boolean;
+            /** Published */
+            published: boolean;
+            /** Released */
+            released: string | null;
+            /** Retired */
+            retired: boolean;
             /** Detail */
             detail?: string | null;
         };

@@ -1,6 +1,7 @@
 """Key-free tests for the FastAPI app. Logs are fabricated on disk with write_eval_log;
 the live-run path uses an injected fake runner + inline scheduler — no model calls."""
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -122,6 +123,20 @@ def test_list_models(tmp_path):
     assert "anthropic/claude-sonnet-4-6" in models and len(models) >= 2
     # the leaderboard additions (incl. the local open-weights option) stay offered
     assert "anthropic/claude-haiku-4-5" in models and "ollama/qwen3.5:latest" in models
+    assert "anthropic/claude-fable-5" in models and "anthropic/claude-sonnet-5" in models
+
+
+def test_default_published_models_match_single_model_leaderboard(monkeypatch):
+    from tessera.api.routes_meta import published_models
+
+    monkeypatch.delenv("TESSERA_MODELS", raising=False)
+    rows_path = Path(__file__).parents[1] / "docs" / "leaderboard.rows.json"
+    rows = json.loads(rows_path.read_text())["rows"]
+    expected = {
+        row["model"] for row in rows
+        if row.get("harness", "single") == "single"
+    }
+    assert set(published_models()) == expected
 
 
 def test_list_models_env_override(tmp_path, monkeypatch):
@@ -130,47 +145,53 @@ def test_list_models_env_override(tmp_path, monkeypatch):
     assert r.status_code == 200 and r.json() == ["a/x", "b/y"]
 
 
-def test_list_models_env_whitespace_falls_back_to_default(tmp_path, monkeypatch):
+def test_list_models_env_whitespace_falls_back_to_published_set(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_MODELS", " , ,")
     r = _client(tmp_path).get("/api/models")
     assert r.status_code == 200 and "anthropic/claude-sonnet-4-6" in r.json()
 
 
-def test_eval_setup_defaults_use_the_resolved_model_list(tmp_path):
+def test_eval_setup_defaults_do_not_claim_a_model_selection(tmp_path):
     r = _client(tmp_path).get("/api/eval-setup")
     assert r.status_code == 200
     body = r.json()
     assert body["defaults"] == {
         "engine": "deterministic",
         "repeats": 3,
-        "model": _client(tmp_path).get("/api/models").json()[0],
         "grader": None,
     }
 
 
 def test_eval_setup_model_readiness(tmp_path, monkeypatch):
     # Readiness comes from what a source observed, never from an env var existing.
-    # Only sonnet was seen by a source; everything else is a curated placeholder, and
+    # Only sonnet was seen by a source; everything else is a published placeholder, and
     # the ollama entry stays needs_config precisely because the daemon is offline.
     from tessera.api.discovery.types import DiscoveredModel
 
     monkeypatch.setenv("TESSERA_MODELS", "anthropic/sonnet,openai/gpt,mlx/foo,ollama/x")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     cache = _stub_cache(models=[
-        DiscoveredModel("anthropic/sonnet", "sonnet", "anthropic", "ready", "cloud"),
+        DiscoveredModel(
+            "anthropic/sonnet", "Sonnet", "anthropic", "ready", "cloud",
+            released="2026-08-01", retired=True,
+        ),
     ])
 
     r = _client(tmp_path, discovery_cache=cache).get("/api/eval-setup")
     assert r.status_code == 200
     assert r.json()["models"] == [
-        {"id": "anthropic/sonnet", "label": "sonnet", "provider": "anthropic",
-         "readiness": "ready", "source": "cloud", "curated": True, "detail": None},
+        {"id": "anthropic/sonnet", "label": "Sonnet", "provider": "anthropic",
+         "readiness": "ready", "source": "cloud", "published": True,
+         "released": "2026-08-01", "retired": True, "detail": None},
         {"id": "openai/gpt", "label": "gpt", "provider": "openai",
-         "readiness": "needs_config", "source": "curated", "curated": True, "detail": None},
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
         {"id": "mlx/foo", "label": "foo", "provider": "unknown",
-         "readiness": "needs_config", "source": "curated", "curated": True, "detail": None},
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
         {"id": "ollama/x", "label": "x", "provider": "ollama",
-         "readiness": "needs_config", "source": "curated", "curated": True, "detail": None},
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
     ]
 
 
@@ -473,18 +494,18 @@ def _stub_cache(models=(), statuses=None):
     class _Fixed:
         def get(self):
             # Run the real merge, so the stub honours the cache's actual contract:
-            # curated ids absent from every source come back as needs_config
+            # published ids absent from every source come back as needs_config
             # placeholders. Returning raw source output instead would test a shape the
             # route never actually receives.
             from tessera.api.discovery.merge import merge
-            from tessera.api.routes_meta import _resolved_models
+            from tessera.api.routes_meta import published_models
             # Hang the seeded models off an existing source rather than inventing one,
             # so the reported source set stays exactly the three real sources.
             seeded = list(resolved)
             if models:
                 head = seeded[0]
                 seeded[0] = SourceResult(head.source, tuple(models), head.status, head.detail)
-            return merge(seeded, curated=_resolved_models())
+            return merge(seeded, published=published_models())
 
         def invalidate(self):
             pass
@@ -511,22 +532,28 @@ def test_eval_setup_reports_source_status_alongside_models(tmp_path):
     ])
     body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
     assert {s["source"] for s in body["sources"]} == {"cloud", "ollama", "mlx"}
-    assert all("source" in m and "curated" in m for m in body["models"])
+    assert all(
+        "source" in model
+        and "published" in model
+        and "released" in model
+        and "retired" in model
+        for model in body["models"]
+    )
 
 
 def test_eval_setup_never_reports_an_unreachable_ollama_model_as_ready(tmp_path, monkeypatch):
     # The reproducible failure this phase exists to fix: the daemon is down, and the
-    # curated list still names an ollama model.
+    # published list still names an ollama model.
     monkeypatch.setenv("TESSERA_MODELS", "ollama/qwen3.5:latest,anthropic/claude-sonnet-4-6")
     body = _client_with_cache(tmp_path, _stub_cache()).get("/api/eval-setup").json()
     ollama = [m for m in body["models"] if m["provider"] == "ollama"]
-    assert ollama, "the curated ollama model should still be listed"
+    assert ollama, "the published ollama model should still be listed"
     assert all(m["readiness"] != "ready" for m in ollama)
 
 
 def test_eval_setup_renders_with_every_runtime_down_and_no_keys(tmp_path):
     # Every source reports failure and nothing is discovered: the launcher must still
-    # render the curated set, honestly marked, rather than 500 or return nothing.
+    # render the published set, honestly marked, rather than 500 or return nothing.
     from tessera.api.discovery.types import SourceResult
     cache = _stub_cache(statuses=[
         SourceResult("cloud", (), "ok"),
@@ -536,4 +563,4 @@ def test_eval_setup_renders_with_every_runtime_down_and_no_keys(tmp_path):
     body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
     assert body["models"]                                     # still renders
     assert all(m["readiness"] != "ready" for m in body["models"])
-    assert body["defaults"]["model"] in [m["id"] for m in body["models"]]
+    assert "model" not in body["defaults"]

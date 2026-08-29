@@ -30,6 +30,8 @@ class DiscoveredModel:
     readiness: Readiness
     source: str
     detail: str | None = None      # e.g. the command that would serve an MLX model
+    released: str | None = None    # ISO date when the provider reports one
+    retired: bool = False          # provider has announced a shutdown date
 
 
 @dataclass(frozen=True)

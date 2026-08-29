@@ -31,7 +31,7 @@
     "/api/models": {
       "get": {
         "summary": "List Models",
-        "description": "The canonical model choices for the Run form (model under test + grader).",
+        "description": "The published model set displayed by the Run form.",
         "operationId": "list_models_api_models_get",
         "responses": {
           "200": {
@@ -1006,10 +1006,6 @@
             "type": "integer",
             "title": "Repeats"
           },
-          "model": {
-            "type": "string",
-            "title": "Model"
-          },
           "grader": {
             "anyOf": [
               {
@@ -1026,7 +1022,6 @@
         "required": [
           "engine",
           "repeats",
-          "model",
           "grader"
         ],
         "title": "EvalSetupDefaults"
@@ -1060,9 +1055,24 @@
             "type": "string",
             "title": "Source"
           },
-          "curated": {
+          "published": {
             "type": "boolean",
-            "title": "Curated"
+            "title": "Published"
+          },
+          "released": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released"
+          },
+          "retired": {
+            "type": "boolean",
+            "title": "Retired"
           },
           "detail": {
             "anyOf": [
@@ -1083,7 +1093,9 @@
           "provider",
           "readiness",
           "source",
-          "curated"
+          "published",
+          "released",
+          "retired"
         ],
         "title": "EvalSetupModel"
       },

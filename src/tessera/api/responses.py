@@ -205,7 +205,6 @@ SuiteKind = Literal["builtin", "custom"]
 class EvalSetupDefaults(BaseModel):
     engine: Literal["deterministic"]
     repeats: int
-    model: str
     grader: str | None
 
 
@@ -215,7 +214,9 @@ class EvalSetupModel(BaseModel):
     provider: str
     readiness: ModelReadiness
     source: str
-    curated: bool
+    published: bool
+    released: str | None
+    retired: bool
     detail: str | None = None
 
 
