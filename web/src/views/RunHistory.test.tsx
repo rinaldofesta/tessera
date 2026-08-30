@@ -56,7 +56,7 @@ describe("RunHistory", () => {
       run({ id: "b", model: "openai/gpt-5.2", org: "toy" }),
     ]);
     view();
-    await screen.findByText("claude-sonnet-4");
+    await screen.findAllByText("claude-sonnet-4");
     await userEvent.type(screen.getByPlaceholderText("filter by model, suite, or grader…"), "toy");
     expect(screen.queryByText("claude-sonnet-4")).not.toBeInTheDocument();
     expect(screen.getByText("gpt-5.2")).toBeInTheDocument();
@@ -85,6 +85,19 @@ describe("RunHistory", () => {
     const box = screen.getByRole("checkbox");
     await userEvent.click(box);
     expect(box).toBeChecked();
+  });
+
+  it("offers the selected finished runs to Compare once there are at least two", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" }), run({ id: "b" })]);
+    view();
+    await screen.findAllByText("claude-sonnet-4");
+    const boxes = screen.getAllByRole("checkbox");
+    await userEvent.click(boxes[0]);
+    expect(screen.queryByRole("link", { name: "Compare selected" })).not.toBeInTheDocument();
+    await userEvent.click(boxes[1]);
+    expect(screen.getByRole("link", { name: "Compare selected" })).toHaveAttribute(
+      "href", "/compare?evals=run:a,run:b",
+    );
   });
 
   it("exports a finished run's report as HTML from the row", async () => {

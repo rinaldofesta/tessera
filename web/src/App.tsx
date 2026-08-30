@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect } from "react";
 import {
   CircleHelp,
   ExternalLink,
-  FlaskConical,
   GitCompare,
   Home,
   Library,
@@ -11,7 +10,7 @@ import {
   Plus,
   Trophy,
 } from "lucide-react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { SHELL_COPY } from "@/copy";
@@ -22,11 +21,10 @@ import { cn } from "@/lib/utils";
 // one chunk per view: recharts (Dashboard's trend line) stays out of the others
 const Dashboard = lazy(() => import("@/views/Dashboard"));
 const Datasets = lazy(() => import("@/views/Datasets"));
-const Experiments = lazy(() => import("@/views/Experiments"));
+const Compare = lazy(() => import("@/views/Compare"));
 const Leaderboard = lazy(() => import("@/views/Leaderboard"));
 const Providers = lazy(() => import("@/views/Providers"));
 const RunMonitor = lazy(() => import("@/views/RunMonitor"));
-const Results = lazy(() => import("@/views/Results"));
 const Run = lazy(() => import("@/views/Run"));
 const RunHistory = lazy(() => import("@/views/RunHistory"));
 
@@ -34,23 +32,29 @@ const NAV = [
   { to: "/", key: "1", label: SHELL_COPY.navItems.home, icon: Home, end: true },
   { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
   { to: "/compare", key: "3", label: SHELL_COPY.navItems.compare, icon: GitCompare, end: false },
-  { to: "/experiments", key: "4", label: SHELL_COPY.navItems.experiments, icon: FlaskConical, end: false },
-  { to: "/suites", key: "5", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  { to: "/suites", key: "4", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
   {
     to: "/providers",
-    key: "6",
+    key: "5",
     label: SHELL_COPY.navItems.providers,
     icon: KeyRound,
     end: false,
   },
   {
     to: "/leaderboard",
-    key: "7",
+    key: "6",
     label: SHELL_COPY.navItems.leaderboard,
     icon: Trophy,
     end: false,
   },
 ] as const;
+
+function ExperimentsRedirect() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("tab", "experiments");
+  return <Navigate to={{ pathname: "/compare", search: `?${params}` }} replace />;
+}
 
 export default function App() {
   const healthy = useApiHealth();
@@ -175,9 +179,9 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/runs" element={<RunHistory />} />
-              <Route path="/compare" element={<Results />} />
+              <Route path="/compare" element={<Compare />} />
               <Route path="/runs/:id" element={<RunMonitor />} />
-              <Route path="/experiments" element={<Experiments />} />
+              <Route path="/experiments" element={<ExperimentsRedirect />} />
               <Route path="/suites" element={<Datasets />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/new" element={<Run />} />

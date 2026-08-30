@@ -46,6 +46,8 @@ export default function RunHistory() {
       return next;
     });
 
+  const compareHref = `/compare?evals=${[...selected].map((id) => `run:${id}`).join(",")}`;
+
   const exportRun = async (id: string, format: "html" | "json") => {
     try {
       const run = await api.getRun(id);
@@ -118,6 +120,11 @@ export default function RunHistory() {
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
               {RUN_HISTORY_COPY.showing(shown.length, rows.length)}
             </span>
+            {selected.size >= 2 && (
+              <Button nativeButton={false} render={<Link role="link" to={compareHref} />}>
+                {RUN_HISTORY_COPY.compareSelected}
+              </Button>
+            )}
           </div>
 
           <Card className="p-0">
