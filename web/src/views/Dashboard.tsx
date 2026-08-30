@@ -93,7 +93,7 @@ export default function Dashboard() {
           <Panel
             title={rows.length > 12 ? `recent runs (12 of ${rows.length})` : `recent runs (${rows.length})`}
             right={
-              <Button variant="ghost" size="xs" render={<Link to="/compare" />}>
+              <Button variant="ghost" size="xs" render={<Link to="/runs" />}>
                 open results →
               </Button>
             }
