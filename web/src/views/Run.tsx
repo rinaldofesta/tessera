@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/api";
 import { ConfirmStep, type RunDraft } from "@/components/launcher/ConfirmStep";
 import { CUSTOM, ModelStep } from "@/components/launcher/ModelStep";
@@ -8,6 +8,7 @@ import { SuiteStep } from "@/components/launcher/SuiteStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAsync } from "@/hooks";
 import { DATASET_LABELS } from "@/copy";
+import { draftFromRun } from "@/lib/rerun";
 
 /** The starter suite if it exists, else the first available. */
 function pickDefaultSuite(suites: { id: string }[]): string {
@@ -29,6 +30,27 @@ export default function Run() {
     grader: null,
     epochs: 3,
   });
+  const [params] = useSearchParams();
+  const fromId = params.get("from");
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Rerun deep-link: /new?from=<id> copies that run's config and jumps to confirm.
+  useEffect(() => {
+    if (!fromId || prefilled || !setup.data) return;
+    api
+      .listRuns()
+      .then((runs) => {
+        const source = runs.find((r) => r.id === fromId);
+        if (!source) return;
+        const known = setup.data!.models.map((m) => m.id);
+        const { draft: next, customId: custom } = draftFromRun(source, known);
+        setDraft(next);
+        if (custom) setCustomId(custom);
+        setStep(3);
+      })
+      .catch(() => {})
+      .finally(() => setPrefilled(true));
+  }, [fromId, prefilled, setup.data]);
 
   // Seed server defaults without clobbering user edits.
   useEffect(() => {
