@@ -3,6 +3,7 @@ import {
   CircleHelp,
   ExternalLink,
   FlaskConical,
+  GitCompare,
   Home,
   Library,
   KeyRound,
@@ -27,22 +28,24 @@ const Providers = lazy(() => import("@/views/Providers"));
 const RunMonitor = lazy(() => import("@/views/RunMonitor"));
 const Results = lazy(() => import("@/views/Results"));
 const Run = lazy(() => import("@/views/Run"));
+const RunHistory = lazy(() => import("@/views/RunHistory"));
 
 const NAV = [
   { to: "/", key: "1", label: SHELL_COPY.navItems.home, icon: Home, end: true },
   { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
-  { to: "/experiments", key: "3", label: SHELL_COPY.navItems.experiments, icon: FlaskConical, end: false },
-  { to: "/suites", key: "4", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  { to: "/compare", key: "3", label: SHELL_COPY.navItems.compare, icon: GitCompare, end: false },
+  { to: "/experiments", key: "4", label: SHELL_COPY.navItems.experiments, icon: FlaskConical, end: false },
+  { to: "/suites", key: "5", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
   {
     to: "/providers",
-    key: "5",
+    key: "6",
     label: SHELL_COPY.navItems.providers,
     icon: KeyRound,
     end: false,
   },
   {
     to: "/leaderboard",
-    key: "6",
+    key: "7",
     label: SHELL_COPY.navItems.leaderboard,
     icon: Trophy,
     end: false,
@@ -171,7 +174,8 @@ export default function App() {
           >
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/runs" element={<Results />} />
+              <Route path="/runs" element={<RunHistory />} />
+              <Route path="/compare" element={<Results />} />
               <Route path="/runs/:id" element={<RunMonitor />} />
               <Route path="/experiments" element={<Experiments />} />
               <Route path="/suites" element={<Datasets />} />
@@ -182,7 +186,7 @@ export default function App() {
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/datasets" element={<Navigate to="/suites" replace />} />
               <Route path="/run" element={<Navigate to="/new" replace />} />
-              <Route path="/results" element={<Navigate to="/runs" replace />} />
+              <Route path="/results" element={<Navigate to="/compare" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
