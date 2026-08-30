@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GAP_COPY, RUN_HISTORY_COPY, engineLabel } from "@/copy";
 import { fmtTs, pct, shortModel } from "@/lib/format";
 import type { RunSummary } from "@/types";
-import { GapBar } from "./GapBar";
+import { GapBar, gapPoints } from "./GapBar";
 import { StatusBadge } from "./StatusBadge";
 
 interface RunRowProps {
@@ -19,7 +19,7 @@ interface RunRowProps {
  *  Only finished runs are selectable — they alone can cross to /compare as run:<id>. */
 export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
   const finished = run.status === "done" && run.pass_k_rate != null && run.mean_rate != null;
-  const gapPp = finished ? Math.round((run.mean_rate! - run.pass_k_rate!) * 100) : 0;
+  const gapPp = finished ? gapPoints(run.pass_k_rate!, run.mean_rate!) : 0;
 
   return (
     <div className="grid grid-cols-[auto_minmax(160px,1.2fr)_minmax(140px,1fr)_150px_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/40">
@@ -37,7 +37,7 @@ export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
           {shortModel(run.model)}
         </div>
         <div className="truncate font-mono text-[11px] text-faint">
-          {run.org} · {engineLabel(run.judge)} · {RUN_HISTORY_COPY.repeats(run.epochs)}
+          {RUN_HISTORY_COPY.meta(run.org, engineLabel(run.judge), run.epochs)}
         </div>
       </div>
 
@@ -47,7 +47,7 @@ export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
         <div className="flex min-w-0 items-center gap-2">
           <StatusBadge status={run.status} />
           {run.error && (
-            <span className="truncate text-[11px] text-verdict-unreliable" title={run.error}>
+            <span className="truncate text-[11px] text-destructive" title={run.error}>
               {run.error}
             </span>
           )}
@@ -65,7 +65,7 @@ export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
             </div>
           </>
         ) : (
-          <div className="text-[15px] font-bold text-faint">—</div>
+          <div className="text-[15px] font-bold text-faint">{RUN_HISTORY_COPY.noScore}</div>
         )}
         <div className="mt-0.5 font-mono text-[10px] text-faint">{fmtTs(run.created_at)}</div>
       </div>

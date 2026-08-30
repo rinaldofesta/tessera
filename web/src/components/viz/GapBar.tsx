@@ -14,6 +14,12 @@ interface GapBarProps {
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
+export function gapPoints(passK: number, mean: number): number {
+  const p = clamp01(passK);
+  const m = Math.max(clamp01(mean), p);
+  return Math.round((m - p) * 100);
+}
+
 /** The core reliability glyph. Solid fill 0→pass^k (iris; green only at exactly 1),
  *  hatched amber pass^k→mean (passes only sometimes — the gap IS the finding),
  *  dark remainder mean→1 (fails even on average). Gap is stated in percentage points. */
@@ -23,7 +29,7 @@ export function GapBar({ passK, mean, k, className }: GapBarProps) {
   }
   const p = clamp01(passK);
   const m = Math.max(clamp01(mean), p);
-  const gapPp = Math.round((m - p) * 100);
+  const gapPp = gapPoints(passK, mean);
 
   return (
     <div
@@ -34,13 +40,13 @@ export function GapBar({ passK, mean, k, className }: GapBarProps) {
       <div
         data-seg="pass"
         className={cn("h-full", p >= 1 ? "bg-verdict-reliable" : "bg-primary")}
-        style={{ width: `${Math.round(p * 100)}%` }}
+        style={{ width: `${parseFloat((p * 100).toFixed(4))}%` }}
       />
       <div
         data-seg="gap"
         className="h-full"
         style={{
-          width: `${gapPp}%`,
+          width: `${parseFloat((Math.max(m - p, 0) * 100).toFixed(4))}%`,
           background:
             "repeating-linear-gradient(45deg, color-mix(in srgb, var(--verdict-inconsistent) 60%, transparent) 0 3px, transparent 3px 6px)",
         }}

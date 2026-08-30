@@ -13,7 +13,7 @@ describe("StatTile", () => {
   });
 
   it("omits the sub line when not given", () => {
-    render(<StatTile label="runs" value="12" />);
-    expect(screen.queryByText("pass^5")).not.toBeInTheDocument();
+    const { container } = render(<StatTile label="runs" value="12" />);
+    expect(container.firstElementChild!.children).toHaveLength(2);
   });
 });

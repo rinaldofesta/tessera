@@ -13,10 +13,14 @@ describe("StatusBadge", () => {
     expect(screen.getByText("failed")).toBeInTheDocument();
   });
 
-  it("keeps 'done' neutral — no verdict color classes", () => {
-    render(<StatusBadge status="done" />);
-    const el = screen.getByText("finished");
-    expect(el.className).not.toMatch(/verdict-reliable/);
+  it("uses no verdict color classes", () => {
+    const { container, rerender } = render(<StatusBadge status="running" />);
+    const className = () => container.querySelector<HTMLElement>('[data-slot="badge"]')!.className;
+    expect(className()).not.toMatch(/verdict-/);
+    rerender(<StatusBadge status="done" />);
+    expect(className()).not.toMatch(/verdict-/);
+    rerender(<StatusBadge status="error" />);
+    expect(className()).not.toMatch(/verdict-/);
   });
 });
 

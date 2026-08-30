@@ -7,7 +7,7 @@ export type RunLifecycle = keyof typeof STATUS_COPY;
 const STYLE: Record<RunLifecycle, string> = {
   running: "border-primary/55 text-primary",
   done: "border-border text-muted-foreground",
-  error: "border-verdict-unreliable/55 text-verdict-unreliable",
+  error: "border-destructive/55 text-destructive",
 };
 
 /** Lifecycle only: running / finished / failed. Never a reliability verdict —
