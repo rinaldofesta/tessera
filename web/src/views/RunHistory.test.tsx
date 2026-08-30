@@ -4,8 +4,10 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RunSummary } from "@/types";
 
-vi.mock("@/api", () => ({ api: { listRuns: vi.fn() } }));
+vi.mock("@/api", () => ({ api: { listRuns: vi.fn(), getRun: vi.fn() } }));
+vi.mock("@/lib/download", () => ({ downloadText: vi.fn() }));
 import { api } from "@/api";
+import { downloadText } from "@/lib/download";
 import RunHistory from "./RunHistory";
 
 const run = (over: Partial<RunSummary>): RunSummary => ({
@@ -83,5 +85,35 @@ describe("RunHistory", () => {
     const box = screen.getByRole("checkbox");
     await userEvent.click(box);
     expect(box).toBeChecked();
+  });
+
+  it("exports a finished run's report as HTML from the row", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
+    vi.mocked(api.getRun).mockResolvedValue({
+      status: "done",
+      error: null,
+      report: {
+        header: {
+          model: "anthropic/claude-sonnet-4", engine: "llm", grader: null, org: "meridian",
+          k: 5, created: "2026-08-29T14:02:11Z", location: "l", scorer_version: null,
+          inspect_ai_version: null, scaffold: "baseline", seed: 0, harness: "single",
+        },
+        overall: { pass_k_rate: 0.72, mean_rate: 0.94 },
+        categories: [], probes: [],
+        axes: {
+          accuracy_rate: null, provenance_rate: 1, refusal_rate: null, n_answer_epochs: 0,
+          n_refuse_epochs: 0, n_total_epochs: 0, answer_format_rate: null,
+        },
+      },
+    });
+    view();
+    await screen.findByText("claude-sonnet-4");
+    await userEvent.click(screen.getByRole("button", { name: "HTML" }));
+    expect(vi.mocked(api.getRun)).toHaveBeenCalledWith("a");
+    expect(vi.mocked(downloadText)).toHaveBeenCalledWith(
+      "tessera-meridian-claude-sonnet-4-2026-08-29.html",
+      expect.stringContaining("<!doctype html>"),
+      "text/html",
+    );
   });
 });

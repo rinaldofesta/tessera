@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { api } from "@/api";
 import { PageHeader } from "@/components/viz/PageHeader";
 import { RunRow } from "@/components/viz/RunRow";
@@ -13,6 +14,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { RUN_HISTORY_COPY, STATUS_COPY } from "@/copy";
 import { useAsync } from "@/hooks";
+import { downloadText } from "@/lib/download";
+import { exportReportHtml, exportReportJson, reportFilename } from "@/lib/exportReport";
 
 const STATUSES = ["running", "done", "error"] as const;
 
@@ -43,6 +46,21 @@ export default function RunHistory() {
       else next.delete(id);
       return next;
     });
+
+  const exportRun = async (id: string, format: "html" | "json") => {
+    try {
+      const run = await api.getRun(id);
+      if (!run.report) throw new Error(RUN_HISTORY_COPY.exportFailed);
+      const text = format === "html" ? exportReportHtml(run.report) : exportReportJson(run.report);
+      downloadText(
+        reportFilename(run.report, format),
+        text,
+        format === "html" ? "text/html" : "application/json",
+      );
+    } catch {
+      toast.error(RUN_HISTORY_COPY.exportFailed);
+    }
+  };
 
   return (
     <div>
@@ -110,7 +128,24 @@ export default function RunHistory() {
 
           <Card className="p-0">
             {shown.map((r) => (
-              <RunRow key={r.id} run={r} selected={selected.has(r.id)} onSelect={toggle} />
+              <RunRow
+                key={r.id}
+                run={r}
+                selected={selected.has(r.id)}
+                onSelect={toggle}
+                extraActions={
+                  r.status === "done" ? (
+                    <>
+                      <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "html")}>
+                        {RUN_HISTORY_COPY.exportHtml}
+                      </Button>
+                      <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "json")}>
+                        {RUN_HISTORY_COPY.exportJson}
+                      </Button>
+                    </>
+                  ) : undefined
+                }
+              />
             ))}
           </Card>
         </>
