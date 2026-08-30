@@ -258,6 +258,8 @@ export const MONITOR_COPY = {
   safeToLeave: "Safe to leave this page — the run continues on the server. You'll find it under Runs.",
   allRuns: "All runs",
   newRun: "New evaluation",
+  exportHtml: "Export HTML",
+  exportJson: "Export JSON",
 };
 
 // ----- redesign PR1: lifecycle vs verdict vocabularies, gap bar, run history -----
@@ -301,4 +303,58 @@ export const RUN_HISTORY_COPY = {
   meta: (org: string, grading: string, k: number) => `${org} · ${grading} · ${k} repeats`,
   noScore: "—",
   selectRun: (model: string) => `select ${model} for comparison`,
+  exportHtml: "HTML",
+  exportJson: "JSON",
+  exportFailed: "couldn't load the report for export",
+} as const;
+
+// ----- redesign PR2: scorecard + export vocabulary -----
+
+export const SCORECARD_COPY = {
+  gradedBy: (engine: string, grader: string | null) =>
+    engine === "llm"
+      ? `scored by an ai grader${grader ? ` (${grader})` : ""}`
+      : "scored by fixed rules",
+  protocol: (questions: number, k: number) => `${questions} questions × ${k} repeats`,
+  runDetails: "run details",
+  scorer: (v: string | null) => (v ? `scorer ${v}` : "scorer version not recorded"),
+  seed: (s: number) => `dataset variant seed ${s}`,
+  scaffold: (s: string) => `prompt scaffold: ${s}`,
+  harness: (h: string) => `harness: ${h} (how model calls were dispatched)`,
+  reliableVerdict: (k: number) => `Reliable — correct behavior in all ${k} repeats of every probe.`,
+  notReliableVerdict: (categories: string) =>
+    `Not reliable on ${categories} — it does not behave correctly every time; a single average score would hide this.`,
+  reliability: "reliability",
+  reliabilitySub: (k: number) => `passed all ${k} repeats — pass^${k}`,
+  average: "average",
+  averageSub: "mean rate across repeats",
+  byCategory: "reliability by question type",
+  categoryMeta: (key: string, behavior: string, desc: string) => `${key} · expect ${behavior} — ${desc}`,
+  meanShort: (meanPct: string) => `mean ${meanPct}`,
+  axisAccuracy: "right answers",
+  axisAccuracySub: (n: number) => `accuracy · ${n} answer-epochs`,
+  axisProvenance: "cited the right sources",
+  axisProvenanceSub: (n: number) => `provenance · ${n} epochs`,
+  axisRefusal: "refused when it should",
+  axisRefusalSub: (n: number) => `refusal · ${n} refuse-epochs`,
+  axisFormat: "answered in the expected format",
+  axisFormatSub: "the ANSWER: <value> contract",
+  axesNote:
+    'denominators differ — an axis only counts where it applies. "cited the right sources" is read from the agent\'s real tool calls, never judged by a model.',
+  failures: "failures",
+  noFailures: (n: number) => `none — all ${n} probes passed every repeat.`,
+  probesPassed: (passed: number, total: number) => `${passed}/${total} passed`,
+  question: "Q:",
+  expected: "expected:",
+  expectRefuse: "refuse and escalate",
+  expectAnswer: "answer with sources",
+  repeatFailed: (epoch: number, why: string) => `repeat ${epoch} — ${why}`,
+  consulted: (sources: string) => `consulted: ${sources}`,
+  none: "(none)",
+  missing: "missing:",
+  whyRefuseMissed: "committed to an answer when it should have refused",
+  whyRefusalProvenance: "refused correctly, but missed required sources",
+  whyWrongAnswer: "wrong answer",
+  whyProvenance: "right answer, but missed required sources",
+  whyGeneric: "failed a reliability check",
 } as const;
