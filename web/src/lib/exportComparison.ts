@@ -2,8 +2,8 @@ import { gapPoints } from "@/components/viz/GapBar";
 import { COMPARE_COPY, conflictLabel } from "@/copy";
 import { pct, shortModel } from "@/lib/format";
 import type { EvaluationSummary } from "@/types";
-import { downloadText } from "./download";
-import { esc } from "./exportReport";
+import { downloadText } from "@/lib/download";
+import { esc, filenameSegment } from "./exportReport";
 import type { PairOutcome } from "./comparePlan";
 
 export interface ComparisonExport {
@@ -83,8 +83,7 @@ ${pairTables}
 }
 
 export function downloadComparison(data: ComparisonExport, format: "html" | "json"): void {
-  const clean = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  const date = clean(data.generated_at.slice(0, 10)) || "undated";
+  const date = filenameSegment(data.generated_at.slice(0, 10)) || "undated";
   const name = `tessera-comparison-${data.evaluations.length}-evals-${date}.${format}`;
   const text = format === "html" ? exportComparisonHtml(data) : exportComparisonJson(data);
   downloadText(name, text, format === "html" ? "text/html" : "application/json");

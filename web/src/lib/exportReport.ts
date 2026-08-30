@@ -15,10 +15,17 @@ export function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Restrict a user-derived filename segment to safe, portable characters. */
+export function filenameSegment(s: string): string {
+  return s
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/\.{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function reportFilename(report: Report, ext: "html" | "json"): string {
-  const clean = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/\.{2,}/g, "-").replace(/^-+|-+$/g, "");
-  const date = clean(report.header.created.slice(0, 10)) || "undated";
-  return `tessera-${clean(report.header.org ?? "run")}-${clean(shortModel(report.header.model))}-${date}.${ext}`;
+  const date = filenameSegment(report.header.created.slice(0, 10)) || "undated";
+  return `tessera-${filenameSegment(report.header.org ?? "run")}-${filenameSegment(shortModel(report.header.model))}-${date}.${ext}`;
 }
 
 export function exportReportJson(report: Report): string {

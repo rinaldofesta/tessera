@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ComparisonResult, EvaluationSummary } from "@/types";
-import { exportComparisonHtml, exportComparisonJson } from "./exportComparison";
+
+vi.mock("@/lib/download", () => ({ downloadText: vi.fn() }));
+
+import { downloadText } from "@/lib/download";
+import { downloadComparison, exportComparisonHtml, exportComparisonJson } from "./exportComparison";
 
 const XSS = "<script>alert(1)</script>";
 
@@ -38,12 +42,28 @@ const data = {
 };
 
 describe("exportComparisonHtml", () => {
-  const html = exportComparisonHtml(data);
   it("contains no script tags and escapes hostile strings", () => {
+    const html = exportComparisonHtml({
+      ...data,
+      generated_at: `generated-${XSS}`,
+      intervention: `intervention-${XSS}`,
+      evaluations: [{ ...evaluation, org: `org-${XSS}` }],
+      pairs: [{
+        challenger: `challenger-${XSS}`,
+        result: {
+          ...result,
+          categories: [{ ...result.categories[0], key: `category-${XSS}` }],
+        },
+      }],
+    });
+
     expect(html.toLowerCase()).not.toContain("<script");
-    expect(html).toContain("&lt;script&gt;");
+    for (const value of ["org", "challenger", "intervention", "generated", "category"]) {
+      expect(html).toContain(`${value}-&lt;script&gt;alert(1)&lt;/script&gt;`);
+    }
   });
   it("is a standalone document with the drift verdict and pair table", () => {
+    const html = exportComparisonHtml(data);
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("Protocol drift detected");
     expect(html).toContain("0.0312");
@@ -56,4 +76,13 @@ describe("exportComparisonJson", () => {
   });
 });
 
-void vi;
+describe("downloadComparison", () => {
+  it("uses a safe filename when generated_at begins with a dot run", () => {
+    vi.mocked(downloadText).mockClear();
+    downloadComparison({ ...data, generated_at: "..........evil" }, "html");
+
+    const [filename] = vi.mocked(downloadText).mock.calls[0];
+    expect(filename).toMatch(/^[A-Za-z0-9._-]+$/);
+    expect(filename).not.toContain("..");
+  });
+});
