@@ -14,8 +14,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { RUN_HISTORY_COPY, STATUS_COPY } from "@/copy";
 import { useAsync } from "@/hooks";
-import { downloadText } from "@/lib/download";
-import { exportReportHtml, exportReportJson, reportFilename } from "@/lib/exportReport";
+import { downloadReport } from "@/lib/exportReport";
 
 const STATUSES = ["running", "done", "error"] as const;
 
@@ -51,12 +50,7 @@ export default function RunHistory() {
     try {
       const run = await api.getRun(id);
       if (!run.report) throw new Error(RUN_HISTORY_COPY.exportFailed);
-      const text = format === "html" ? exportReportHtml(run.report) : exportReportJson(run.report);
-      downloadText(
-        reportFilename(run.report, format),
-        text,
-        format === "html" ? "text/html" : "application/json",
-      );
+      downloadReport(run.report, format);
     } catch {
       toast.error(RUN_HISTORY_COPY.exportFailed);
     }

@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MONITOR_COPY } from "@/copy";
-import { downloadText } from "@/lib/download";
-import { exportReportHtml, exportReportJson, reportFilename } from "@/lib/exportReport";
+import { downloadReport } from "@/lib/exportReport";
 import type { Report, RunStatus } from "@/types";
 
 const MAX_POLL_FAILURES = 5;
@@ -179,22 +178,14 @@ export default function RunMonitor() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                downloadText(reportFilename(report, "html"), exportReportHtml(report), "text/html")
-              }
+              onClick={() => downloadReport(report, "html")}
             >
               {MONITOR_COPY.exportHtml}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                downloadText(
-                  reportFilename(report, "json"),
-                  exportReportJson(report),
-                  "application/json",
-                )
-              }
+              onClick={() => downloadReport(report, "json")}
             >
               {MONITOR_COPY.exportJson}
             </Button>

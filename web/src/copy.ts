@@ -316,7 +316,6 @@ export const SCORECARD_COPY = {
       ? `scored by an ai grader${grader ? ` (${grader})` : ""}`
       : "scored by fixed rules",
   protocol: (questions: number, k: number) => `${questions} questions × ${k} repeats`,
-  runDetails: "run details",
   scorer: (v: string | null) => (v ? `scorer ${v}` : "scorer version not recorded"),
   seed: (s: number) => `dataset variant seed ${s}`,
   scaffold: (s: string) => `prompt scaffold: ${s}`,

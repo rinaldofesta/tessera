@@ -1,4 +1,5 @@
 import { SCORECARD_COPY, conflictLabel } from "@/copy";
+import { downloadText } from "./download";
 import { pct, shortModel } from "@/lib/format";
 import type { Report } from "@/types";
 
@@ -20,6 +21,15 @@ export function reportFilename(report: Report, ext: "html" | "json"): string {
 
 export function exportReportJson(report: Report): string {
   return JSON.stringify(report, null, 2);
+}
+
+export function downloadReport(report: Report, format: "html" | "json"): void {
+  const text = format === "html" ? exportReportHtml(report) : exportReportJson(report);
+  downloadText(
+    reportFilename(report, format),
+    text,
+    format === "html" ? "text/html" : "application/json",
+  );
 }
 
 const CSS = `
