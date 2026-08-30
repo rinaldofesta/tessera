@@ -15,14 +15,14 @@ const item = {
     protocol_hash: "abcdef0123456789deadbeef",
     execution_hash: "fedcba9876543210cafebabe",
     protocol: {}, artifact: {},
-    runtime: { effective_models: ["claude-sonnet-4"] },
+    runtime: { effective_models: ["claude-sonnet-4"], inspect_ai_version: "0.3.1", tessera_version: "1.2.0" },
     timing: { duration_seconds: 42.5 },
-    usage: { billed_cost: 0.1234 },
+    usage: { total_tokens: 48213, billed_cost: 0.1234 },
   },
 } as unknown as EvaluationSummary;
 
 describe("EvaluationDetail", () => {
-  it("shows fingerprints, effective model, and cost", () => {
+  it("shows fingerprints, effective model, cost, runtime, and tokens", () => {
     render(
       <EvaluationDetail
         item={item}
@@ -33,6 +33,8 @@ describe("EvaluationDetail", () => {
     expect(screen.getByText("claude-sonnet-4")).toBeInTheDocument();
     expect(screen.getByText(/tool error · timeout/)).toBeInTheDocument();
     expect(screen.getByText("×3")).toBeInTheDocument();
+    expect(screen.getByText(/0\.3\.1.*tessera 1\.2\.0/)).toBeInTheDocument();
+    expect(screen.getByText("48,213")).toBeInTheDocument();
   });
 
   it("says so when there are no signatures", () => {

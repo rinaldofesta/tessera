@@ -36,8 +36,21 @@ export function EvaluationDetail({ item, diagnostics }: { item: EvaluationSummar
             <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{C.billedCost}</dt>
             <dd className="tabular-nums">
               {receipt.usage.billed_cost == null ? C.notReported : `$${receipt.usage.billed_cost.toFixed(4)}`}
-              {receipt.timing.duration_seconds != null && ` · ${C.duration(receipt.timing.duration_seconds.toFixed(1))}`}
             </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{C.durationLabel}</dt>
+            <dd className="tabular-nums">
+              {receipt.timing.duration_seconds == null ? C.notReported : C.duration(receipt.timing.duration_seconds.toFixed(1))}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{C.runtime}</dt>
+            <dd>{receipt.runtime.inspect_ai_version ?? C.notReported} · tessera {receipt.runtime.tessera_version ?? C.notReported}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{C.tokensUsed}</dt>
+            <dd className="tabular-nums">{receipt.usage.total_tokens.toLocaleString()}</dd>
           </div>
         </dl>
       </div>

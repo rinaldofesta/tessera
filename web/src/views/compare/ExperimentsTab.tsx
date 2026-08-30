@@ -18,7 +18,7 @@ import { SectionLabel } from "@/components/viz/SectionLabel";
 import { StatTile } from "@/components/viz/StatTile";
 import { EXPERIMENTS_COPY as C } from "@/copy";
 import { useAsync } from "@/hooks";
-import { shortModel } from "@/lib/format";
+import { messageOf, pValue, shortModel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
   ComparisonIntervention,
@@ -81,13 +81,24 @@ export default function ExperimentsTab() {
   }));
   useEffect(() => {
     if (modelItems.length < 2) return;
-    setBaseline((value) => value || modelItems[0].value);
-    setChallenger(
-      (value) =>
-        value ||
-        modelItems.find((item) => item.value !== modelItems[0].value)?.value ||
-        "",
-    );
+    // A forked-from-comparison `?baseline=`/`?challenger=` can name a model that's no
+    // longer discoverable/credentialed (retired, renamed, an ad-hoc import) — treat an
+    // unresolvable value as unset so the "first ready model" default still applies,
+    // rather than leaving the Select blank and silently POSTing a dead model id. The
+    // challenger's fallback must exclude whichever model *baseline actually resolved
+    // to* (not always modelItems[0]) — otherwise a validly-seeded non-default baseline
+    // and an unset/invalid challenger can both resolve to the same model.
+    const known = new Set(modelItems.map((item) => item.value));
+    setBaseline((prevBaseline) => {
+      const resolvedBaseline = prevBaseline && known.has(prevBaseline) ? prevBaseline : modelItems[0].value;
+      setChallenger((prevChallenger) => {
+        if (prevChallenger && known.has(prevChallenger) && prevChallenger !== resolvedBaseline) {
+          return prevChallenger;
+        }
+        return modelItems.find((item) => item.value !== resolvedBaseline)?.value ?? "";
+      });
+      return resolvedBaseline;
+    });
   }, [modelItems]);
   useEffect(() => {
     if (!(experiments.data ?? []).some((item) => item.status === "running"))
@@ -110,7 +121,7 @@ export default function ExperimentsTab() {
       const result = await api.preflight(model);
       setPreflights((current) => ({ ...current, [model]: result }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
     } finally {
       setChecking(null);
     }
@@ -155,7 +166,7 @@ export default function ExperimentsTab() {
       setSelected(result.experiment_id);
       experiments.reload();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
     } finally {
       setLaunching(false);
     }
@@ -172,7 +183,7 @@ export default function ExperimentsTab() {
         ),
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
     }
   }
   async function resumeActive() {
@@ -182,7 +193,7 @@ export default function ExperimentsTab() {
       await api.resumeExperiment(active.id);
       experiments.reload();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
     }
   }
   return (
@@ -346,6 +357,8 @@ export default function ExperimentsTab() {
                     launching ||
                     !name ||
                     !baseline ||
+                    !Number.isInteger(repeats) ||
+                    repeats < 1 ||
                     (intervention === "model" &&
                       (!challenger || baseline === challenger))
                   }
@@ -501,14 +514,7 @@ export default function ExperimentsTab() {
               label={C.challengerOnly}
               value={String(comparison.overall.b_wins)}
             />
-            <StatTile
-              label={C.exactP}
-              value={
-                comparison.overall.p_value < 0.0001
-                  ? "<0.0001"
-                  : comparison.overall.p_value.toFixed(4)
-              }
-            />
+            <StatTile label={C.exactP} value={pValue(comparison.overall.p_value)} />
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             {C.pairedRepeats(

@@ -17,7 +17,9 @@ interface RunPickerProps {
 }
 
 /** The compare rail: ordered multi-select over the evaluation library.
- *  A selection keeps its palette color for as long as it stays selected. */
+ *  Color and the "baseline" tag are the selection's *position* (index 0 = baseline,
+ *  index → palette slot) — deselecting an earlier item shifts every later one's color
+ *  and can hand off the baseline tag, matching planPairs' "first = baseline" rule. */
 export function RunPicker({ evaluations, selected, onToggle, onInspect, importSlot }: RunPickerProps) {
   const toggle = (id: string) =>
     onToggle(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);

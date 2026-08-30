@@ -45,7 +45,11 @@ const report: Report = {
   probes: [],
 };
 
-const comparison = (compatible: boolean, unexpected: string[] = []): ComparisonResult => ({
+const comparison = (
+  compatible: boolean,
+  unexpected: string[] = [],
+  diagnostics: ComparisonResult["diagnostics"] = { a: [], b: [] },
+): ComparisonResult => ({
   compatible, intervention: "model",
   changed_dimensions: ["model"], unexpected_dimensions: unexpected,
   overall: {
@@ -53,7 +57,7 @@ const comparison = (compatible: boolean, unexpected: string[] = []): ComparisonR
     both_pass: 4, both_fail: 1, discordant: 7, p_value: 0.0312, dropped: [],
   },
   categories: [],
-  diagnostics: { a: [], b: [] },
+  diagnostics,
 });
 
 const view = (search = "") =>
@@ -125,5 +129,29 @@ describe("AdHocTab", () => {
       el.getAttribute("aria-label")?.includes("reliable (pass^"),
     );
     expect(bars).toHaveLength(2);
+  });
+
+  it("shows the paired comparison's per-side failure signatures", async () => {
+    vi.mocked(api.listEvaluations).mockResolvedValue([ev("run:a", "x/a"), ev("run:b", "x/b")]);
+    vi.mocked(api.compareEvaluations).mockResolvedValue(comparison(true, [], {
+      a: [{ kind: "tool_error", signature: "timeout", count: 2 }],
+      b: [],
+    }));
+    view("?evals=run:a,run:b");
+    expect(await screen.findByText("baseline friction — a")).toBeInTheDocument();
+    expect(screen.getByText("challenger friction — b")).toBeInTheDocument();
+    expect(screen.getByText(/tool error · timeout/)).toBeInTheDocument();
+    expect(screen.getByText("×2")).toBeInTheDocument();
+    expect(screen.getByText("no recorded failure signatures")).toBeInTheDocument();
+  });
+
+  it("caps a ?evals= seed at the palette size so colors never collide", async () => {
+    const evals = Array.from({ length: 9 }, (_, i) => ev(`run:${i}`, `x/${i}`));
+    vi.mocked(api.listEvaluations).mockResolvedValue(evals);
+    vi.mocked(api.compareEvaluations).mockResolvedValue(comparison(true));
+    view(`?evals=${evals.map((e) => e.id).join(",")}`);
+    // 8 selected (capped) → 7 baseline-vs-challenger calls, not 8.
+    await waitFor(() => expect(api.compareEvaluations).toHaveBeenCalledTimes(7));
+    expect(api.compareEvaluations).not.toHaveBeenCalledWith("run:0", "run:8", "model");
   });
 });

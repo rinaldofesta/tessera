@@ -1,10 +1,10 @@
 import { gapPoints } from "@/components/viz/GapBar";
 import { COMPARE_COPY, conflictLabel } from "@/copy";
-import { pct, shortModel } from "@/lib/format";
+import { pct, pValue, shortModel } from "@/lib/format";
 import type { EvaluationSummary } from "@/types";
 import { downloadText } from "@/lib/download";
 import { esc, filenameSegment } from "./exportReport";
-import type { PairOutcome } from "./comparePlan";
+import { driftSummary, type PairOutcome } from "./comparePlan";
 
 export interface ComparisonExport {
   generated_at: string;
@@ -34,13 +34,17 @@ const CSS = `
 `;
 
 export function exportComparisonHtml(data: ComparisonExport): string {
-  const drift = data.pairs.some((p) => !p.result.compatible);
-  const banner = drift
-    ? `<div class="card bad"><b>${esc(COMPARE_COPY.drift)}</b> — ${data.pairs
-        .filter((p) => p.result.unexpected_dimensions.length > 0)
-        .map((p) => esc(COMPARE_COPY.driftDetail(p.challenger, p.result.unexpected_dimensions.join(", "))))
-        .join("; ")}</div>`
-    : `<div class="card ok"><b>${esc(COMPARE_COPY.controlled)}</b> — ${esc(data.intervention)}</div>`;
+  // Mirror AdHocTab's live banner exactly (same driftSummary, same copy) instead of
+  // re-deriving drift ad hoc — the export previously dropped the "changed dimensions"
+  // disclosure the live UI shows on a controlled (non-drifting) comparison.
+  const summary = driftSummary(data.pairs);
+  const banner = summary.compatible
+    ? `<div class="card ok"><b>${esc(COMPARE_COPY.controlled)}</b> — ${esc(
+        COMPARE_COPY.controlledDetail(data.intervention, summary.changed.join(", ")),
+      )}</div>`
+    : `<div class="card bad"><b>${esc(COMPARE_COPY.drift)}</b> — ${summary.unexpectedByChallenger
+        .map(({ challenger, dims }) => esc(COMPARE_COPY.driftDetail(challenger, dims.join(", "))))
+        .join("; ")}</div>`;
 
   const evals = data.evaluations
     .map(
@@ -53,21 +57,29 @@ export function exportComparisonHtml(data: ComparisonExport): string {
     )
     .join("");
 
+  const headerRow = `<tr>${[
+    COMPARE_COPY.significanceCols.category,
+    COMPARE_COPY.significanceCols.matched,
+    COMPARE_COPY.significanceCols.aWins,
+    COMPARE_COPY.significanceCols.bWins,
+    COMPARE_COPY.significanceCols.p,
+  ].map((col) => `<th>${esc(col)}</th>`).join("")}</tr>`;
+
   const pairTables = data.pairs
     .map((p) => {
       const rows = [...p.result.categories, { ...p.result.overall, key: "OVERALL" }]
         .map(
           (row) => `<tr><td>${esc(row.key === "OVERALL" ? "OVERALL" : conflictLabel(row.key))}</td>
           <td class="n">${row.matched}</td><td class="n">${row.a_wins}</td>
-          <td class="n">${row.b_wins}</td><td class="n">${row.p_value.toFixed(4)}</td></tr>`,
+          <td class="n">${row.b_wins}</td><td class="n">${pValue(row.p_value)}</td></tr>`,
         )
         .join("");
+      const dropped = p.result.overall.dropped;
+      const unmatched = dropped.length > 0
+        ? `<p class="faint">${esc(COMPARE_COPY.unmatched(dropped.length, dropped.join(", ")))}</p>`
+        : "";
       return `<h2>baseline vs ${esc(p.challenger)}</h2>
-      <table><tr><th>${esc(COMPARE_COPY.significanceCols.category)}</th><th>${esc(
-        COMPARE_COPY.significanceCols.matched,
-      )}</th><th>${esc(COMPARE_COPY.significanceCols.aWins)}</th><th>${esc(
-        COMPARE_COPY.significanceCols.bWins,
-      )}</th><th>${esc(COMPARE_COPY.significanceCols.p)}</th></tr>${rows}</table>`;
+      <table>${headerRow}${rows}</table>${unmatched}`;
     })
     .join("");
 

@@ -23,7 +23,7 @@ import { COMPARE_COPY, COMPARE_PALETTE, conflictLabel } from "@/copy";
 import { useAsync } from "@/hooks";
 import { driftSummary, parseEvalsParam, planPairs, type PairOutcome } from "@/lib/comparePlan";
 import { downloadComparison } from "@/lib/exportComparison";
-import { shortModel } from "@/lib/format";
+import { messageOf, pValue, shortModel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ComparisonIntervention, Diagnostic, Report } from "@/types";
 
@@ -41,10 +41,6 @@ const INTERVENTIONS: { value: ComparisonIntervention; label: string }[] = [
 type Metric = keyof typeof COMPARE_COPY.metricTabs;
 
 const METRICS = Object.keys(COMPARE_COPY.metricTabs) as Metric[];
-
-const messageOf = (error: unknown) => error instanceof Error ? error.message : String(error);
-
-const pValue = (value: number) => value < 0.0001 ? "< 0.0001" : value.toFixed(4);
 
 export default function AdHocTab() {
   const [searchParams] = useSearchParams();
@@ -88,7 +84,16 @@ export default function AdHocTab() {
     if (seeded.current || evaluations.data == null) return;
     seeded.current = true;
     const known = new Set(evaluations.data.map((item) => item.id));
-    setSelected(parseEvalsParam(searchParams.get("evals")).filter((id) => known.has(id)));
+    // The picker only ever offers up to COMPARE_PALETTE.length selections — but a
+    // shared `?evals=` link (or the "Compare selected" link from Run History, which
+    // has no such cap) can list more. Clamp here so every downstream color lookup
+    // (RunPicker's dot, the gap/category-bar series) stays inside the palette instead
+    // of going undefined or aliasing two evaluations to the same color.
+    setSelected(
+      parseEvalsParam(searchParams.get("evals"))
+        .filter((id) => known.has(id))
+        .slice(0, COMPARE_PALETTE.length),
+    );
   }, [evaluations.data, searchParams]);
 
   useEffect(() => {
@@ -212,12 +217,16 @@ export default function AdHocTab() {
 
   const exportComparison = (format: "html" | "json") => {
     if (!pairs) return;
-    downloadComparison({
-      generated_at: new Date().toISOString(),
-      intervention,
-      evaluations: selectedSummaries,
-      pairs,
-    }, format);
+    try {
+      downloadComparison({
+        generated_at: new Date().toISOString(),
+        intervention,
+        evaluations: selectedSummaries,
+        pairs,
+      }, format);
+    } catch (error) {
+      toast.error(COMPARE_COPY.exportFailed(messageOf(error)));
+    }
   };
 
   const pickFile = async (file: File | undefined) => {
@@ -237,7 +246,12 @@ export default function AdHocTab() {
     if (!uploaded) return;
     setAdding(true);
     try {
-      await api.importEvaluation(uploaded.file);
+      const saved = await api.importEvaluation(uploaded.file);
+      setSelected((current) =>
+        current.includes(saved.id) || current.length >= COMPARE_PALETTE.length
+          ? current
+          : [...current, saved.id],
+      );
       evaluations.reload();
       setUploaded(null);
     } catch (error) {
@@ -289,7 +303,7 @@ export default function AdHocTab() {
         <RunPicker
           evaluations={library}
           selected={selected}
-          onToggle={setSelected}
+          onToggle={(next) => { setUploaded(null); setSelected(next); }}
           onInspect={setInspected}
           importSlot={importSlot}
         />
@@ -464,6 +478,35 @@ export default function AdHocTab() {
                 </div>
               )}
             </Card>
+          );
+        })()}
+
+        {selected.length === 2 && pairs?.[0] && selectedSummaries[0] && selectedSummaries[1] && (() => {
+          const { a, b } = pairs[0].result.diagnostics;
+          const arms = [
+            { label: COMPARE_COPY.baselineTag, item: selectedSummaries[0], data: a },
+            { label: COMPARE_COPY.challengerTag, item: selectedSummaries[1], data: b },
+          ];
+          return (
+            <div className="grid gap-3 md:grid-cols-2">
+              {arms.map(({ label, item, data }) => (
+                <Card key={label} className="p-4">
+                  <SectionLabel>{COMPARE_COPY.frictionTitle(label, shortModel(item.model))}</SectionLabel>
+                  {data.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{COMPARE_COPY.noSignatures}</p>
+                  ) : (
+                    <div className="space-y-1 text-xs">
+                      {data.slice(0, 8).map((entry) => (
+                        <div key={`${entry.kind}:${entry.signature}`} className="flex justify-between gap-3">
+                          <span className="truncate">{entry.kind.replace(/_/g, " ")} · {entry.signature}</span>
+                          <span className="tabular-nums text-muted-foreground">×{entry.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
           );
         })()}
 

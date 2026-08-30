@@ -25,7 +25,7 @@ export function driftSummary(pairs: PairOutcome[]): {
   unexpectedByChallenger: { challenger: string; dims: string[] }[];
 } {
   return {
-    compatible: pairs.every((p) => p.result.compatible),
+    compatible: pairs.length > 0 && pairs.every((p) => p.result.compatible),
     changed: [...new Set(pairs.flatMap((p) => p.result.changed_dimensions))],
     unexpectedByChallenger: pairs
       .filter((p) => p.result.unexpected_dimensions.length > 0)
