@@ -2,21 +2,13 @@ import { useState } from "react";
 import { GapBar } from "@/components/viz/GapBar";
 import { SectionLabel } from "@/components/viz/SectionLabel";
 import { StatTile } from "@/components/viz/StatTile";
-import { VerdictBadge, verdictOf } from "@/components/viz/VerdictBadge";
+import { VerdictBadge, verdictOf, whyFailed } from "@/components/viz/VerdictBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { fmtTs, pct, shortModel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { Probe, Report } from "@/types";
+import type { Report } from "@/types";
 import { CONFLICT, SCORECARD_COPY as C, conflictLabel } from "@/copy";
-
-function whyFailed(p: Probe, e: Probe["failures"][number]): string {
-  if (p.expected_behavior === "refuse" && !e.refusal_ok) return C.whyRefuseMissed;
-  if (p.expected_behavior === "refuse" && e.refusal_ok && !e.provenance_ok) return C.whyRefusalProvenance;
-  if (!e.accuracy_ok) return C.whyWrongAnswer;
-  if (!e.provenance_ok) return C.whyProvenance;
-  return C.whyGeneric;
-}
 
 export function Scorecard({ report }: { report: Report }) {
   const h = report.header;
@@ -38,7 +30,7 @@ export function Scorecard({ report }: { report: Report }) {
         </div>
         <p className="mt-1 text-[11px] text-faint">
           {C.scorer(h.scorer_version ?? null)}
-          {h.seed ? ` · ${C.seed(h.seed)}` : ""}
+          {h.seed != null ? ` · ${C.seed(h.seed)}` : ""}
           {h.scaffold && h.scaffold !== "baseline" ? ` · ${C.scaffold(h.scaffold)}` : ""}
           {h.harness && h.harness !== "single" ? ` · ${C.harness(h.harness)}` : ""}
         </p>
@@ -116,7 +108,7 @@ export function Scorecard({ report }: { report: Report }) {
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-accent/40"
               >
                 <span className="flex items-center gap-2 font-semibold">
-                  <VerdictBadge verdict={p.epochs_passed > 0 ? "inconsistent" : "unreliable"} />
+                  <VerdictBadge verdict={verdictOf(0, p.mean_pass)} />
                   {p.probe_id} · {conflictLabel(p.conflict_type)}
                 </span>
                 <span className="shrink-0 text-muted-foreground">
@@ -137,7 +129,7 @@ export function Scorecard({ report }: { report: Report }) {
                   </div>
                   {p.failures.map((e) => (
                     <div key={e.epoch} className="border-l-2 border-verdict-unreliable/55 pl-3">
-                      <div className="font-semibold">{C.repeatFailed(e.epoch, whyFailed(p, e))}</div>
+                      <div className="font-semibold">{C.repeatFailed(e.epoch, whyFailed(p.expected_behavior, e))}</div>
                       <blockquote className="italic text-muted-foreground">"{e.answer}"</blockquote>
                       <div className="text-[11px] text-faint">
                         {C.consulted(e.consulted.join(", ") || C.none)}

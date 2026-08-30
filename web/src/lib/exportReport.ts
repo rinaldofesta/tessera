@@ -1,5 +1,7 @@
-import { SCORECARD_COPY, conflictLabel } from "@/copy";
+import { conflictLabel } from "@/copy";
 import { downloadText } from "./download";
+import { gapPoints } from "@/components/viz/GapBar";
+import { whyFailed } from "@/components/viz/VerdictBadge";
 import { pct, shortModel } from "@/lib/format";
 import type { Report } from "@/types";
 
@@ -53,18 +55,10 @@ const CSS = `
   blockquote { margin: 4px 0; padding-left: 10px; border-left: 2px solid #2e3340; color: #9aa1b0; font-style: italic; }
 `;
 
-function whyFailed(expected: string, f: Report["probes"][number]["failures"][number]): string {
-  // Same vocabulary as the on-screen Scorecard — SCORECARD_COPY is the single source.
-  if (expected === "refuse" && !f.refusal_ok) return SCORECARD_COPY.whyRefuseMissed;
-  if (expected === "refuse" && f.refusal_ok && !f.provenance_ok) return SCORECARD_COPY.whyRefusalProvenance;
-  if (!f.accuracy_ok) return SCORECARD_COPY.whyWrongAnswer;
-  if (!f.provenance_ok) return SCORECARD_COPY.whyProvenance;
-  return SCORECARD_COPY.whyGeneric;
-}
-
 function bar(passK: number, mean: number): string {
-  const p = Math.min(1, Math.max(0, passK));
-  const m = Math.max(Math.min(1, Math.max(0, mean)), p);
+  const clamp01 = (x: number) => (Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
+  const p = clamp01(passK);
+  const m = Math.max(clamp01(mean), p);
   const fill = `<i${p >= 1 - 1e-9 ? ' class="full"' : ""} style="width:${(p * 100).toFixed(2)}%"></i>`;
   const gap = `<em style="width:${((m - p) * 100).toFixed(2)}%"></em>`;
   return `<div class="bar">${fill}${gap}</div>`;
@@ -75,7 +69,7 @@ export function exportReportHtml(report: Report): string {
   const h = report.header;
   const failed = report.probes.filter((p) => !p.pass_k);
   const failedCats = report.categories.filter((c) => c.pass_k_rate < 1);
-  const gapPp = Math.round((report.overall.mean_rate - report.overall.pass_k_rate) * 100);
+  const gapPp = gapPoints(report.overall.pass_k_rate, report.overall.mean_rate);
 
   const verdict = failedCats.length === 0
     ? `<div class="card verdict-ok"><b>✓ RELIABLE</b> — correct behavior in all ${h.k} repeats of every probe.</div>`
@@ -123,8 +117,8 @@ export function exportReportHtml(report: Report): string {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tessera — ${esc(shortModel(h.model))} on ${esc(h.org ?? "run")}</title><style>${CSS}</style></head><body>
 <h1>${esc(shortModel(h.model))}</h1>
-<p class="muted">${esc(h.org ?? "")} · ${h.engine === "llm" ? `scored by an ai grader${h.grader ? ` (${esc(h.grader)})` : ""}` : "scored by fixed rules"} · ${report.probes.length} questions × ${h.k} repeats · ${esc(h.created)}</p>
-<p class="faint">${esc(h.scorer_version ? `scorer ${h.scorer_version}` : "scorer version not recorded")}${h.seed ? ` · dataset variant seed ${h.seed}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · prompt scaffold: ${esc(h.scaffold)}` : ""}${h.harness && h.harness !== "single" ? ` · harness: ${esc(h.harness)}` : ""}</p>
+<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${h.engine === "llm" ? `scored by an ai grader${h.grader ? ` (${esc(h.grader)})` : ""}` : "scored by fixed rules"} · ${report.probes.length} questions × ${h.k} repeats · ${esc(h.created)}</p>
+<p class="faint">${esc(h.scorer_version ? `scorer ${h.scorer_version}` : "scorer version not recorded")}${h.seed != null ? ` · dataset variant seed ${h.seed}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · prompt scaffold: ${esc(h.scaffold)}` : ""}${h.harness && h.harness !== "single" ? ` · harness: ${esc(h.harness)}` : ""}</p>
 ${verdict}
 <div class="tiles">
   <div class="card"><span class="faint">reliability</span><b>${pct(report.overall.pass_k_rate)}</b><span class="faint">passed all ${h.k} repeats — pass^${h.k}</span></div>

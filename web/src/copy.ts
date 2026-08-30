@@ -260,6 +260,7 @@ export const MONITOR_COPY = {
   newRun: "New evaluation",
   exportHtml: "Export HTML",
   exportJson: "Export JSON",
+  exportFailed: "couldn't export the report",
 };
 
 // ----- redesign PR1: lifecycle vs verdict vocabularies, gap bar, run history -----

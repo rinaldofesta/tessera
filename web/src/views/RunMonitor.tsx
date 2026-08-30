@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { api } from "@/api";
 import { Scorecard } from "@/components/Scorecard";
 import { VerdictMosaic, type TileState } from "@/components/VerdictMosaic";
@@ -140,6 +141,15 @@ export default function RunMonitor() {
   const suite = report?.header.org ?? configuration?.suite;
   const grading = report?.header.engine ?? configuration?.grading;
 
+  const exportRun = (format: "html" | "json") => {
+    if (!report) return;
+    try {
+      downloadReport(report, format);
+    } catch {
+      toast.error(MONITOR_COPY.exportFailed);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-1 font-display text-2xl font-bold tracking-tight">
@@ -178,14 +188,14 @@ export default function RunMonitor() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => downloadReport(report, "html")}
+              onClick={() => exportRun("html")}
             >
               {MONITOR_COPY.exportHtml}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => downloadReport(report, "json")}
+              onClick={() => exportRun("json")}
             >
               {MONITOR_COPY.exportJson}
             </Button>
