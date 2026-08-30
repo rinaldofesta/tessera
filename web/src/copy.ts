@@ -379,9 +379,6 @@ export const RUN_HISTORY_COPY = {
 } as const;
 
 export const EXPERIMENTS_COPY = {
-  eyebrow: "Experiments",
-  title: "Change one dimension at a time",
-  subtitle: "run a resumable matrix, then compare paired evidence against a declared baseline",
   error: (detail: string) => detail,
   preflightUnchecked: "not checked",
   preflightReady: (model: string | null | undefined) => `ready · ${model ?? "identity unreported"}`,
