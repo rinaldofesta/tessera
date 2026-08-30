@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RUN_HISTORY_COPY } from "@/copy";
+import { RUN_HISTORY_COPY, STATUS_COPY } from "@/copy";
 import { useAsync } from "@/hooks";
 
 const STATUSES = ["running", "done", "error"] as const;
@@ -90,7 +90,7 @@ export default function RunHistory() {
               <SelectContent>
                 <SelectItem value="all">{RUN_HISTORY_COPY.statusAll}</SelectItem>
                 {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>{STATUS_COPY[s]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
