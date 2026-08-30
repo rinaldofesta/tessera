@@ -332,6 +332,7 @@ export const SCORECARD_COPY = {
   byCategory: "reliability by question type",
   byAxis: "how it failed, by axis",
   categoryMeta: (key: string, behavior: string, desc: string) => `${key} · expect ${behavior} — ${desc}`,
+  categoryLine: (k: number, meanPct: string) => `pass^${k} · mean ${meanPct}`,
   meanShort: (meanPct: string) => `mean ${meanPct}`,
   axisAccuracy: "right answers",
   axisAccuracySub: (n: number) => `accuracy · ${n} answer-epochs`,

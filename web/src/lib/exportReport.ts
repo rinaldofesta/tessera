@@ -81,7 +81,7 @@ export function exportReportHtml(report: Report): string {
     .map(
       (c) => `<div class="card">
         <table><tr><td>${esc(conflictLabel(c.key))}</td>
-        <td style="text-align:right"><b>${pct(c.pass_k_rate)}</b> <span class="faint">pass^${h.k} · mean ${pct(c.mean_rate)}</span></td></tr></table>
+        <td style="text-align:right"><b>${pct(c.pass_k_rate)}</b> <span class="faint">${esc(SCORECARD_COPY.categoryLine(h.k, pct(c.mean_rate)))}</span></td></tr></table>
         ${bar(c.pass_k_rate, c.mean_rate)}</div>`,
     )
     .join("");
@@ -90,6 +90,7 @@ export function exportReportHtml(report: Report): string {
     <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisAccuracy)}</span><b>${pct(report.axes.accuracy_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisAccuracySub(report.axes.n_answer_epochs))}</span></div>
     <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisProvenance)}</span><b>${pct(report.axes.provenance_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisProvenanceSub(report.axes.n_total_epochs))}</span></div>
     <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisRefusal)}</span><b>${pct(report.axes.refusal_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisRefusalSub(report.axes.n_refuse_epochs))}</span></div>
+    ${report.axes.answer_format_rate != null ? `<div class="card"><span class="faint">${esc(SCORECARD_COPY.axisFormat)}</span><b>${pct(report.axes.answer_format_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisFormatSub)}</span></div>` : ""}
   </div>`;
 
   const failures = failed.length === 0

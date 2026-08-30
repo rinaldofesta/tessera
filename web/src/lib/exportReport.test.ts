@@ -87,6 +87,17 @@ describe("exportReportHtml", () => {
     expect(html).toContain("<details");
     expect(html).toContain("repeat 2");
   });
+
+  it("renders and escapes the answer-format axis when present", () => {
+    const withAnswerFormat: Report = {
+      ...report,
+      axes: { ...report.axes, answer_format_rate: 0.9 },
+    };
+    const formatHtml = exportReportHtml(withAnswerFormat);
+
+    expect(formatHtml).toContain("&lt;value&gt;");
+    expect(formatHtml).not.toContain("<value>");
+  });
 });
 
 describe("exportReportJson", () => {
