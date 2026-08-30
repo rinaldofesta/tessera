@@ -43,6 +43,13 @@ describe("GapBar", () => {
     expect(seg(container, "gap").style.width).toBe("0%");
   });
 
+  it("renders non-finite inputs as an empty, zero-gap bar", () => {
+    const { container, getByRole } = render(<GapBar passK={Number.NaN} mean={Number.NaN} k={3} />);
+    expect(seg(container, "pass").style.width).toBe("0%");
+    expect(seg(container, "gap").style.width).toBe("0%");
+    expect(getByRole("img").getAttribute("aria-label")).toContain("0 point gap");
+  });
+
   it("clamps inconsistent inputs (passK > mean) to a zero gap and warns", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { container } = render(<GapBar passK={0.9} mean={0.8} k={3} />);

@@ -86,6 +86,12 @@ describe("exportReportHtml", () => {
   it("renders every failure behind a native details element", () => {
     expect(html).toContain("<details");
     expect(html).toContain("repeat 2");
+    expect(html).toContain("inconsistent · ✗ p1");
+  });
+
+  it("formats the header timestamp like the scorecard", () => {
+    expect(html).toContain("2026-08-29 14:02");
+    expect(html).not.toContain("2026-08-29T14:02:11Z");
   });
 
   it("renders and escapes the answer-format axis when present", () => {
@@ -119,5 +125,6 @@ describe("reportFilename", () => {
     const filename = reportFilename(weird, "html");
     expect(filename).toMatch(/^[A-Za-z0-9._-]+$/);
     expect(filename.endsWith(".html")).toBe(true);
+    expect(filename).not.toContain("..");
   });
 });

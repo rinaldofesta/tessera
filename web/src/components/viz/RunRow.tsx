@@ -70,7 +70,7 @@ export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
         <div className="mt-0.5 font-mono text-[10px] text-faint">{fmtTs(run.created_at)}</div>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Button variant="ghost" size="xs" nativeButton={false} render={<Link role="link" to={`/runs/${run.id}`} />}>
           {RUN_HISTORY_COPY.details}
         </Button>

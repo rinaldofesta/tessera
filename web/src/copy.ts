@@ -327,7 +327,6 @@ export const SCORECARD_COPY = {
   reliability: "reliability",
   reliabilitySub: (k: number) => `passed all ${k} repeats — pass^${k}`,
   average: "average",
-  averageSub: "mean rate across repeats",
   averageSubWithGap: (gapPp: number) => `mean rate across repeats · gap ${gapPp} pp`,
   byCategory: "reliability by question type",
   byAxis: "how it failed, by axis",

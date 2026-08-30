@@ -1,8 +1,8 @@
-import { SCORECARD_COPY, conflictLabel } from "@/copy";
+import { SCORECARD_COPY, VERDICT_COPY, conflictLabel } from "@/copy";
 import { downloadText } from "./download";
 import { gapPoints } from "@/components/viz/GapBar";
 import { whyFailed } from "@/components/viz/VerdictBadge";
-import { pct, shortModel } from "@/lib/format";
+import { fmtTs, pct, shortModel } from "@/lib/format";
 import type { Report } from "@/types";
 
 /** Escape the five HTML metacharacters. Every report string passes through here. */
@@ -16,7 +16,7 @@ export function esc(s: string): string {
 }
 
 export function reportFilename(report: Report, ext: "html" | "json"): string {
-  const clean = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  const clean = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/\.{2,}/g, "-").replace(/^-+|-+$/g, "");
   const date = clean(report.header.created.slice(0, 10)) || "undated";
   return `tessera-${clean(report.header.org ?? "run")}-${clean(shortModel(report.header.model))}-${date}.${ext}`;
 }
@@ -75,7 +75,7 @@ export function exportReportHtml(report: Report): string {
     ? `<div class="card verdict-ok"><b>✓</b> ${esc(SCORECARD_COPY.reliableVerdict(h.k))}</div>`
     : `<div class="card verdict-bad"><b>✗</b> ${esc(
         SCORECARD_COPY.notReliableVerdict(failedCats.map((c) => conflictLabel(c.key)).join(", ")),
-      )}</b></div>`;
+      )}</div>`;
 
   const categories = report.categories
     .map(
@@ -97,7 +97,7 @@ export function exportReportHtml(report: Report): string {
     ? `<p class="muted">${esc(SCORECARD_COPY.noFailures(report.probes.length))}</p>`
     : failed
         .map(
-          (p) => `<details class="card"><summary>✗ ${esc(p.probe_id)} · ${esc(
+          (p) => `<details class="card"><summary>${esc(VERDICT_COPY[p.epochs_passed > 0 ? "inconsistent" : "unreliable"])} · ✗ ${esc(p.probe_id)} · ${esc(
             conflictLabel(p.conflict_type),
           )} <span class="faint">${esc(SCORECARD_COPY.probesPassed(p.epochs_passed, p.epochs_total))}</span></summary>
           ${p.failures[0] ? `<p><span class="muted">${esc(SCORECARD_COPY.question)}</span> ${esc(p.failures[0].question)}</p>` : ""}
@@ -118,7 +118,7 @@ export function exportReportHtml(report: Report): string {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tessera — ${esc(shortModel(h.model))} on ${esc(h.org ?? "run")}</title><style>${CSS}</style></head><body>
 <h1>${esc(shortModel(h.model))}</h1>
-<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${esc(SCORECARD_COPY.gradedBy(h.engine, h.grader ?? null))} · ${esc(SCORECARD_COPY.protocol(report.probes.length, h.k))} · ${esc(h.created)}</p>
+<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${esc(SCORECARD_COPY.gradedBy(h.engine, h.grader ?? null))} · ${esc(SCORECARD_COPY.protocol(report.probes.length, h.k))} · ${esc(fmtTs(h.created))}</p>
 <p class="faint">${esc(SCORECARD_COPY.scorer(h.scorer_version ?? null))}${h.seed != null ? ` · ${esc(SCORECARD_COPY.seed(h.seed))}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · ${esc(SCORECARD_COPY.scaffold(h.scaffold))}` : ""}${h.harness && h.harness !== "single" ? ` · ${esc(SCORECARD_COPY.harness(h.harness))}` : ""}</p>
 ${verdict}
 <div class="tiles">

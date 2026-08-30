@@ -12,7 +12,7 @@ interface GapBarProps {
   className?: string;
 }
 
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const clamp01 = (x: number) => (Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
 
 export function gapPoints(passK: number, mean: number): number {
   const p = clamp01(passK);

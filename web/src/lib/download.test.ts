@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { downloadText } from "./download";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("downloadText", () => {
-  it("creates an object URL, clicks a download anchor, and revokes the URL", () => {
+  it("creates an object URL, clicks a download anchor, and revokes the URL on the next tick", () => {
+    vi.useFakeTimers();
     const created: Blob[] = [];
     const create = vi.fn((b: Blob) => {
       created.push(b);
@@ -21,6 +25,8 @@ describe("downloadText", () => {
     const anchor = click.mock.instances[0] as HTMLAnchorElement;
     expect(anchor.download).toBe("report.html");
     expect(anchor.href).toBe("blob:fake");
+    expect(revoke).not.toHaveBeenCalled();
+    vi.runAllTimers();
     expect(revoke).toHaveBeenCalledWith("blob:fake");
   });
 });

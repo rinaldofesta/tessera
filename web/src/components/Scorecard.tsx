@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GapBar } from "@/components/viz/GapBar";
+import { GapBar, gapPoints } from "@/components/viz/GapBar";
 import { SectionLabel } from "@/components/viz/SectionLabel";
 import { StatTile } from "@/components/viz/StatTile";
 import { VerdictBadge, verdictOf, whyFailed } from "@/components/viz/VerdictBadge";
@@ -16,6 +16,7 @@ export function Scorecard({ report }: { report: Report }) {
   const [open, setOpen] = useState<string | null>(failed[0]?.probe_id ?? null);
   const failedCats = report.categories.filter((c) => c.pass_k_rate < 1);
   const reliable = failedCats.length === 0;
+  const gapPp = gapPoints(report.overall.pass_k_rate, report.overall.mean_rate);
 
   return (
     <div className="space-y-5 text-[13px]">
@@ -53,7 +54,7 @@ export function Scorecard({ report }: { report: Report }) {
       {/* overall */}
       <div className="grid grid-cols-2 gap-2">
         <StatTile label={C.reliability} value={pct(report.overall.pass_k_rate)} sub={C.reliabilitySub(h.k)} />
-        <StatTile label={C.average} value={pct(report.overall.mean_rate)} sub={C.averageSub} />
+        <StatTile label={C.average} value={pct(report.overall.mean_rate)} sub={C.averageSubWithGap(gapPp)} />
       </div>
 
       {/* by conflict type */}
@@ -85,13 +86,16 @@ export function Scorecard({ report }: { report: Report }) {
       </div>
 
       {/* axes */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <StatTile label={C.axisAccuracy} value={pct(report.axes.accuracy_rate)} sub={C.axisAccuracySub(report.axes.n_answer_epochs)} />
-        <StatTile label={C.axisProvenance} value={pct(report.axes.provenance_rate)} sub={C.axisProvenanceSub(report.axes.n_total_epochs)} />
-        <StatTile label={C.axisRefusal} value={pct(report.axes.refusal_rate)} sub={C.axisRefusalSub(report.axes.n_refuse_epochs)} />
-        {report.axes.answer_format_rate != null && (
-          <StatTile label={C.axisFormat} value={pct(report.axes.answer_format_rate)} sub={C.axisFormatSub} />
-        )}
+      <div>
+        <SectionLabel>{C.byAxis}</SectionLabel>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          <StatTile label={C.axisAccuracy} value={pct(report.axes.accuracy_rate)} sub={C.axisAccuracySub(report.axes.n_answer_epochs)} />
+          <StatTile label={C.axisProvenance} value={pct(report.axes.provenance_rate)} sub={C.axisProvenanceSub(report.axes.n_total_epochs)} />
+          <StatTile label={C.axisRefusal} value={pct(report.axes.refusal_rate)} sub={C.axisRefusalSub(report.axes.n_refuse_epochs)} />
+          {report.axes.answer_format_rate != null && (
+            <StatTile label={C.axisFormat} value={pct(report.axes.answer_format_rate)} sub={C.axisFormatSub} />
+          )}
+        </div>
       </div>
       <p className="text-[11px] text-faint">{C.axesNote}</p>
 

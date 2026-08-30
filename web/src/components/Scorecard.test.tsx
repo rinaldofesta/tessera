@@ -79,6 +79,12 @@ describe("Scorecard", () => {
     );
   });
 
+  it("labels the axes and gives average the same gap caption as the export", () => {
+    render(<Scorecard report={report} />);
+    expect(screen.getByText("how it failed, by axis")).toBeInTheDocument();
+    expect(screen.getByText("mean rate across repeats · gap 25 pp")).toBeInTheDocument();
+  });
+
   it("badges categories with reliability verdicts, not lifecycle", () => {
     render(<Scorecard report={report} />);
     // "inconsistent" appears on the category row AND on the open failure header — assert presence, not uniqueness
