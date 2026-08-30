@@ -1,4 +1,4 @@
-import { conflictLabel } from "@/copy";
+import { SCORECARD_COPY, conflictLabel } from "@/copy";
 import { downloadText } from "./download";
 import { gapPoints } from "@/components/viz/GapBar";
 import { whyFailed } from "@/components/viz/VerdictBadge";
@@ -72,10 +72,10 @@ export function exportReportHtml(report: Report): string {
   const gapPp = gapPoints(report.overall.pass_k_rate, report.overall.mean_rate);
 
   const verdict = failedCats.length === 0
-    ? `<div class="card verdict-ok"><b>✓ RELIABLE</b> — correct behavior in all ${h.k} repeats of every probe.</div>`
-    : `<div class="card verdict-bad"><b>✗ NOT RELIABLE on ${esc(
-        failedCats.map((c) => conflictLabel(c.key)).join(", "),
-      )}</b> — it does not behave correctly every time; a single average score would hide this.</div>`;
+    ? `<div class="card verdict-ok"><b>✓</b> ${esc(SCORECARD_COPY.reliableVerdict(h.k))}</div>`
+    : `<div class="card verdict-bad"><b>✗</b> ${esc(
+        SCORECARD_COPY.notReliableVerdict(failedCats.map((c) => conflictLabel(c.key)).join(", ")),
+      )}</b></div>`;
 
   const categories = report.categories
     .map(
@@ -87,26 +87,26 @@ export function exportReportHtml(report: Report): string {
     .join("");
 
   const axes = `<div class="tiles">
-    <div class="card"><span class="faint">right answers</span><b>${pct(report.axes.accuracy_rate)}</b><span class="faint">accuracy · ${report.axes.n_answer_epochs} answer-epochs</span></div>
-    <div class="card"><span class="faint">cited the right sources</span><b>${pct(report.axes.provenance_rate)}</b><span class="faint">provenance · ${report.axes.n_total_epochs} epochs</span></div>
-    <div class="card"><span class="faint">refused when it should</span><b>${pct(report.axes.refusal_rate)}</b><span class="faint">refusal · ${report.axes.n_refuse_epochs} refuse-epochs</span></div>
+    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisAccuracy)}</span><b>${pct(report.axes.accuracy_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisAccuracySub(report.axes.n_answer_epochs))}</span></div>
+    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisProvenance)}</span><b>${pct(report.axes.provenance_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisProvenanceSub(report.axes.n_total_epochs))}</span></div>
+    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisRefusal)}</span><b>${pct(report.axes.refusal_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisRefusalSub(report.axes.n_refuse_epochs))}</span></div>
   </div>`;
 
   const failures = failed.length === 0
-    ? `<p class="muted">none — all ${report.probes.length} probes passed every repeat.</p>`
+    ? `<p class="muted">${esc(SCORECARD_COPY.noFailures(report.probes.length))}</p>`
     : failed
         .map(
           (p) => `<details class="card"><summary>✗ ${esc(p.probe_id)} · ${esc(
             conflictLabel(p.conflict_type),
-          )} <span class="faint">${p.epochs_passed}/${p.epochs_total} passed</span></summary>
-          ${p.failures[0] ? `<p><span class="muted">Q:</span> ${esc(p.failures[0].question)}</p>` : ""}
-          <p><span class="muted">expected:</span> ${p.expected_behavior === "refuse" ? "refuse and escalate" : "answer with sources"}</p>
+          )} <span class="faint">${esc(SCORECARD_COPY.probesPassed(p.epochs_passed, p.epochs_total))}</span></summary>
+          ${p.failures[0] ? `<p><span class="muted">${esc(SCORECARD_COPY.question)}</span> ${esc(p.failures[0].question)}</p>` : ""}
+          <p><span class="muted">${esc(SCORECARD_COPY.expected)}</span> ${esc(p.expected_behavior === "refuse" ? SCORECARD_COPY.expectRefuse : SCORECARD_COPY.expectAnswer)}</p>
           ${p.failures
             .map(
-              (f) => `<p><b>repeat ${f.epoch} — ${esc(whyFailed(p.expected_behavior, f))}</b></p>
+              (f) => `<p><b>${esc(SCORECARD_COPY.repeatFailed(f.epoch, whyFailed(p.expected_behavior, f)))}</b></p>
               <blockquote>"${esc(f.answer)}"</blockquote>
-              <p class="faint">consulted: ${esc(f.consulted.join(", ") || "(none)")}${
-                f.missing.length > 0 ? ` · missing: <b>${esc(f.missing.join(", "))}</b>` : ""
+              <p class="faint">${esc(SCORECARD_COPY.consulted(f.consulted.join(", ") || SCORECARD_COPY.none))}${
+                f.missing.length > 0 ? ` · ${esc(SCORECARD_COPY.missing)} <b>${esc(f.missing.join(", "))}</b>` : ""
               }</p>`,
             )
             .join("")}</details>`,
@@ -117,16 +117,16 @@ export function exportReportHtml(report: Report): string {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tessera — ${esc(shortModel(h.model))} on ${esc(h.org ?? "run")}</title><style>${CSS}</style></head><body>
 <h1>${esc(shortModel(h.model))}</h1>
-<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${h.engine === "llm" ? `scored by an ai grader${h.grader ? ` (${esc(h.grader)})` : ""}` : "scored by fixed rules"} · ${report.probes.length} questions × ${h.k} repeats · ${esc(h.created)}</p>
-<p class="faint">${esc(h.scorer_version ? `scorer ${h.scorer_version}` : "scorer version not recorded")}${h.seed != null ? ` · dataset variant seed ${h.seed}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · prompt scaffold: ${esc(h.scaffold)}` : ""}${h.harness && h.harness !== "single" ? ` · harness: ${esc(h.harness)}` : ""}</p>
+<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${esc(SCORECARD_COPY.gradedBy(h.engine, h.grader ?? null))} · ${esc(SCORECARD_COPY.protocol(report.probes.length, h.k))} · ${esc(h.created)}</p>
+<p class="faint">${esc(SCORECARD_COPY.scorer(h.scorer_version ?? null))}${h.seed != null ? ` · ${esc(SCORECARD_COPY.seed(h.seed))}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · ${esc(SCORECARD_COPY.scaffold(h.scaffold))}` : ""}${h.harness && h.harness !== "single" ? ` · ${esc(SCORECARD_COPY.harness(h.harness))}` : ""}</p>
 ${verdict}
 <div class="tiles">
-  <div class="card"><span class="faint">reliability</span><b>${pct(report.overall.pass_k_rate)}</b><span class="faint">passed all ${h.k} repeats — pass^${h.k}</span></div>
-  <div class="card"><span class="faint">average</span><b>${pct(report.overall.mean_rate)}</b><span class="faint">mean across repeats · gap ${gapPp} pp</span></div>
+  <div class="card"><span class="faint">${esc(SCORECARD_COPY.reliability)}</span><b>${pct(report.overall.pass_k_rate)}</b><span class="faint">${esc(SCORECARD_COPY.reliabilitySub(h.k))}</span></div>
+  <div class="card"><span class="faint">${esc(SCORECARD_COPY.average)}</span><b>${pct(report.overall.mean_rate)}</b><span class="faint">${esc(SCORECARD_COPY.averageSubWithGap(gapPp))}</span></div>
 </div>
-<h2>reliability by question type</h2>${categories}
-<h2>how it failed, by axis</h2>${axes}
-<p class="faint">denominators differ — an axis only counts where it applies. "cited the right sources" is read from the agent's real tool calls, never judged by a model.</p>
-<h2>failures</h2>${failures}
+<h2>${esc(SCORECARD_COPY.byCategory)}</h2>${categories}
+<h2>${esc(SCORECARD_COPY.byAxis)}</h2>${axes}
+<p class="faint">${esc(SCORECARD_COPY.axesNote)}</p>
+<h2>${esc(SCORECARD_COPY.failures)}</h2>${failures}
 </body></html>`;
 }

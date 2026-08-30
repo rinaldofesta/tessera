@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/api";
 import { Scorecard } from "@/components/Scorecard";
 import { VerdictMosaic, type TileState } from "@/components/VerdictMosaic";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/viz/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -157,18 +157,7 @@ export default function RunMonitor() {
       </h1>
 
       <div className="mb-5 flex items-center gap-3">
-        <Badge
-          variant="outline"
-          className={
-            status === "error"
-              ? "border-[var(--verdict-unreliable)]/55 text-[var(--verdict-unreliable)]"
-              : status === "done"
-                ? "border-[var(--verdict-reliable)]/55 text-[var(--verdict-reliable)]"
-                : "border-[var(--primary)]/55 text-[var(--primary)]"
-          }
-        >
-          {MONITOR_COPY.status[status]}
-        </Badge>
+        <StatusBadge status={status} />
         {status === "running" && (
           <span className="text-sm text-[var(--muted-foreground)]">
             {MONITOR_COPY.elapsed(elapsed(startedAt.current))}
