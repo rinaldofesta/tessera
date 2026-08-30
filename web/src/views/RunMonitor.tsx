@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "@/api";
+import { Scorecard } from "@/components/Scorecard";
 import { VerdictMosaic, type TileState } from "@/components/VerdictMosaic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MONITOR_COPY } from "@/copy";
+import { downloadText } from "@/lib/download";
+import { exportReportHtml, exportReportJson, reportFilename } from "@/lib/exportReport";
 import type { Report, RunStatus } from "@/types";
 
 const MAX_POLL_FAILURES = 5;
@@ -166,11 +169,43 @@ export default function RunMonitor() {
 
       {questions > 0 && (
         <div className="mb-6">
-          <VerdictMosaic questions={questions} repeats={repeats} tiles={tiles} />
+          <VerdictMosaic questions={questions} repeats={repeats} tiles={tiles} size="lg" />
         </div>
       )}
 
-      {(model || suite || grading) && (
+      {report && (
+        <>
+          <div className="mb-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                downloadText(reportFilename(report, "html"), exportReportHtml(report), "text/html")
+              }
+            >
+              {MONITOR_COPY.exportHtml}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                downloadText(
+                  reportFilename(report, "json"),
+                  exportReportJson(report),
+                  "application/json",
+                )
+              }
+            >
+              {MONITOR_COPY.exportJson}
+            </Button>
+          </div>
+          <Card className="p-5">
+            <Scorecard report={report} />
+          </Card>
+        </>
+      )}
+
+      {!report && (model || suite || grading) && (
         <Card className="p-4">
           <dl className="text-[13px]">
             <div className="flex justify-between py-1.5">

@@ -9,6 +9,8 @@ interface VerdictMosaicProps {
   /** One entry per tile, row-major. Omit while the run is in flight. */
   tiles?: TileState[];
   label?: string;
+  /** md: row-height tiles (34px columns). lg: detail-page tiles (44px columns). */
+  size?: "md" | "lg";
 }
 
 const TILE: Record<TileState, string> = {
@@ -24,8 +26,10 @@ export function VerdictMosaic({
   repeats,
   tiles,
   label,
+  size = "md",
 }: VerdictMosaicProps): JSX.Element {
   const total = Math.max(0, questions) * Math.max(0, repeats);
+  const col = size === "lg" ? 44 : 34;
   const states: TileState[] = Array.from(
     { length: total },
     (_, index) => tiles?.[index] ?? "pending",
@@ -37,7 +41,7 @@ export function VerdictMosaic({
         className="grid gap-[3px]"
         style={{
           gridTemplateColumns: `repeat(${Math.max(1, questions)}, minmax(0, 1fr))`,
-          maxWidth: `${Math.max(1, questions) * 34}px`,
+          maxWidth: `${Math.max(1, questions) * col}px`,
         }}
         role="img"
         aria-label={label ?? MOSAIC_COPY.aria(questions, repeats)}
