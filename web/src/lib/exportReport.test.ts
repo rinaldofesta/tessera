@@ -103,4 +103,10 @@ describe("reportFilename", () => {
     const weird = { ...report, header: { ...report.header, model: "a b/c:d" } };
     expect(reportFilename(weird, "json")).toBe("tessera-meridian-c-d-2026-08-29.json");
   });
+  it("sanitizes hostile created values", () => {
+    const weird = { ...report, header: { ...report.header, created: "../../\x00 x" } };
+    const filename = reportFilename(weird, "html");
+    expect(filename).toMatch(/^[A-Za-z0-9._-]+$/);
+    expect(filename.endsWith(".html")).toBe(true);
+  });
 });

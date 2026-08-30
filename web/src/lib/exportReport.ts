@@ -14,7 +14,7 @@ export function esc(s: string): string {
 
 export function reportFilename(report: Report, ext: "html" | "json"): string {
   const clean = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  const date = report.header.created.slice(0, 10);
+  const date = clean(report.header.created.slice(0, 10)) || "undated";
   return `tessera-${clean(report.header.org ?? "run")}-${clean(shortModel(report.header.model))}-${date}.${ext}`;
 }
 
