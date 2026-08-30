@@ -46,7 +46,9 @@ export default function RunHistory() {
       return next;
     });
 
-  const compareHref = `/compare?evals=${[...selected].map((id) => `run:${id}`).join(",")}`;
+  const compareHref = `/compare?evals=${encodeURIComponent(
+    [...selected].map((id) => `run:${id}`).join(","),
+  )}`;
 
   const exportRun = async (id: string, format: "html" | "json") => {
     try {
@@ -121,7 +123,11 @@ export default function RunHistory() {
               {RUN_HISTORY_COPY.showing(shown.length, rows.length)}
             </span>
             {selected.size >= 2 && (
-              <Button nativeButton={false} render={<Link role="link" to={compareHref} />}>
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={<Link role="link" to={compareHref} />}
+              >
                 {RUN_HISTORY_COPY.compareSelected}
               </Button>
             )}

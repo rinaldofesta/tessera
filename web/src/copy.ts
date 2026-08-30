@@ -375,11 +375,13 @@ export const RUN_HISTORY_COPY = {
   exportHtml: "HTML",
   exportJson: "JSON",
   exportFailed: "couldn't load the report for export",
-  compareSelected: "Compare selected",
+  compareSelected: "Compare selected →",
 } as const;
 
 export const EXPERIMENTS_COPY = {
   error: (detail: string) => detail,
+  defaultName: "model contrast",
+  createTitle: "new controlled experiment",
   preflightUnchecked: "not checked",
   preflightReady: (model: string | null | undefined) => `ready · ${model ?? "identity unreported"}`,
   experimentName: "experiment name",
@@ -408,7 +410,9 @@ export const EXPERIMENTS_COPY = {
   status: "status",
   cellCount: "cells",
   cost: "cost",
+  unknown: "unknown",
   baseline: "baseline",
+  noBaseline: "—",
   pairedResult: "paired experiment result",
   pairedObservations: "paired observations",
   baselineOnly: "baseline only passes",

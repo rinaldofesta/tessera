@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "@/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,22 +28,19 @@ import type {
 
 function PreflightBadge({ result }: { result: PreflightResult | undefined }) {
   if (!result)
-    return (
-      <span className="text-[10px] text-muted-foreground">
-        {C.preflightUnchecked}
-      </span>
-    );
+    return <Badge variant="outline" className="text-[10px] text-muted-foreground">{C.preflightUnchecked}</Badge>;
   return (
-    <span
+    <Badge
+      variant="outline"
       className={cn(
-        "border px-1.5 py-0.5 text-[10px]",
+        "text-[10px]",
         result.ok
-          ? "border-verdict-reliable/55 text-verdict-reliable"
-          : "border-verdict-unreliable/55 text-verdict-unreliable",
+          ? "text-verdict-reliable"
+          : "text-verdict-unreliable",
       )}
     >
       {result.ok ? C.preflightReady(result.effective_model) : result.error}
-    </span>
+    </Badge>
   );
 }
 
@@ -50,7 +48,7 @@ export default function ExperimentsTab() {
   const [query] = useSearchParams();
   const setup = useAsync(() => api.evalSetup(), []);
   const experiments = useAsync(() => api.listExperiments(), []);
-  const [name, setName] = useState("model contrast");
+  const [name, setName] = useState<string>(C.defaultName);
   const [intervention, setIntervention] =
     useState<Extract<ComparisonIntervention, "model" | "scaffold">>("model");
   const [baseline, setBaseline] = useState(query.get("baseline") ?? "");
@@ -189,14 +187,18 @@ export default function ExperimentsTab() {
   }
   return (
     <div className="space-y-4 pt-4">
-      {[error, setup.error, experiments.error].filter(Boolean).map((detail) => (
-        <Alert key={detail} variant="destructive">
+      {[
+        ["local", error],
+        ["setup", setup.error],
+        ["experiments", experiments.error],
+      ].filter(([, detail]) => Boolean(detail)).map(([source, detail]) => (
+        <Alert key={source} variant="destructive">
           <AlertDescription>{C.error(detail!)}</AlertDescription>
         </Alert>
       ))}
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="p-4 xl:col-span-2">
-          <SectionLabel>new controlled experiment</SectionLabel>
+          <SectionLabel>{C.createTitle}</SectionLabel>
           {setup.loading ? (
             <Skeleton className="h-48 w-full" />
           ) : (
@@ -432,11 +434,11 @@ export default function ExperimentsTab() {
               label={C.cost}
               value={
                 active.total_cost == null
-                  ? "unknown"
+                  ? C.unknown
                   : `$${active.total_cost.toFixed(4)}`
               }
             />
-            <StatTile label={C.baseline} value={baselineVariant ?? "—"} />
+            <StatTile label={C.baseline} value={baselineVariant ?? C.noBaseline} />
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             {active.request.variants.map((variant) => (
