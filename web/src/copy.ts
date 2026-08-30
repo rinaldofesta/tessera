@@ -11,6 +11,7 @@ export const SHELL_COPY = {
   navItems: {
     home: "Home",
     runs: "Runs",
+    compare: "Compare",
     experiments: "Experiments",
     suites: "Test suites",
     providers: "Providers",
@@ -19,7 +20,7 @@ export const SHELL_COPY = {
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
   apiOriginHint: "The backend this app is talking to",
-  shortcuts: "Keyboard: 1–6 switch views",
+  shortcuts: "Keyboard: 1–7 switch views",
   help: "Help & docs",
 } as const;
 
@@ -258,3 +259,45 @@ export const MONITOR_COPY = {
   allRuns: "All runs",
   newRun: "New evaluation",
 };
+
+// ----- redesign PR1: lifecycle vs verdict vocabularies, gap bar, run history -----
+
+/** Lifecycle only. "finished" is neutral on purpose — completion says nothing
+ *  about reliability; VerdictBadge speaks to that. */
+export const STATUS_COPY = {
+  running: "running…",
+  done: "finished",
+  error: "failed",
+} as const;
+
+export const VERDICT_COPY = {
+  reliable: "reliable",
+  inconsistent: "inconsistent",
+  unreliable: "unreliable",
+} as const;
+
+export const GAP_COPY = {
+  /** Full-sentence aria for the gap bar. Gap is percentage points, never "%" of anything. */
+  aria: (passKPct: string, k: number, meanPct: string, gapPp: number) =>
+    `${passKPct} reliable (pass^${k}), ${meanPct} mean success, ${gapPp} point gap`,
+  headline: (k: number, meanPct: string, gapPp: number) =>
+    `pass^${k} · mean ${meanPct} · gap ${gapPp} pp`,
+} as const;
+
+export const RUN_HISTORY_COPY = {
+  eyebrow: "Run history",
+  title: "Every evaluation you've launched",
+  subtitle:
+    "raw runs — live, finished, and errored. The gap bar reads: solid = reliable every repeat, hatched = passes only sometimes.",
+  filterPlaceholder: "filter by model, suite, or grader…",
+  statusAll: "all statuses",
+  suiteAll: "all suites",
+  showing: (shown: number, total: number) =>
+    shown === total ? `${total} runs` : `${shown} of ${total} runs`,
+  empty: "no runs yet — launch the first evaluation to start the history",
+  emptyCta: "New evaluation",
+  details: "Details",
+  rerun: "Rerun",
+  repeats: (k: number) => `${k} repeats`,
+  selectRun: (model: string) => `select ${model} for comparison`,
+} as const;
