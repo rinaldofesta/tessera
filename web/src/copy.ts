@@ -49,6 +49,74 @@ export const CONFLICT: Record<string, { label: string; behavior: "answer" | "ref
 
 export const conflictLabel = (key: string) => CONFLICT[key]?.label ?? key;
 
+// ----- redesign PR3: compare view -----
+
+/** Persistent per-selection colors — assigned by selection order, max 8 selections. */
+export const COMPARE_PALETTE = [
+  "#8b93ff", "#4ade80", "#fbbf24", "#f87171",
+  "#67e8f9", "#f9a8d4", "#fb923c", "#a3e635",
+] as const;
+
+export const COMPARE_COPY = {
+  eyebrow: "Compare",
+  title: "Evidence, side by side",
+  subtitle:
+    "pick up to 8 finished evaluations — each keeps its color while selected. The first pick is the baseline every other run is compared against.",
+  tabAdHoc: "ad-hoc",
+  tabExperiments: "experiments",
+  rail: "evaluations",
+  railEmpty: "no evaluations indexed yet — finished runs appear here automatically",
+  maxSelected: (n: number) => `up to ${n} selections`,
+  baselineTag: "baseline",
+  intervention: "intended change",
+  needTwo: "select at least two evaluations to compare",
+  controlled: "Controlled comparison",
+  controlledDetail: (intervention: string, changed: string) =>
+    `intended change: ${intervention}. Changed: ${changed || "nothing"} — no undeclared drift.`,
+  drift: "Protocol drift detected",
+  driftDetail: (challenger: string, dims: string) => `${challenger}: unexpected ${dims}`,
+  gapPanel: "the gap",
+  gapPanelSub: "mean − pass^k, in percentage points",
+  metricTabs: {
+    reliability: "reliability",
+    average: "average",
+    accuracy: "accuracy",
+    provenance: "provenance",
+    refusal: "refusal",
+  },
+  metricByCategory: "by question type",
+  metricOverall: "overall, per evaluation",
+  significance: "paired outcomes — probe × repeat",
+  significanceCols: {
+    category: "question type",
+    matched: "paired n",
+    aWins: "baseline only passes",
+    bWins: "challenger only passes",
+    p: "exact p",
+  },
+  unmatched: (n: number, list: string) => `${n} unmatched observation(s): ${list}`,
+  importButton: "Import .eval",
+  importHint: "inspect once, then explicitly add it to the evaluation library",
+  importInspecting: (name: string) => `local — ${name}`,
+  importAdd: "add to library",
+  importAdding: "adding…",
+  importClose: "close",
+  importFailed: (detail: string) => `upload failed: ${detail}`,
+  detail: "receipt & diagnostics",
+  protocolFingerprint: "protocol fingerprint",
+  executionFingerprint: "execution fingerprint",
+  effectiveModel: "effective model",
+  notReported: "not reported",
+  duration: (s: string) => `${s}s`,
+  billedCost: "billed cost",
+  signatures: "failure signatures",
+  noSignatures: "no recorded failure signatures",
+  forkExperiment: "fork as controlled experiment",
+  exportHtml: "Export HTML",
+  exportJson: "Export JSON",
+  loadFailed: (what: string, detail: string) => `${what}: ${detail}`,
+} as const;
+
 export const engineLabel = (engine: string) =>
   engine === "llm" ? "ai grader" : engine === "deterministic" ? "fixed rules" : engine;
 
