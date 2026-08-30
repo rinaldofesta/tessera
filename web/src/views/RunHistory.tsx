@@ -69,7 +69,7 @@ export default function RunHistory() {
         <Card className="p-10 text-center text-sm text-muted-foreground">
           <p>{RUN_HISTORY_COPY.empty}</p>
           <div className="mt-4">
-            <Button render={<Link to="/new" />}>
+            <Button nativeButton={false} render={<Link role="link" to="/new" />}>
               {RUN_HISTORY_COPY.emptyCta}
             </Button>
           </div>

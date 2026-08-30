@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/api";
 import { ConfirmStep, type RunDraft } from "@/components/launcher/ConfirmStep";
@@ -32,14 +32,18 @@ export default function Run() {
   });
   const [params] = useSearchParams();
   const fromId = params.get("from");
-  const [prefilled, setPrefilled] = useState(false);
+  // Which fromId we've already prefilled from, so a fresh /new?from=<id> deep-link
+  // still prefills even after an earlier one already completed on this mount.
+  const prefilledFor = useRef<string | null>(null);
 
   // Rerun deep-link: /new?from=<id> copies that run's config and jumps to confirm.
   useEffect(() => {
-    if (!fromId || prefilled || !setup.data) return;
+    if (!fromId || prefilledFor.current === fromId || !setup.data) return;
+    let alive = true;
     api
       .listRuns()
       .then((runs) => {
+        if (!alive) return;
         const source = runs.find((r) => r.id === fromId);
         if (!source) return;
         const known = setup.data!.models.map((m) => m.id);
@@ -49,8 +53,13 @@ export default function Run() {
         setStep(3);
       })
       .catch(() => {})
-      .finally(() => setPrefilled(true));
-  }, [fromId, prefilled, setup.data]);
+      .finally(() => {
+        prefilledFor.current = fromId;
+      });
+    return () => {
+      alive = false;
+    };
+  }, [fromId, setup.data]);
 
   // Seed server defaults without clobbering user edits.
   useEffect(() => {

@@ -39,7 +39,7 @@ export function GapBar({ passK, mean, k, className }: GapBarProps) {
     >
       <div
         data-seg="pass"
-        className={cn("h-full", p >= 1 ? "bg-verdict-reliable" : "bg-primary")}
+        className={cn("h-full", p >= 1 - 1e-9 ? "bg-verdict-reliable" : "bg-primary")}
         style={{ width: `${parseFloat((p * 100).toFixed(4))}%` }}
       />
       <div

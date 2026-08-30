@@ -27,7 +27,7 @@ export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
         type="checkbox"
         className="accent-[var(--primary)]"
         checked={selected}
-        disabled={run.status !== "done"}
+        disabled={!finished}
         onChange={(e) => onSelect(run.id, e.target.checked)}
         aria-label={RUN_HISTORY_COPY.selectRun(shortModel(run.model))}
       />
