@@ -300,6 +300,5 @@ export const RUN_HISTORY_COPY = {
   rerun: "Rerun",
   meta: (org: string, grading: string, k: number) => `${org} · ${grading} · ${k} repeats`,
   noScore: "—",
-  repeats: (k: number) => `${k} repeats`,
   selectRun: (model: string) => `select ${model} for comparison`,
 } as const;
