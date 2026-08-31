@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/api", () => ({
@@ -30,13 +30,25 @@ beforeEach(() => {
     models: [
       { id: "x/a", label: "A", provider: "x", readiness: "ready", source: "s", published: true, released: null, retired: null },
     ],
-    suites: [{ id: "toy", questions: 4 }],
+    suites: [{ id: "toy", kind: "builtin", questions: 4 }],
     sources: [],
   } as never);
   vi.mocked(api.watchRun).mockReturnValue(new FakeSource() as unknown as EventSource);
 });
 
-const view = () => render(<MemoryRouter initialEntries={["/new"]}><Run /></MemoryRouter>);
+function LocationDisplay() {
+  return <output data-testid="location-display">{useLocation().pathname}</output>;
+}
+
+const view = () => render(
+  <MemoryRouter initialEntries={["/new"]}>
+    <LocationDisplay />
+    <Routes>
+      <Route path="/new" element={<Run />} />
+      <Route path="*" element={<div>navigated away</div>} />
+    </Routes>
+  </MemoryRouter>,
+);
 
 describe("Run — launch left, watch right", () => {
   it("previews what will run before launch, mosaic pending", async () => {
@@ -57,5 +69,6 @@ describe("Run — launch left, watch right", () => {
     expect(await screen.findByText(/live — a on toy|live — x\/a on toy/i)).toBeInTheDocument();
     expect(screen.getByText("running…")).toBeInTheDocument();
     expect(api.startRun).toHaveBeenCalled();
+    expect(screen.getByTestId("location-display")).toHaveTextContent("/new");
   });
 });
