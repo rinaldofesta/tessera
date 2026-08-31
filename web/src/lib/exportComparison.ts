@@ -78,15 +78,15 @@ export function exportComparisonHtml(data: ComparisonExport): string {
       const unmatched = dropped.length > 0
         ? `<p class="faint">${esc(COMPARE_COPY.unmatched(dropped.length, dropped.join(", ")))}</p>`
         : "";
-      return `<h2>baseline vs ${esc(p.challenger)}</h2>
+      return `<h2>${esc(COMPARE_COPY.pairHeading(p.challenger))}</h2>
       <table>${headerRow}${rows}</table>${unmatched}`;
     })
     .join("");
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tessera — comparison of ${data.evaluations.length} evaluations</title><style>${CSS}</style></head><body>
-<h1>tessera — comparison</h1>
+<title>${esc(COMPARE_COPY.exportTitle(data.evaluations.length))}</title><style>${CSS}</style></head><body>
+<h1>${esc(COMPARE_COPY.exportHeading)}</h1>
 <p class="faint">${esc(data.generated_at)} · ${esc(COMPARE_COPY.intervention)}: ${esc(data.intervention)}</p>
 ${banner}
 <h2>${esc(COMPARE_COPY.gapPanel)}</h2>${evals}

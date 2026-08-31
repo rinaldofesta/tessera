@@ -27,16 +27,9 @@ import { messageOf, pValue, shortModel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ComparisonIntervention, Diagnostic, Report } from "@/types";
 
-const INTERVENTIONS: { value: ComparisonIntervention; label: string }[] = [
-  { value: "model", label: "model" },
-  { value: "scaffold", label: "scaffold" },
-  { value: "harness", label: "harness" },
-  { value: "grader", label: "grader" },
-  { value: "engine", label: "scoring engine" },
-  { value: "org", label: "test suite" },
-  { value: "seed", label: "dataset seed" },
-  { value: "k", label: "repeat count" },
-];
+const INTERVENTIONS: { value: ComparisonIntervention; label: string }[] = Object.entries(
+  COMPARE_COPY.interventions,
+).map(([value, label]) => ({ value: value as ComparisonIntervention, label }));
 
 type Metric = keyof typeof COMPARE_COPY.metricTabs;
 
