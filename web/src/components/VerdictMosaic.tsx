@@ -1,7 +1,18 @@
 import { MOSAIC_COPY } from "@/copy";
 import { cn } from "@/lib/utils";
+import type { Report } from "@/types";
 
 export type TileState = "pending" | "pass" | "fail";
+
+/** Lay out repeats as rows so each failed epoch lands on its actual tile. */
+export function tilesFrom(report: Report): TileState[] {
+  const repeats = report.probes[0]?.epochs_total ?? report.header.k;
+  return Array.from({ length: repeats }, (_, repeat) =>
+    report.probes.map((probe) =>
+      probe.failures.some((failure) => failure.epoch === repeat + 1) ? "fail" : "pass",
+    ),
+  ).flat();
+}
 
 interface VerdictMosaicProps {
   questions: number;
