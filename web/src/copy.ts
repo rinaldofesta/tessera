@@ -492,3 +492,20 @@ export const SCORECARD_COPY = {
   whyProvenance: "right answer, but missed required sources",
   whyGeneric: "failed a reliability check",
 } as const;
+
+// ----- redesign PR4: launch + live merge -----
+
+export const LIVE_COPY = {
+  willRunTitle: "what will run",
+  liveTitle: (model: string, suite: string) => `live — ${model} on ${suite}`,
+  doneTitle: (model: string) => `finished — ${model}`,
+  openDetail: "Open run detail →",
+  runAnother: "Run another evaluation",
+  failed: "The run failed",
+  reliable: (k: number) => `Reliable — correct behavior in all ${k} repeats of every probe.`,
+  notReliable: (categories: string) => `Not reliable on ${categories}.`,
+  reliability: "reliability",
+  reliabilitySub: (k: number) => `pass^${k}`,
+  average: "average",
+  averageSub: "mean across repeats",
+} as const;
