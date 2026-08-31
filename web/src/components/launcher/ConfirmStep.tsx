@@ -1,7 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { VerdictMosaic } from "@/components/VerdictMosaic";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { CONFIRM_COPY, WIZARD_COPY } from "@/copy";
 import type { EvalSetupModel } from "@/types";
 
@@ -62,33 +59,6 @@ export function ConfirmStep({
       <p className="mt-1 mb-5 text-sm text-[var(--muted-foreground)]">
         {CONFIRM_COPY.summary(questions, draft.epochs, draft.judge)}
       </p>
-
-      <div className="flex flex-wrap items-start gap-7">
-        <Card className="min-w-[320px] flex-1 p-4">
-          <dl className="text-[13px]">
-            {[
-              [CONFIRM_COPY.suite, draft.org],
-              [CONFIRM_COPY.model, draft.model],
-              [
-                CONFIRM_COPY.grading,
-                draft.judge === "llm"
-                  ? CONFIRM_COPY.llm
-                  : CONFIRM_COPY.deterministic,
-              ],
-              [CONFIRM_COPY.repeats, CONFIRM_COPY.repeatsValue(draft.epochs)],
-            ].map(([key, value], index, rows) => (
-              <div key={key as string}>
-                <div className="flex justify-between gap-6 py-1.5">
-                  <dt className="text-[var(--muted-foreground)]">{key}</dt>
-                  <dd className="text-right font-mono">{value}</dd>
-                </div>
-                {index < rows.length - 1 && <Separator />}
-              </div>
-            ))}
-          </dl>
-        </Card>
-        <VerdictMosaic questions={questions} repeats={draft.epochs} />
-      </div>
 
       <Collapsible className="mt-5">
         <CollapsibleTrigger className="group flex items-center gap-1.5 text-[13px] text-[var(--muted-foreground)] outline-none hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]">

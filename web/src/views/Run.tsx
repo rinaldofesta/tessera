@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { api } from "@/api";
+import { LiveRunPanel } from "@/components/LiveRunPanel";
+import { VerdictMosaic } from "@/components/VerdictMosaic";
+import { SectionLabel } from "@/components/viz/SectionLabel";
 import { ConfirmStep, type RunDraft } from "@/components/launcher/ConfirmStep";
 import { CUSTOM, ModelStep } from "@/components/launcher/ModelStep";
 import { StepNav, type StepId } from "@/components/launcher/StepNav";
 import { SuiteStep } from "@/components/launcher/SuiteStep";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useAsync } from "@/hooks";
-import { DATASET_LABELS } from "@/copy";
+import { CONFIRM_COPY, DATASET_LABELS, LIVE_COPY } from "@/copy";
 import { draftFromRun } from "@/lib/rerun";
 
 /** The starter suite if it exists, else the first available. */
@@ -16,13 +22,13 @@ function pickDefaultSuite(suites: { id: string }[]): string {
 }
 
 export default function Run() {
-  const navigate = useNavigate();
   const setup = useAsync(() => api.evalSetup(), []);
   const [step, setStep] = useState<StepId>(1);
   const [customId, setCustomId] = useState("");
   const [rescanning, setRescanning] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RunDraft>({
     org: "",
     model: "",
@@ -104,7 +110,8 @@ export default function Run() {
         seed: 0,
         ...(draft.judge === "llm" && draft.grader ? { grader: draft.grader } : {}),
       });
-      navigate(`/runs/${job_id}`);
+      setJobId(job_id);
+      setLaunching(false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
       setLaunching(false);
@@ -112,7 +119,7 @@ export default function Run() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       {setup.loading ? (
         <div className="grid gap-3">
           <Skeleton className="h-8 w-64" />
@@ -120,48 +127,84 @@ export default function Run() {
         </div>
       ) : (
         <>
-          <StepNav
-            current={step}
-            chosen={{
-              suite: step > 1 ? (DATASET_LABELS[draft.org] ?? draft.org) : undefined,
-              model: step > 2 ? effectiveModel : undefined,
-            }}
-            onJump={setStep}
-          />
-          {step === 1 && (
-            <SuiteStep
-              suites={setup.data?.suites ?? []}
-              value={draft.org}
-              onChange={(org) => setDraft((current) => ({ ...current, org }))}
-              onContinue={() => setStep(2)}
-            />
-          )}
-          {step === 2 && (
-            <ModelStep
-              models={models}
-              sources={sources}
-              value={draft.model}
-              customId={customId}
-              onChange={(model) => setDraft((current) => ({ ...current, model }))}
-              onCustomId={setCustomId}
-              onRescan={rescan}
-              rescanning={rescanning}
-              onBack={() => setStep(1)}
-              onContinue={() => setStep(3)}
-            />
-          )}
-          {step === 3 && (
-            <ConfirmStep
-              draft={{ ...draft, model: effectiveModel }}
-              questions={questions}
-              models={models}
-              onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              onBack={() => setStep(2)}
-              onLaunch={launch}
-              launching={launching}
-              error={error}
-            />
-          )}
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div>
+              <StepNav
+                current={step}
+                chosen={{
+                  suite: step > 1 ? (DATASET_LABELS[draft.org] ?? draft.org) : undefined,
+                  model: step > 2 ? effectiveModel : undefined,
+                }}
+                onJump={setStep}
+              />
+              {step === 1 && (
+                <SuiteStep
+                  suites={setup.data?.suites ?? []}
+                  value={draft.org}
+                  onChange={(org) => setDraft((current) => ({ ...current, org }))}
+                  onContinue={() => setStep(2)}
+                />
+              )}
+              {step === 2 && (
+                <ModelStep
+                  models={models}
+                  sources={sources}
+                  value={draft.model}
+                  customId={customId}
+                  onChange={(model) => setDraft((current) => ({ ...current, model }))}
+                  onCustomId={setCustomId}
+                  onRescan={rescan}
+                  rescanning={rescanning}
+                  onBack={() => setStep(1)}
+                  onContinue={() => setStep(3)}
+                />
+              )}
+              {step === 3 && (
+                <ConfirmStep
+                  draft={{ ...draft, model: effectiveModel }}
+                  questions={questions}
+                  models={models}
+                  onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+                  onBack={() => setStep(2)}
+                  onLaunch={launch}
+                  launching={launching}
+                  error={error}
+                />
+              )}
+            </div>
+
+            <aside>
+              {jobId ? (
+                <div className="space-y-3">
+                  <LiveRunPanel jobId={jobId} questions={questions} repeats={draft.epochs} model={effectiveModel} suite={draft.org} />
+                  <Button variant="ghost" onClick={() => { setJobId(null); setLaunching(false); }}>
+                    {LIVE_COPY.runAnother}
+                  </Button>
+                </div>
+              ) : (
+                <Card className="space-y-4 p-4">
+                  <SectionLabel>{LIVE_COPY.willRunTitle}</SectionLabel>
+                  <dl className="text-[13px]">
+                    {[
+                      [CONFIRM_COPY.suite, draft.org],
+                      [CONFIRM_COPY.model, effectiveModel],
+                      [CONFIRM_COPY.grading, draft.judge === "llm" ? CONFIRM_COPY.llm : CONFIRM_COPY.deterministic],
+                      [CONFIRM_COPY.repeats, CONFIRM_COPY.repeatsValue(draft.epochs)],
+                    ].map(([key, value], index, rows) => (
+                      <div key={key}>
+                        <div className="flex justify-between gap-6 py-1.5">
+                          <dt className="text-[var(--muted-foreground)]">{key}</dt>
+                          <dd className="text-right font-mono">{value}</dd>
+                        </div>
+                        {index < rows.length - 1 && <Separator />}
+                      </div>
+                    ))}
+                  </dl>
+                  <VerdictMosaic questions={questions} repeats={draft.epochs} />
+                </Card>
+              )}
+            </aside>
+          </div>
         </>
       )}
     </div>
