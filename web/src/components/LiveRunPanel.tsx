@@ -9,14 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LIVE_COPY, conflictLabel } from "@/copy";
 import { useRunStatus } from "@/hooks";
-import { pct, shortModel } from "@/lib/format";
-
-function elapsedLabel(from: number): string {
-  const seconds = Math.floor((Date.now() - from) / 1000);
-  return seconds < 60
-    ? `${seconds}s`
-    : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
-}
+import { elapsed, pct, shortModel } from "@/lib/format";
 
 interface LiveRunPanelProps {
   jobId: string;
@@ -40,6 +33,11 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
 
   const tiles = useMemo(() => (run.report ? tilesFrom(run.report) : undefined), [run.report]);
   const failedCats = run.report?.categories.filter((category) => category.pass_k_rate < 1) ?? [];
+  // Once the report loads, its own dimensions are the honest source of truth — questions/repeats
+  // are only a pre-launch estimate, and the wizard on the left stays editable after launch, so
+  // they can drift from what the running job actually used.
+  const mosaicQuestions = run.report?.probes.length ?? questions;
+  const mosaicRepeats = run.report?.probes[0]?.epochs_total ?? run.report?.header.k ?? repeats;
 
   return (
     <Card className="space-y-4 p-4">
@@ -52,11 +50,13 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
       <div className="flex items-center gap-3">
         <StatusBadge status={run.status} />
         {run.status === "running" && (
-          <span className="font-mono text-xs text-muted-foreground">{elapsedLabel(run.startedAt)}</span>
+          <span className="font-mono text-xs text-muted-foreground">{elapsed(run.startedAt)}</span>
         )}
       </div>
 
-      {questions > 0 && <VerdictMosaic questions={questions} repeats={repeats} tiles={tiles} />}
+      {mosaicQuestions > 0 && (
+        <VerdictMosaic questions={mosaicQuestions} repeats={mosaicRepeats} tiles={tiles} />
+      )}
 
       {run.status === "done" && run.report && (
         <>

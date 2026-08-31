@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Report } from "@/types";
 
@@ -6,7 +6,10 @@ vi.mock("@/api", () => ({ api: { watchRun: vi.fn(), getRun: vi.fn() } }));
 import { api } from "@/api";
 import { useRunStatus } from "./hooks";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 class FakeSource {
   onmessage: ((e: { data: string }) => void) | null = null;

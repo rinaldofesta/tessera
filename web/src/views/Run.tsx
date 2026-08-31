@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAsync } from "@/hooks";
 import { CONFIRM_COPY, DATASET_LABELS, LIVE_COPY } from "@/copy";
+import { messageOf } from "@/lib/format";
 import { draftFromRun } from "@/lib/rerun";
 
 /** The starter suite if it exists, else the first available. */
@@ -28,7 +29,16 @@ export default function Run() {
   const [rescanning, setRescanning] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  // Snapshot of what was actually submitted — the wizard on the left stays open and
+  // editable after launch, so the live panel must not read live `draft`/`questions`,
+  // which would drift out from under the run that's actually in flight.
+  const [activeRun, setActiveRun] = useState<{
+    jobId: string;
+    model: string;
+    suite: string;
+    epochs: number;
+    questions: number;
+  } | null>(null);
   const [draft, setDraft] = useState<RunDraft>({
     org: "",
     model: "",
@@ -98,6 +108,10 @@ export default function Run() {
   };
 
   const launch = async () => {
+    // A run from this draft is already showing on the right (the wizard stays on
+    // step 3, editable, after launch) — relaunching would silently orphan it.
+    // "Run another evaluation" clears activeRun first to allow a deliberate relaunch.
+    if (activeRun) return;
     setLaunching(true);
     setError(null);
     try {
@@ -110,10 +124,10 @@ export default function Run() {
         seed: 0,
         ...(draft.judge === "llm" && draft.grader ? { grader: draft.grader } : {}),
       });
-      setJobId(job_id);
+      setActiveRun({ jobId: job_id, model: effectiveModel, suite: draft.org, epochs: draft.epochs, questions });
       setLaunching(false);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
       setLaunching(false);
     }
   };
@@ -168,16 +182,23 @@ export default function Run() {
                   onBack={() => setStep(2)}
                   onLaunch={launch}
                   launching={launching}
+                  hasActiveRun={activeRun !== null}
                   error={error}
                 />
               )}
             </div>
 
             <aside>
-              {jobId ? (
+              {activeRun ? (
                 <div className="space-y-3">
-                  <LiveRunPanel jobId={jobId} questions={questions} repeats={draft.epochs} model={effectiveModel} suite={draft.org} />
-                  <Button variant="ghost" onClick={() => { setJobId(null); setLaunching(false); }}>
+                  <LiveRunPanel
+                    jobId={activeRun.jobId}
+                    questions={activeRun.questions}
+                    repeats={activeRun.epochs}
+                    model={activeRun.model}
+                    suite={activeRun.suite}
+                  />
+                  <Button variant="ghost" onClick={() => { setActiveRun(null); setLaunching(false); }}>
                     {LIVE_COPY.runAnother}
                   </Button>
                 </div>

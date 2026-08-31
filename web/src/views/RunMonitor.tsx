@@ -11,13 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { MONITOR_COPY } from "@/copy";
 import { useRunStatus } from "@/hooks";
 import { downloadReport } from "@/lib/exportReport";
-
-function elapsed(from: number): string {
-  const seconds = Math.floor((Date.now() - from) / 1000);
-  return seconds < 60
-    ? `${seconds}s`
-    : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
-}
+import { elapsed } from "@/lib/format";
 
 interface RunConfiguration {
   model: string;

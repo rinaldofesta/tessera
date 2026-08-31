@@ -71,4 +71,29 @@ describe("Run — launch left, watch right", () => {
     expect(api.startRun).toHaveBeenCalled();
     expect(screen.getByTestId("location-display")).toHaveTextContent("/new");
   });
+
+  it("blocks relaunch while a run is showing, so it can't be silently orphaned", async () => {
+    vi.mocked(api.startRun).mockClear();
+    vi.mocked(api.startRun).mockResolvedValue({ job_id: "job1", status: "running" } as never);
+    view();
+    await screen.findByText("what will run");
+    await userEvent.click(screen.getByRole("radio", { name: /Toy starter/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue — choose the model" }));
+    await userEvent.click(await screen.findByRole("radio", { name: /A/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue — confirm & launch" }));
+    const launchButton = await screen.findByRole("button", { name: "Run evaluation" });
+    await userEvent.click(launchButton);
+    await screen.findByText(/live —/);
+    expect(api.startRun).toHaveBeenCalledTimes(1);
+
+    // Still on step 3, the launch button remains in the DOM but must stay disabled —
+    // clicking it again must not start a second run.
+    expect(launchButton).toBeDisabled();
+    await userEvent.click(launchButton);
+    expect(api.startRun).toHaveBeenCalledTimes(1);
+
+    // "Run another evaluation" clears the live panel and re-enables a deliberate relaunch.
+    await userEvent.click(screen.getByRole("button", { name: "Run another evaluation" }));
+    expect(launchButton).toBeEnabled();
+  });
 });

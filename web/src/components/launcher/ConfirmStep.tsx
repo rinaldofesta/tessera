@@ -33,6 +33,9 @@ interface ConfirmStepProps {
   onBack: () => void;
   onLaunch: () => void;
   launching: boolean;
+  /** A run from this draft is already showing on the right — launching again would
+   *  silently orphan it (and desync its live view once these fields keep changing). */
+  hasActiveRun: boolean;
   error: string | null;
 }
 
@@ -44,6 +47,7 @@ export function ConfirmStep({
   onBack,
   onLaunch,
   launching,
+  hasActiveRun,
   error,
 }: ConfirmStepProps) {
   const selfGrading =
@@ -159,7 +163,7 @@ export function ConfirmStep({
       )}
 
       <div className="mt-6 flex gap-3">
-        <Button onClick={onLaunch} disabled={blocked || launching}>
+        <Button onClick={onLaunch} disabled={blocked || launching || hasActiveRun}>
           {launching ? CONFIRM_COPY.launching : WIZARD_COPY.launch}
         </Button>
         <Button variant="ghost" onClick={onBack}>
