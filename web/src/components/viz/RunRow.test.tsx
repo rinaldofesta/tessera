@@ -20,6 +20,7 @@ const doneRun: RunSummary = {
   finished_at: "2026-08-29T14:31:40Z",
   pass_k_rate: 0.72,
   mean_rate: 0.94,
+  archived: false,
 };
 
 const runningRun: RunSummary = {

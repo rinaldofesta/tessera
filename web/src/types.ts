@@ -21,6 +21,8 @@ export type Report = S["Report"];
 // ----- logs + runs -----
 export type LogMeta = S["LogMeta"];
 export type RunSummary = S["RunSummary"];
+export type LeaderboardManifest = S["LeaderboardManifest"];
+export type LeaderboardRow = S["LeaderboardRow"];
 export type TrendPoint = S["TrendPoint"];
 export type StartRunResult = S["StartRunResult"];
 export type RunStatus = S["RunStatus"];

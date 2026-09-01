@@ -51,6 +51,25 @@
         }
       }
     },
+    "/api/leaderboard": {
+      "get": {
+        "summary": "Leaderboard",
+        "description": "The committed public-leaderboard manifest served verbatim to the SPA.",
+        "operationId": "leaderboard_api_leaderboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardManifest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/eval-setup": {
       "get": {
         "summary": "Eval Setup",
@@ -436,39 +455,18 @@
       }
     },
     "/api/runs": {
-      "get": {
-        "summary": "List Runs",
-        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
-        "operationId": "list_runs_api_runs_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunSummary"
-                  },
-                  "type": "array",
-                  "title": "Response List Runs Api Runs Get"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "summary": "Start Run",
         "operationId": "start_run_api_runs_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RunRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -477,6 +475,100 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StartRunResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Runs",
+        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
+        "operationId": "list_runs_api_runs_get",
+        "parameters": [
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "title": "Response List Runs Api Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{job_id}/archive": {
+      "post": {
+        "summary": "Archive Run",
+        "operationId": "archive_run_api_runs__job_id__archive_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveRequest",
+                "default": {
+                  "archived": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSummary"
                 }
               }
             }
@@ -1174,6 +1266,17 @@
   },
   "components": {
     "schemas": {
+      "ArchiveRequest": {
+        "properties": {
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "ArchiveRequest"
+      },
       "Artifacts": {
         "properties": {
           "manifest": {
@@ -2305,6 +2408,171 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LeaderboardManifest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "exhibitions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Exhibitions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "LeaderboardManifest"
+      },
+      "LeaderboardRow": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "pass_k_rate": {
+            "type": "number",
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "type": "number",
+            "title": "Mean Rate"
+          },
+          "categories": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Categories"
+          },
+          "answer_format_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Format Rate"
+          },
+          "scorer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Version"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K"
+          },
+          "scaffold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scaffold"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "log": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "model",
+          "pass_k_rate",
+          "mean_rate",
+          "categories",
+          "k"
+        ],
+        "title": "LeaderboardRow"
       },
       "LogMeta": {
         "properties": {
@@ -3692,6 +3960,11 @@
               }
             ],
             "title": "Mean Rate"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
           }
         },
         "type": "object",

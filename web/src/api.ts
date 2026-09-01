@@ -2,7 +2,7 @@ import type {
   Artifacts, Blueprint, BlueprintMeta, EvalSetup, LogMeta, Provider, ProviderUpdate,
   ComparisonIntervention, ComparisonResult, Diagnostic, EvaluationSummary, Experiment,
   ExperimentComparison, ExperimentRequest, ExperimentStarted, PreflightResult,
-  RescanResult, Report, RunConfig, RunStatus, RunSummary, StartRunResult, TrendPoint,
+  LeaderboardManifest, RescanResult, Report, RunConfig, RunStatus, RunSummary, StartRunResult, TrendPoint,
   ValidationResult,
 } from "./types";
 
@@ -67,7 +67,14 @@ export const api = {
   getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<RunStatus>),
   // EventSource isn't fetch-shaped, but network access still routes through this module.
   watchRun: (id: string) => new EventSource(`/api/runs/${id}/events`),
-  listRuns: () => fetch("/api/runs").then(j<RunSummary[]>),
+  listRuns: (includeArchived = false) =>
+    fetch(`/api/runs${includeArchived ? "?include_archived=true" : ""}`).then(j<RunSummary[]>),
+  setRunArchived: (id: string, archived: boolean) =>
+    fetch(`/api/runs/${encodeURIComponent(id)}/archive`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ archived }),
+    }).then(j<RunSummary>),
+  leaderboard: () => fetch("/api/leaderboard").then(j<LeaderboardManifest>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);
     return fetch(`/api/trends?${p}`).then(j<TrendPoint[]>);
