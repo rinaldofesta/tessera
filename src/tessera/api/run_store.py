@@ -34,6 +34,7 @@ class RunStore:
             columns = {row[1] for row in c.execute("PRAGMA table_info(runs)")}
             for name, kind in (
                 ("receipt", "TEXT"), ("experiment_id", "TEXT"), ("cell_id", "TEXT"),
+                ("archived", "INTEGER NOT NULL DEFAULT 0"),
             ):
                 if name not in columns:
                     c.execute(f"ALTER TABLE runs ADD COLUMN {name} {kind}")
@@ -81,6 +82,7 @@ class RunStore:
             "created_at": r["created_at"], "finished_at": r["finished_at"],
             "receipt": json.loads(r["receipt"]) if r["receipt"] else None,
             "experiment_id": r["experiment_id"], "cell_id": r["cell_id"],
+            "archived": bool(r["archived"]),
         }
 
     def get(self, job_id: str) -> dict | None:
@@ -88,10 +90,19 @@ class RunStore:
             row = c.execute("SELECT * FROM runs WHERE id=?", (job_id,)).fetchone()
         return self._row(row) if row else None
 
-    def list(self) -> list[dict]:
+    def set_archived(self, job_id: str, archived: bool) -> dict | None:
+        with self._conn() as c:
+            c.execute("UPDATE runs SET archived=? WHERE id=?", (archived, job_id))
+            row = c.execute("SELECT * FROM runs WHERE id=?", (job_id,)).fetchone()
+        return self._row(row) if row else None
+
+    def list(self, include_archived: bool = False) -> list[dict]:
         """History summaries (no full report), newest first."""
         with self._conn() as c:
-            rows = c.execute("SELECT * FROM runs ORDER BY created_at DESC").fetchall()
+            rows = c.execute(
+                "SELECT * FROM runs" + ("" if include_archived else " WHERE archived=0")
+                + " ORDER BY created_at DESC"
+            ).fetchall()
         out = []
         for r in rows:
             d = self._row(r)

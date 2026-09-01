@@ -134,6 +134,30 @@ class RunSummary(BaseModel):
     finished_at: str | None
     pass_k_rate: float | None        # null until a report exists
     mean_rate: float | None
+    archived: bool = False
+
+
+class LeaderboardRow(BaseModel):
+    label: str
+    model: str
+    date: str | None = None
+    pass_k_rate: float
+    mean_rate: float
+    categories: dict[str, float]
+    answer_format_rate: float | None = None
+    scorer_version: str | None = None
+    org: str | None = None
+    k: int
+    scaffold: str | None = None
+    seed: int | None = None
+    notes: str | None = None
+    log: str | None = None
+
+
+class LeaderboardManifest(BaseModel):
+    title: str | None = None
+    rows: list[LeaderboardRow]
+    exhibitions: list[dict] = []
 
 
 class TrendPoint(BaseModel):

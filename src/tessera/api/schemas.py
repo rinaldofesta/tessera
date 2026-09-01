@@ -18,6 +18,10 @@ class RunRequest(BaseModel):
     seed: int = Field(0, ge=0)
 
 
+class ArchiveRequest(BaseModel):
+    archived: bool = True
+
+
 ComparisonIntervention = Literal[
     "model", "org", "engine", "grader", "k", "scaffold", "seed", "harness",
 ]
