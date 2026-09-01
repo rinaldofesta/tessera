@@ -50,7 +50,9 @@ def sync_library(request: Request) -> None:
                 _record_log(request, source, path)
             except Exception:  # noqa: BLE001 — one corrupt artifact must not hide the library
                 continue
-    for row in request.app.state.run_store.finished():
+    # The evaluation library intentionally includes archived runs: it is the durable
+    # evidence base; archive governs run-history surfaces.
+    for row in request.app.state.run_store.finished(include_archived=True):
         report = row.get("report")
         if not report:
             continue

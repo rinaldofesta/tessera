@@ -57,6 +57,16 @@ describe("Run — launch left, watch right", () => {
     expect(screen.getByText(/12 answers/)).toBeInTheDocument();
   });
 
+  it("includes archived runs when prefilling a rerun", async () => {
+    render(
+      <MemoryRouter initialEntries={["/new?from=archived"]}>
+        <Routes><Route path="/new" element={<Run />} /></Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText("what will run");
+    expect(api.listRuns).toHaveBeenCalledWith(true);
+  });
+
   it("stays on /new and flips the panel live on launch", async () => {
     vi.mocked(api.startRun).mockResolvedValue({ job_id: "job1", status: "running" } as never);
     view();

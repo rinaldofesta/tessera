@@ -73,10 +73,34 @@ describe("RunHistory", () => {
     expect(screen.getByRole("link", { name: "New evaluation" })).toHaveAttribute("href", "/new");
   });
 
+  it("keeps the archived toggle reachable when the default history is empty", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([]);
+    view();
+    expect(await screen.findByRole("checkbox", { name: "show archived" })).toBeInTheDocument();
+  });
+
   it("surfaces a load error", async () => {
     vi.mocked(api.listRuns).mockRejectedValue(new Error("api unreachable"));
     view();
     expect(await screen.findByText("api unreachable")).toBeInTheDocument();
+    expect(screen.queryByText("0 runs")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "show archived" })).not.toBeInTheDocument();
+  });
+
+  it("treats a suite selection missing from refetched rows as all suites", async () => {
+    vi.mocked(api.listRuns).mockReset();
+    vi.mocked(api.listRuns)
+      .mockResolvedValueOnce([run({ id: "a", org: "meridian" }), run({ id: "b", org: "toy" })])
+      .mockResolvedValueOnce([run({ id: "b", org: "toy" })]);
+    view();
+    await screen.findAllByText("claude-sonnet-4");
+    await userEvent.click(screen.getAllByRole("combobox")[1]);
+    await userEvent.click(await screen.findByRole("option", { name: "meridian" }));
+    expect(screen.getByText("1 of 2 runs")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "show archived" }));
+    expect(await screen.findByText("1 runs")).toBeInTheDocument();
+    expect(screen.getByText("claude-sonnet-4")).toBeInTheDocument();
   });
 
   it("tracks selection of finished runs", async () => {

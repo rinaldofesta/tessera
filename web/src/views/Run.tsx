@@ -57,7 +57,7 @@ export default function Run() {
     if (!fromId || prefilledFor.current === fromId || !setup.data) return;
     let alive = true;
     api
-      .listRuns()
+      .listRuns(true)
       .then((runs) => {
         if (!alive) return;
         const source = runs.find((r) => r.id === fromId);

@@ -150,6 +150,7 @@ class LeaderboardRow(BaseModel):
     k: int
     scaffold: str | None = None
     seed: int | None = None
+    harness: str | None = None
     notes: str | None = None
     log: str | None = None
 

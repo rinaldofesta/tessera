@@ -41,7 +41,8 @@ export default function Leaderboard() {
                     <span>{LEADERBOARD_COPY.protocol(row.org ?? "?", row.k, row.scorer_version ?? "?")}</span>
                     {row.date && <span>{row.date}</span>}
                     {row.scaffold && row.scaffold !== "baseline" && <span>{LEADERBOARD_COPY.scaffoldTag(row.scaffold)}</span>}
-                    {row.seed ? <span>{LEADERBOARD_COPY.seedTag(row.seed)}</span> : null}
+                    {row.seed != null && <span>{LEADERBOARD_COPY.seedTag(row.seed)}</span>}
+                    {row.harness && row.harness !== "single" && <span>{LEADERBOARD_COPY.harnessTag(row.harness)}</span>}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {Object.entries(row.categories).map(([key, value]) => <Badge key={key} variant="outline">{conflictLabel(key)} {pct(value)}</Badge>)}

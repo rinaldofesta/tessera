@@ -67,4 +67,11 @@ describe("RunMonitor as run detail", () => {
       "text/html",
     );
   });
+
+  it("includes archived runs when loading the detail configuration", async () => {
+    vi.mocked(api.watchRun).mockReturnValue(new FakeSource() as unknown as EventSource);
+    view();
+    await screen.findByText(/Run details|Evaluation/);
+    expect(api.listRuns).toHaveBeenCalledWith(true);
+  });
 });

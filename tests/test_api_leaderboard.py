@@ -24,6 +24,8 @@ def test_leaderboard_serves_the_committed_manifest_verbatim(tmp_path):
     assert response.status_code == 200
     assert set(response.json()) == {"title", "rows", "exhibitions"}
     assert response.json()["rows"][0] == expected["rows"][0]
+    ensemble = next(row for row in response.json()["rows"] if row["label"].startswith("moa/max"))
+    assert ensemble["harness"] == "ensemble"
 
 
 def test_leaderboard_returns_a_clear_404_when_the_manifest_is_missing(tmp_path, monkeypatch):
@@ -34,3 +36,16 @@ def test_leaderboard_returns_a_clear_404_when_the_manifest_is_missing(tmp_path, 
 
     assert response.status_code == 404
     assert response.json()["detail"] == "leaderboard manifest not found (docs/leaderboard.rows.json)"
+
+
+def test_leaderboard_returns_a_clear_500_when_the_manifest_is_invalid_json(tmp_path, monkeypatch):
+    from tessera.api import routes_meta
+
+    manifest = tmp_path / "invalid.json"
+    manifest.write_text("{")
+    monkeypatch.setattr(routes_meta, "_LEADERBOARD", manifest)
+
+    response = _client(tmp_path).get("/api/leaderboard")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "leaderboard manifest is not valid JSON (docs/leaderboard.rows.json)"

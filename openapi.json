@@ -2540,6 +2540,17 @@
             ],
             "title": "Seed"
           },
+          "harness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Harness"
+          },
           "notes": {
             "anyOf": [
               {

@@ -63,12 +63,17 @@ def list_models():
     return published_models()
 
 
-@router.get("/api/leaderboard", response_model=R.LeaderboardManifest)
+@router.get("/api/leaderboard", response_model=R.LeaderboardManifest, response_model_exclude_unset=True)
 def leaderboard():
     """The committed public-leaderboard manifest served verbatim to the SPA."""
     if not _LEADERBOARD.exists():
         raise HTTPException(404, "leaderboard manifest not found (docs/leaderboard.rows.json)")
-    return json.loads(_LEADERBOARD.read_text())
+    try:
+        return json.loads(_LEADERBOARD.read_text())
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            500, "leaderboard manifest is not valid JSON (docs/leaderboard.rows.json)",
+        ) from exc
 
 
 @router.get("/api/eval-setup", response_model=R.EvalSetup)

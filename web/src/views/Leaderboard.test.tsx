@@ -33,6 +33,16 @@ describe("Leaderboard", () => {
     expect(screen.getByText("fact missing 100%")).toBeInTheDocument();
   });
 
+  it("renders seed zero and a non-single harness", async () => {
+    vi.mocked(api.leaderboard).mockResolvedValue(manifest({
+      rows: [{ label: "Ensemble", model: "moa/max", date: null, pass_k_rate: 1, mean_rate: 1,
+        categories: {}, k: 3, scaffold: "baseline", seed: 0, harness: "ensemble" }],
+    }));
+    render(<Leaderboard />);
+    expect(await screen.findByText("seed 0")).toBeInTheDocument();
+    expect(screen.getByText("harness: ensemble")).toBeInTheDocument();
+  });
+
   it("uses a manifest title when provided", async () => {
     vi.mocked(api.leaderboard).mockResolvedValue(manifest({ title: "September board" }));
     render(<Leaderboard />);

@@ -75,3 +75,11 @@ def test_run_summaries_include_archived_false_by_default(tmp_path):
 
     assert response.status_code == 200
     assert response.json()[0]["archived"] is False
+
+
+def test_archived_done_run_is_absent_from_trends(tmp_path):
+    client = _client(tmp_path)
+    job_id = _done_run(client)
+    client.post(f"/api/runs/{job_id}/archive")
+
+    assert client.get("/api/trends").json() == []

@@ -997,6 +997,8 @@ export interface components {
             scaffold?: string | null;
             /** Seed */
             seed?: number | null;
+            /** Harness */
+            harness?: string | null;
             /** Notes */
             notes?: string | null;
             /** Log */

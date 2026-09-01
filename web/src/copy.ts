@@ -433,6 +433,7 @@ export const LEADERBOARD_COPY = {
   protocol: (org: string, k: number, scorer: string) => `${org} · pass^${k} · scorer ${scorer}`,
   scaffoldTag: (s: string) => `scaffold: ${s}`,
   seedTag: (n: number) => `seed ${n}`,
+  harnessTag: (h: string) => `harness: ${h}`,
   canonical: "View the canonical markdown",
   empty: "the manifest has no rows yet",
   loadFailed: (detail: string) => `couldn't load the leaderboard: ${detail}`,

@@ -28,16 +28,17 @@ export default function RunHistory() {
 
   const rows = runs.data ?? [];
   const suites = useMemo(() => [...new Set(rows.map((r) => r.org))].sort(), [rows]);
+  const effectiveSuite = suite === "all" || suites.includes(suite) ? suite : "all";
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (status !== "all" && r.status !== status) return false;
-      if (suite !== "all" && r.org !== suite) return false;
+      if (effectiveSuite !== "all" && r.org !== effectiveSuite) return false;
       if (!q) return true;
       return [r.model, r.org, r.judge, r.grader ?? ""].some((f) => f.toLowerCase().includes(q));
     });
-  }, [rows, query, status, suite]);
+  }, [rows, query, status, effectiveSuite]);
 
   const toggle = (id: string, on: boolean) =>
     setSelected((current) => {
@@ -91,18 +92,7 @@ export default function RunHistory() {
         </Alert>
       )}
 
-      {!runs.loading && !runs.error && rows.length === 0 && (
-        <Card className="p-10 text-center text-sm text-muted-foreground">
-          <p>{RUN_HISTORY_COPY.empty}</p>
-          <div className="mt-4">
-            <Button nativeButton={false} render={<Link role="link" to="/new" />}>
-              {RUN_HISTORY_COPY.emptyCta}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {rows.length > 0 && (
+      {!runs.loading && !runs.error && (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Input
@@ -154,8 +144,18 @@ export default function RunHistory() {
             )}
           </div>
 
-          <Card className="p-0">
-            {shown.map((r) => (
+          {rows.length === 0 ? (
+            <Card className="p-10 text-center text-sm text-muted-foreground">
+              <p>{RUN_HISTORY_COPY.empty}</p>
+              <div className="mt-4">
+                <Button nativeButton={false} render={<Link role="link" to="/new" />}>
+                  {RUN_HISTORY_COPY.emptyCta}
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-0">
+              {shown.map((r) => (
               <RunRow
                 key={r.id}
                 run={r}
@@ -181,8 +181,9 @@ export default function RunHistory() {
                   ) : undefined
                 }
               />
-            ))}
-          </Card>
+              ))}
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -34,7 +34,7 @@ export default function RunMonitor() {
 
     // RunStatus has no in-flight report, so these read-only endpoints provide the
     // fixed dimensions needed to render honest pending tiles from the first frame.
-    Promise.all([api.listRuns(), api.evalSetup()])
+    Promise.all([api.listRuns(true), api.evalSetup()])
       .then(([runs, setup]) => {
         if (!active) return;
         const run = runs.find((candidate) => candidate.id === id);

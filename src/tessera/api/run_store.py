@@ -112,8 +112,12 @@ class RunStore:
             out.append(d)
         return out
 
-    def finished(self) -> list[dict]:
+    def finished(self, include_archived: bool = False) -> list[dict]:
         """Full rows for done runs, oldest first (for trends)."""
         with self._conn() as c:
-            rows = c.execute("SELECT * FROM runs WHERE status='done' ORDER BY created_at ASC").fetchall()
+            rows = c.execute(
+                "SELECT * FROM runs WHERE status='done'"
+                + ("" if include_archived else " AND archived=0")
+                + " ORDER BY created_at ASC"
+            ).fetchall()
         return [self._row(r) for r in rows]
