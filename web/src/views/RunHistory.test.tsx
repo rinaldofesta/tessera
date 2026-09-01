@@ -177,6 +177,27 @@ describe("RunHistory", () => {
     expect(vi.mocked(api.setRunArchived)).toHaveBeenCalledWith("a", true);
   });
 
+  it("removes an archived run from the comparison selection", async () => {
+    vi.mocked(api.listRuns)
+      .mockResolvedValueOnce([run({ id: "a" }), run({ id: "b", model: "openai/gpt-5.2" })])
+      .mockResolvedValueOnce([run({ id: "b", model: "openai/gpt-5.2" })]);
+    vi.mocked(api.setRunArchived).mockResolvedValue(run({ id: "a", archived: true }));
+    view();
+    await screen.findByText("claude-sonnet-4");
+    await userEvent.click(screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "select gpt-5.2 for comparison" }));
+    expect(screen.getByRole("link", { name: "Compare selected →" })).toHaveAttribute(
+      "href",
+      "/compare?evals=run%3Aa%2Crun%3Ab",
+    );
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: "Compare selected →" })).not.toBeInTheDocument();
+    });
+  });
+
   it("shows an archived run's badge and unarchive action", async () => {
     vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a", archived: true })]);
     view();

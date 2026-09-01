@@ -65,6 +65,11 @@ export default function RunHistory() {
   const setArchived = async (id: string, archived: boolean) => {
     try {
       await api.setRunArchived(id, archived);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       runs.reload();
     } catch {
       toast.error(RUN_HISTORY_COPY.archiveFailed);
