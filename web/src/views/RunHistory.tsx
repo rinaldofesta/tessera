@@ -19,7 +19,8 @@ import { downloadReport } from "@/lib/exportReport";
 const STATUSES = ["running", "done", "error"] as const;
 
 export default function RunHistory() {
-  const runs = useAsync(() => api.listRuns(), []);
+  const [showArchived, setShowArchived] = useState(false);
+  const runs = useAsync(() => api.listRuns(showArchived), [showArchived]);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [suite, setSuite] = useState<string>("all");
@@ -57,6 +58,15 @@ export default function RunHistory() {
       downloadReport(run.report, format);
     } catch {
       toast.error(RUN_HISTORY_COPY.exportFailed);
+    }
+  };
+
+  const setArchived = async (id: string, archived: boolean) => {
+    try {
+      await api.setRunArchived(id, archived);
+      runs.reload();
+    } catch {
+      toast.error(RUN_HISTORY_COPY.archiveFailed);
     }
   };
 
@@ -119,6 +129,14 @@ export default function RunHistory() {
                 ))}
               </SelectContent>
             </Select>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+              />
+              {RUN_HISTORY_COPY.showArchived}
+            </label>
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
               {RUN_HISTORY_COPY.showing(shown.length, rows.length)}
             </span>
@@ -141,13 +159,20 @@ export default function RunHistory() {
                 selected={selected.has(r.id)}
                 onSelect={toggle}
                 extraActions={
-                  r.status === "done" ? (
+                  r.status !== "running" ? (
                     <>
-                      <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "html")}>
-                        {RUN_HISTORY_COPY.exportHtml}
-                      </Button>
-                      <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "json")}>
-                        {RUN_HISTORY_COPY.exportJson}
+                      {r.status === "done" && (
+                        <>
+                          <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "html")}>
+                            {RUN_HISTORY_COPY.exportHtml}
+                          </Button>
+                          <Button variant="ghost" size="xs" onClick={() => exportRun(r.id, "json")}>
+                            {RUN_HISTORY_COPY.exportJson}
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="xs" onClick={() => setArchived(r.id, !r.archived)}>
+                        {r.archived ? RUN_HISTORY_COPY.unarchive : RUN_HISTORY_COPY.archive}
                       </Button>
                     </>
                   ) : undefined

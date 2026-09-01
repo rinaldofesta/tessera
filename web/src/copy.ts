@@ -394,6 +394,11 @@ export const RUN_HISTORY_COPY = {
   exportHtml: "HTML",
   exportJson: "JSON",
   exportFailed: "couldn't load the report for export",
+  archive: "Archive",
+  unarchive: "Unarchive",
+  archivedBadge: "archived",
+  showArchived: "show archived",
+  archiveFailed: "couldn't change the archive flag",
   compareSelected: "Compare selected →",
 } as const;
 

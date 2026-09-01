@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RunSummary } from "@/types";
 
-vi.mock("@/api", () => ({ api: { listRuns: vi.fn(), getRun: vi.fn() } }));
+vi.mock("@/api", () => ({ api: { listRuns: vi.fn(), getRun: vi.fn(), setRunArchived: vi.fn() } }));
 vi.mock("@/lib/download", () => ({ downloadText: vi.fn() }));
 import { api } from "@/api";
 import { downloadText } from "@/lib/download";
@@ -83,7 +83,7 @@ describe("RunHistory", () => {
     vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
     view();
     await screen.findByText("claude-sonnet-4");
-    const box = screen.getByRole("checkbox");
+    const box = screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" });
     await userEvent.click(box);
     expect(box).toBeChecked();
   });
@@ -92,7 +92,10 @@ describe("RunHistory", () => {
     vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" }), run({ id: "b", model: "openai/gpt-5.2" })]);
     view();
     await screen.findByText("claude-sonnet-4");
-    const boxes = screen.getAllByRole("checkbox");
+    const boxes = [
+      screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" }),
+      screen.getByRole("checkbox", { name: "select gpt-5.2 for comparison" }),
+    ];
     await userEvent.click(boxes[0]);
     await userEvent.click(boxes[1]);
     expect(screen.getByRole("link", { name: "Compare selected →" })).toHaveAttribute(
@@ -106,6 +109,30 @@ describe("RunHistory", () => {
     view();
     await screen.findByText("claude-sonnet-4");
     expect(screen.queryByRole("link", { name: "Compare selected →" })).not.toBeInTheDocument();
+  });
+
+  it("refetches with archived runs when show archived is toggled", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
+    view();
+    await screen.findByText("claude-sonnet-4");
+    await userEvent.click(screen.getByRole("checkbox", { name: "show archived" }));
+    expect(vi.mocked(api.listRuns)).toHaveBeenCalledWith(true);
+  });
+
+  it("archives a completed run", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
+    vi.mocked(api.setRunArchived).mockResolvedValue(run({ id: "a", archived: true }));
+    view();
+    await screen.findByText("claude-sonnet-4");
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+    expect(vi.mocked(api.setRunArchived)).toHaveBeenCalledWith("a", true);
+  });
+
+  it("shows an archived run's badge and unarchive action", async () => {
+    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a", archived: true })]);
+    view();
+    expect(await screen.findByText("archived")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unarchive" })).toBeInTheDocument();
   });
 
   it("exports a finished run's report as HTML from the row", async () => {

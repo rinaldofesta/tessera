@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { GAP_COPY, RUN_HISTORY_COPY, engineLabel } from "@/copy";
 import { fmtTs, pct, shortModel } from "@/lib/format";
 import type { RunSummary } from "@/types";
@@ -35,8 +36,15 @@ export function RunRow({ run, selected = false, onSelect, extraActions }: RunRow
       )}
 
       <div className="min-w-0">
-        <div className="truncate text-[13px] font-semibold text-foreground">
-          {shortModel(run.model)}
+        <div className="flex items-center gap-1.5">
+          <div className="truncate text-[13px] font-semibold text-foreground">
+            {shortModel(run.model)}
+          </div>
+          {run.archived && (
+            <Badge variant="outline" className="text-muted-foreground">
+              {RUN_HISTORY_COPY.archivedBadge}
+            </Badge>
+          )}
         </div>
         <div className="truncate font-mono text-[11px] text-faint">
           {RUN_HISTORY_COPY.meta(run.org, engineLabel(run.judge), run.epochs)}

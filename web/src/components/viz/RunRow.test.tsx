@@ -67,6 +67,11 @@ describe("RunRow", () => {
     expect(screen.getByText("meridian · ai grader · 5 repeats")).toBeInTheDocument();
   });
 
+  it("marks an archived run beside its identity", () => {
+    renderRow({ ...doneRun, archived: true });
+    expect(screen.getByText("archived")).toBeInTheDocument();
+  });
+
   it("shows a lifecycle badge instead of a gap bar while running", () => {
     renderRow(runningRun);
     expect(screen.getByText("running…")).toBeInTheDocument();
