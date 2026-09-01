@@ -9,28 +9,30 @@ import { StatusBadge } from "./StatusBadge";
 
 interface RunRowProps {
   run: RunSummary;
-  selected: boolean;
-  onSelect: (id: string, selected: boolean) => void;
+  selected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
   /** Slot for later-PR actions (Export in PR2, Archive in PR5). */
   extraActions?: React.ReactNode;
 }
 
 /** One raw run in the history: checkbox · identity · glyph · headline · time · actions.
  *  Only finished runs are selectable — they alone can cross to /compare as run:<id>. */
-export function RunRow({ run, selected, onSelect, extraActions }: RunRowProps) {
+export function RunRow({ run, selected = false, onSelect, extraActions }: RunRowProps) {
   const finished = run.status === "done" && run.pass_k_rate != null && run.mean_rate != null;
   const gapPp = finished ? gapPoints(run.pass_k_rate!, run.mean_rate!) : 0;
 
   return (
-    <div className="grid grid-cols-[auto_minmax(160px,1.2fr)_minmax(140px,1fr)_150px_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/40">
-      <input
-        type="checkbox"
-        className="accent-[var(--primary)]"
-        checked={selected}
-        disabled={!finished}
-        onChange={(e) => onSelect(run.id, e.target.checked)}
-        aria-label={RUN_HISTORY_COPY.selectRun(shortModel(run.model))}
-      />
+    <div className={`grid ${onSelect ? "grid-cols-[auto_minmax(160px,1.2fr)_minmax(140px,1fr)_150px_auto]" : "grid-cols-[minmax(160px,1.2fr)_minmax(140px,1fr)_150px_auto]"} items-center gap-4 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/40`}>
+      {onSelect && (
+        <input
+          type="checkbox"
+          className="accent-[var(--primary)]"
+          checked={selected}
+          disabled={!finished}
+          onChange={(e) => onSelect(run.id, e.target.checked)}
+          aria-label={RUN_HISTORY_COPY.selectRun(shortModel(run.model))}
+        />
+      )}
 
       <div className="min-w-0">
         <div className="truncate text-[13px] font-semibold text-foreground">

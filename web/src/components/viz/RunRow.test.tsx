@@ -84,6 +84,15 @@ describe("RunRow", () => {
     expect(screen.getByRole("checkbox")).toBeEnabled();
   });
 
+  it("omits selection controls when no selection handler is supplied", () => {
+    render(
+      <MemoryRouter>
+        <RunRow run={doneRun} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("disables selection for running and errored runs", () => {
     renderRow(runningRun);
     expect(screen.getByRole("checkbox")).toBeDisabled();

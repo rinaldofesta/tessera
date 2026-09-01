@@ -397,6 +397,42 @@ export const RUN_HISTORY_COPY = {
   compareSelected: "Compare selected →",
 } as const;
 
+export const DASHBOARD_COPY = {
+  eyebrow: "Home",
+  title: "The reliability program at a glance",
+  subtitle: "latest score, the gap over time, and recent runs",
+  latestReliability: "latest reliability",
+  latestAverage: "latest average",
+  averageSubtitle: "success rate",
+  runsTotal: "runs total",
+  completed: "completed",
+  errored: (n: number) => `${n} errored`,
+  noCompleted: "no completed runs",
+  trendTitle: "the gap over time",
+  trendSubtitle: "pass^k vs mean per run, oldest → newest — the amber band is the fragility",
+  legendReliability: "reliability (pass^k)",
+  legendAverage: "average success rate",
+  emptyTitle: "no runs recorded yet",
+  emptyBody: "history and trends appear after the first live eval",
+  emptyCta: "Run the first eval",
+  recentTitle: (shown: number, total: number) =>
+    total > shown ? `recent runs (${shown} of ${total})` : `recent runs (${total})`,
+  openRuns: "open run history →",
+} as const;
+
+export const LEADERBOARD_COPY = {
+  eyebrow: "Leaderboard",
+  title: "Public reliability results",
+  subtitle:
+    "generated from the committed manifest — the repo file is the source of truth, this view just renders it",
+  protocol: (org: string, k: number, scorer: string) => `${org} · pass^${k} · scorer ${scorer}`,
+  scaffoldTag: (s: string) => `scaffold: ${s}`,
+  seedTag: (n: number) => `seed ${n}`,
+  canonical: "View the canonical markdown",
+  empty: "the manifest has no rows yet",
+  loadFailed: (detail: string) => `couldn't load the leaderboard: ${detail}`,
+} as const;
+
 export const EXPERIMENTS_COPY = {
   error: (detail: string) => detail,
   defaultName: "model contrast",
