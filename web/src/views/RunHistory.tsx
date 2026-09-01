@@ -133,7 +133,10 @@ export default function RunHistory() {
               <input
                 type="checkbox"
                 checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
+                onChange={(e) => {
+                  setShowArchived(e.target.checked);
+                  setSelected(new Set());
+                }}
               />
               {RUN_HISTORY_COPY.showArchived}
             </label>
