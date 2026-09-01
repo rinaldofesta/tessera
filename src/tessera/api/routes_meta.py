@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import json
+from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from tessera.api import blueprint_store
 from tessera.api import responses as R
@@ -23,6 +25,7 @@ _PUBLISHED_MODELS = [
     "anthropic/claude-fable-5",
     "anthropic/claude-sonnet-5",
 ]
+_LEADERBOARD = Path("docs/leaderboard.rows.json")
 
 
 def published_models() -> list[str]:
@@ -58,6 +61,14 @@ def list_models():
     # published set shown at the top of the picker. Set it in .env or the shell;
     # credentials for each provider live in .env too.
     return published_models()
+
+
+@router.get("/api/leaderboard", response_model=R.LeaderboardManifest)
+def leaderboard():
+    """The committed public-leaderboard manifest served verbatim to the SPA."""
+    if not _LEADERBOARD.exists():
+        raise HTTPException(404, "leaderboard manifest not found (docs/leaderboard.rows.json)")
+    return json.loads(_LEADERBOARD.read_text())
 
 
 @router.get("/api/eval-setup", response_model=R.EvalSetup)
