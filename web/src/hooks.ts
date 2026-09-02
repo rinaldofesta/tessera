@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "./api";
-import { toLegacyStatus } from "./lib/runStatus";
-import type { Catalog, Report, Run, RunStatus } from "./types";
+import type { Catalog, Run } from "./types";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -109,60 +108,45 @@ export function useApiHealth(ms = 30_000): boolean {
   return error === null;
 }
 
-export interface RunStatusState {
-  status: RunStatus["status"];
-  report: Report | null;
-  verdict: Run["verdict"];
+export interface RunWatchState {
+  run: Run | null;
+  terminal: boolean;
   error: string | null;
-  /** Epoch ms of the moment this id started being watched — for elapsed clocks. */
-  startedAt: number;
 }
 
 const MAX_POLL_FAILURES = 5;
 
 /** Watch one run to its terminal state: SSE first, 2s polling as the fallback,
  *  and a full getRun once terminal (the stream carries only status/error). */
-export function useRunStatus(id: string): RunStatusState {
-  const [state, setState] = useState<RunStatusState>({
-    status: "running", report: null, verdict: null, error: null, startedAt: Date.now(),
-  });
+const TERMINAL = new Set<Run["status"]>(["completed", "failed", "interrupted"]);
+
+export function useRunStatus(id: string): RunWatchState {
+  const [run, setRun] = useState<Run | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let poller: ReturnType<typeof setInterval> | null = null;
     let failures = 0;
     let active = true;
 
-    setState({ status: "running", report: null, verdict: null, error: null, startedAt: Date.now() });
+    setRun(null);
+    setError(null);
 
     const stopPolling = () => {
       if (poller) { clearInterval(poller); poller = null; }
     };
 
-    const apply = (next: RunStatus) => {
+    const apply = (next: Run) => {
       if (!active) return;
-      setState((current) => ({
-        ...current,
-        status: next.status,
-        report: next.report ?? current.report,
-        verdict: next.verdict ?? current.verdict,
-        error: next.error ?? current.error,
-      }));
-      if (next.status !== "running") stopPolling();
+      setRun(next);
+      // Fall back to the current error only when this fetch didn't report one — a
+      // terminal SSE message's error can otherwise be lost if the trailing getRun
+      // response hasn't caught up yet.
+      setError((current) => next.error ?? current);
+      if (TERMINAL.has(next.status)) stopPolling();
     };
 
-    const source = api.watchRun(id);
-    source.onmessage = (event) => {
-      const eventData = JSON.parse(event.data) as { status: Run["status"]; error: string | null };
-      const next = { ...eventData, status: toLegacyStatus(eventData.status) };
-      if (!active) return;
-      setState((current) => ({ ...current, status: next.status, error: next.error ?? current.error }));
-      if (next.status !== "running") {
-        source.close();
-        api.getRun(id).then(apply).catch(() => {});
-      }
-    };
-    source.onerror = () => {
-      source.close();
+    const startPolling = () => {
       if (poller) return;
       poller = setInterval(() => {
         api.getRun(id)
@@ -171,8 +155,25 @@ export function useRunStatus(id: string): RunStatusState {
       }, 2000);
     };
 
+    const source = api.watchRun(id);
+    source.onmessage = (event) => {
+      const eventData = JSON.parse(event.data) as { status: Run["status"]; error: string | null };
+      if (!active) return;
+      setError(eventData.error);
+      if (TERMINAL.has(eventData.status)) {
+        source.close();
+        // A transient failure here must not strand the UI mid-terminal: fall back to
+        // the same polling loop onerror uses, rather than swallowing the error.
+        api.getRun(id).then(apply).catch(startPolling);
+      }
+    };
+    source.onerror = () => {
+      source.close();
+      startPolling();
+    };
+
     return () => { active = false; source.close(); stopPolling(); };
   }, [id]);
 
-  return state;
+  return { run, terminal: run ? TERMINAL.has(run.status) : false, error };
 }

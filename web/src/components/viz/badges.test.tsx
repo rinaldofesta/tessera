@@ -7,9 +7,9 @@ describe("StatusBadge", () => {
   it("names each lifecycle state", () => {
     const { rerender } = render(<StatusBadge status="running" />);
     expect(screen.getByText("running…")).toBeInTheDocument();
-    rerender(<StatusBadge status="done" />);
+    rerender(<StatusBadge status="completed" />);
     expect(screen.getByText("finished")).toBeInTheDocument();
-    rerender(<StatusBadge status="error" />);
+    rerender(<StatusBadge status="failed" />);
     expect(screen.getByText("failed")).toBeInTheDocument();
   });
 
@@ -17,9 +17,9 @@ describe("StatusBadge", () => {
     const { container, rerender } = render(<StatusBadge status="running" />);
     const className = () => container.querySelector<HTMLElement>('[data-slot="badge"]')!.className;
     expect(className()).not.toMatch(/verdict-/);
-    rerender(<StatusBadge status="done" />);
+    rerender(<StatusBadge status="completed" />);
     expect(className()).not.toMatch(/verdict-/);
-    rerender(<StatusBadge status="error" />);
+    rerender(<StatusBadge status="failed" />);
     expect(className()).not.toMatch(/verdict-/);
   });
 });

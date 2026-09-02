@@ -138,31 +138,14 @@ export const MOSAIC_COPY = {
     `Answer grid: ${questions} questions by ${repeats} repeats`,
 };
 
-export const MONITOR_COPY = {
-  runningTitle: "Evaluation in progress",
-  doneTitle: (model: string) => `Evaluated ${model}`,
-  status: { running: "running", done: "done", error: "failed" } as Record<string, string>,
-  elapsed: (t: string) => `Running for ${t}`,
-  model: "Model",
-  suite: "Suite",
-  grading: "Grading",
-  safeToLeave: "Safe to leave this page — the run continues on the server. You'll find it under Runs.",
-  failed: "The run failed",
-  allRuns: "All runs",
-  newRun: "New evaluation",
-  exportHtml: "Export HTML",
-  exportJson: "Export JSON",
-  exportFailed: "couldn't export the report",
-};
-
-// ----- redesign PR1: lifecycle vs verdict vocabularies, gap bar, run history -----
-
 /** Lifecycle only. "finished" is neutral on purpose — completion says nothing
  *  about reliability; VerdictBadge speaks to that. */
 export const STATUS_COPY = {
+  queued: "queued…",
   running: "running…",
-  done: "finished",
-  error: "failed",
+  completed: "finished",
+  failed: "failed",
+  interrupted: "interrupted",
 } as const;
 
 export const VERDICT_COPY = {
@@ -177,70 +160,33 @@ export const GAP_COPY = {
     `${passKPct} reliable (pass^${k}), ${meanPct} mean success, ${gapPp} point gap`,
   headline: (k: number, meanPct: string, gapPp: number) =>
     `pass^${k} · mean ${meanPct} · gap ${gapPp} pp`,
+  rightEveryTime: "right every time",
+  onlySometimes: "only sometimes",
+  never: "never",
 } as const;
 
-export const RUN_HISTORY_COPY = {
-  eyebrow: "Run history",
-  title: "Every evaluation you've launched",
-  subtitle:
-    "raw runs — live, finished, and errored. The gap bar reads: solid = reliable every repeat, hatched = passes only sometimes.",
-  filterPlaceholder: "filter by model, suite, or grader…",
-  statusAll: "all statuses",
-  suiteAll: "all suites",
-  showing: (shown: number, total: number) =>
-    shown === total ? `${total} runs` : `${shown} of ${total} runs`,
-  empty: "no runs yet — launch the first evaluation to start the history",
-  emptyCta: "New evaluation",
-  details: "Details",
-  rerun: "Rerun",
-  meta: (org: string, grading: string, k: number) => `${org} · ${grading} · ${k} repeats`,
-  noScore: "—",
-  selectRun: (model: string) => `select ${model} for comparison`,
-  exportHtml: "HTML",
-  exportJson: "JSON",
-  exportFailed: "couldn't load the report for export",
+export const REPORT_COPY = {
+  save: "Save report",
+  copySummary: "Copy summary",
+  compare: "Compare with…",
+  runAgain: "Run again",
+  exportFailed: "couldn't save the report",
   archive: "Archive",
-  unarchive: "Unarchive",
-  archivedBadge: "archived",
-  showArchived: "show archived",
+  restore: "Restore",
   archiveFailed: "couldn't change the archive flag",
-} as const;
-
-// ----- redesign PR2: scorecard + export vocabulary -----
-
-export const SCORECARD_COPY = {
-  gradedBy: (engine: string, grader: string | null) =>
-    engine === "llm"
-      ? `scored by an ai grader${grader ? ` (${grader})` : ""}`
-      : "scored by fixed rules",
-  protocol: (questions: number, k: number) => `${questions} questions × ${k} repeats`,
-  scorer: (v: string | null) => (v ? `scorer ${v}` : "scorer version not recorded"),
-  seed: (s: number) => `dataset variant seed ${s}`,
-  scaffold: (s: string) => `prompt scaffold: ${s}`,
-  harness: (h: string) => `harness: ${h} (how model calls were dispatched)`,
-  reliableVerdict: (k: number) => `Reliable — correct behavior in all ${k} repeats of every probe.`,
-  notReliableVerdict: (categories: string) =>
-    `Not reliable on ${categories} — it does not behave correctly every time; a single average score would hide this.`,
-  reliability: "reliability",
-  reliabilitySub: (k: number) => `passed all ${k} repeats — pass^${k}`,
-  average: "average",
-  averageSubWithGap: (gapPp: number) => `mean rate across repeats · gap ${gapPp} pp`,
-  byCategory: "reliability by question type",
-  byAxis: "how it failed, by axis",
-  categoryMeta: (key: string, behavior: string, desc: string) => `${key} · expect ${behavior} — ${desc}`,
-  categoryLine: (k: number, meanPct: string) => `pass^${k} · mean ${meanPct}`,
-  meanShort: (meanPct: string) => `mean ${meanPct}`,
+  copied: "summary copied",
+  copyFailed: "couldn't copy the summary",
+  failed: "The run did not complete",
+  details: "Details",
+  categories: "By question type",
+  axes: "Three checks",
   axisAccuracy: "right answers",
   axisAccuracySub: (n: number) => `accuracy · ${n} answer-epochs`,
   axisProvenance: "cited the right sources",
   axisProvenanceSub: (n: number) => `provenance · ${n} epochs`,
   axisRefusal: "refused when it should",
   axisRefusalSub: (n: number) => `refusal · ${n} refuse-epochs`,
-  axisFormat: "answered in the expected format",
-  axisFormatSub: "the ANSWER: <value> contract",
-  axesNote:
-    'denominators differ — an axis only counts where it applies. "cited the right sources" is read from the agent\'s real tool calls, never judged by a model.',
-  failures: "failures",
+  failures: "Failures",
   noFailures: (n: number) => `none — all ${n} probes passed every repeat.`,
   probesPassed: (passed: number, total: number) => `${passed}/${total} passed`,
   question: "Q:",
@@ -256,6 +202,43 @@ export const SCORECARD_COPY = {
   whyWrongAnswer: "wrong answer",
   whyProvenance: "right answer, but missed required sources",
   whyGeneric: "failed a reliability check",
+  receipt: "Receipt",
+  scorerVersion: "scorer version",
+  scaffold: "scaffold",
+  seed: "seed",
+  protocolHash: "protocol hash",
+  logPath: "log path",
+  diagnostics: "Diagnostics",
+} as const;
+
+export const REPORTS_COPY = {
+  eyebrow: "Saved evaluations",
+  title: "Reports",
+  subtitle: "Open, export, repeat or archive an evaluation.",
+  filterPlaceholder: "Filter by model or suite…",
+  showArchived: "show archived",
+  empty: "No reports yet.",
+  emptyCta: "Run your first",
+  open: "Open",
+  runAgain: "Run again",
+  saveHtml: "Save HTML",
+  archive: "Archive",
+  restore: "Restore",
+  archived: "archived",
+  exportFailed: "couldn't save the report",
+  archiveFailed: "couldn't change the archive flag",
+} as const;
+
+export const COMPARE_COPY = {
+  title: "Compare with…",
+  choose: "Choose a completed report",
+  compatible: "comparable — same scorer, suite, repeats, scaffold and seed",
+  incompatible: "protocol differs",
+  aWins: "A wins",
+  bWins: "B wins",
+  bothPass: "both pass",
+  bothFail: "both fail",
+  mcnemar: "McNemar p",
 } as const;
 
 // ----- redesign PR4: launch + live merge -----

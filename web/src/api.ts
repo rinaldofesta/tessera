@@ -1,7 +1,6 @@
-import { toLegacyStatus } from "@/lib/runStatus";
 import type {
   Artifacts, Blueprint, BlueprintMeta, Catalog, ComparisonIntervention, ComparisonResult,
-  Provider, ProviderUpdate, Run, RunSpec, RunStatus, RunSummary, ValidationResult,
+  Plan, Provider, ProviderUpdate, Run, RunSpec, ValidationResult,
 } from "./types";
 
 function messageForDetail(detail: unknown): string {
@@ -29,35 +28,8 @@ export class ApiError extends Error {
   }
 }
 
-export function toSummary(run: Run): RunSummary {
-  return {
-    id: run.id,
-    status: toLegacyStatus(run.status),
-    error: run.error,
-    model: run.request.model,
-    org: run.request.suite,
-    judge: run.request.engine,
-    grader: run.request.grader,
-    epochs: run.request.k,
-    created_at: run.created_at,
-    finished_at: run.finished_at,
-    pass_k_rate: run.verdict?.pass_k_rate ?? null,
-    mean_rate: run.verdict?.mean_rate ?? null,
-    archived: run.archived,
-  };
-}
-
-export function toStatus(run: Run): RunStatus {
-  return {
-    status: toLegacyStatus(run.status),
-    report: run.report,
-    verdict: run.verdict,
-    error: run.error,
-  };
-}
-
 export const api = {
-  compareRuns: (a: string, b: string, intervention: ComparisonIntervention) =>
+  compareRuns: (a: string, b: string, intervention: ComparisonIntervention = "model") =>
     fetch("/api/comparisons", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ a, b, intervention }),
@@ -76,18 +48,23 @@ export const api = {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify(spec),
     }).then(j<Run>),
+  dryRun: (spec: RunSpec) =>
+    fetch("/api/runs/dry-run", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(spec),
+    }).then(j<Plan>),
   getRun: (id: string) =>
-    fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<Run>).then(toStatus),
+    fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<Run>),
   // EventSource isn't fetch-shaped, but network access still routes through this module.
   watchRun: (id: string) => new EventSource(`/api/runs/${id}/events`),
   listRuns: (includeArchived = false) =>
     fetch(`/api/runs${includeArchived ? "?include_archived=true" : ""}`)
-      .then(j<Run[]>).then((runs) => runs.map(toSummary)),
+      .then(j<Run[]>),
   setRunArchived: (id: string, archived: boolean) =>
     fetch(`/api/runs/${encodeURIComponent(id)}/archive`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ archived }),
-    }).then(j<Run>).then(toSummary),
+    }).then(j<Run>),
   // blueprints (datasets)
   listBlueprints: () => fetch("/api/blueprints").then(j<BlueprintMeta[]>),
   getBlueprint: (id: string) => fetch(`/api/blueprints/${encodeURIComponent(id)}`).then(j<Blueprint>),

@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 const Connect = lazy(() => import("@/views/Connect"));
 const Datasets = lazy(() => import("@/views/Datasets"));
 const Run = lazy(() => import("@/views/Run"));
-const RunHistory = lazy(() => import("@/views/RunHistory"));
-const RunMonitor = lazy(() => import("@/views/RunMonitor"));
+const Reports = lazy(() => import("@/views/Reports"));
+const Report = lazy(() => import("@/views/Report"));
 
 const NAV = [
   { to: "/", label: NAV_COPY.run, end: true },
@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-line bg-panel">
+      <header className="app-nav border-b border-line bg-panel">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-7 gap-y-3 px-5 py-4 md:px-8">
           <NavLink to="/" className="font-display text-xl font-bold tracking-tight text-foreground">
             {NAV_COPY.brand}
@@ -74,8 +74,8 @@ export default function App() {
         <Suspense fallback={<div className="rounded-xl border border-line bg-panel p-5 text-sm text-faint">Loading…</div>}>
           <Routes>
             <Route path="/" element={<Run />} />
-            <Route path="/reports" element={<RunHistory />} />
-            <Route path="/reports/:id" element={<RunMonitor />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/:id" element={<Report />} />
             <Route path="/connect" element={<Connect />} />
             <Route path="/suites" element={<Datasets />} />
             <Route path="/new" element={<RootRedirect />} />

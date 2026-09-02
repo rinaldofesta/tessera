@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { LIVE_COPY } from "@/copy";
 import { useRunStatus } from "@/hooks";
 import { elapsed, pct, shortModel } from "@/lib/format";
+import type { Run } from "@/types";
 
 interface LiveRunPanelProps {
   jobId: string;
@@ -17,39 +18,47 @@ interface LiveRunPanelProps {
   repeats: number;
   model: string;
   suite: string;
+  onTerminal?: (run: Run) => void;
 }
 
 /** /new's right column after launch. Honest by construction: while running it shows
  * only what the server actually reports — status, elapsed, and fixed dimensions. */
-export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRunPanelProps) {
-  const run = useRunStatus(jobId);
+export function LiveRunPanel({ jobId, questions, repeats, model, suite, onTerminal }: LiveRunPanelProps) {
+  const watch = useRunStatus(jobId);
+  const run = watch.run;
+  const status = run?.status ?? "running";
+  const [startedAt] = useState(Date.now);
   const [, tick] = useState(0);
 
   useEffect(() => {
-    if (run.status !== "running") return;
+    if (status !== "queued" && status !== "running") return;
     const timer = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(timer);
-  }, [run.status]);
+  }, [status]);
 
-  const tiles = useMemo(() => (run.report ? tilesFrom(run.report) : undefined), [run.report]);
+  useEffect(() => {
+    if (watch.terminal && run) onTerminal?.(run);
+  }, [onTerminal, run, watch.terminal]);
+
+  const tiles = useMemo(() => (run?.report ? tilesFrom(run.report) : undefined), [run?.report]);
   // Once the report loads, its own dimensions are the honest source of truth — questions/repeats
   // are only a pre-launch estimate, and the wizard on the left stays editable after launch, so
   // they can drift from what the running job actually used.
-  const mosaicQuestions = run.report?.probes.length ?? questions;
-  const mosaicRepeats = run.report?.probes[0]?.epochs_total ?? run.report?.header.k ?? repeats;
+  const mosaicQuestions = run?.report?.probes.length ?? questions;
+  const mosaicRepeats = run?.report?.probes[0]?.epochs_total ?? run?.report?.header.k ?? repeats;
 
   return (
     <Card className="space-y-4 p-4">
       <SectionLabel>
-        {run.status === "done"
+        {status === "completed"
           ? LIVE_COPY.doneTitle(shortModel(model))
           : LIVE_COPY.liveTitle(shortModel(model), suite)}
       </SectionLabel>
 
       <div className="flex items-center gap-3">
-        <StatusBadge status={run.status} />
-        {run.status === "running" && (
-          <span className="font-mono text-xs text-muted-foreground">{elapsed(run.startedAt)}</span>
+        <StatusBadge status={status} />
+        {(status === "queued" || status === "running") && (
+          <span className="font-mono text-xs text-muted-foreground">{elapsed(startedAt)}</span>
         )}
       </div>
 
@@ -57,7 +66,7 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
         <VerdictMosaic questions={mosaicQuestions} repeats={mosaicRepeats} tiles={tiles} />
       )}
 
-      {run.status === "done" && run.report && (
+      {status === "completed" && run?.report && (
         <>
           {run.verdict?.sentence && <p className="text-[13px] font-medium">{run.verdict.sentence}</p>}
           <div className="grid grid-cols-2 gap-2">
@@ -70,9 +79,9 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
         </>
       )}
 
-      {run.status === "error" && run.error && (
+      {(status === "failed" || status === "interrupted") && (watch.error || run?.error) && (
         <Alert variant="destructive">
-          <AlertDescription className="break-words font-mono text-xs">{run.error}</AlertDescription>
+          <AlertDescription className="break-words font-mono text-xs">{watch.error ?? run?.error}</AlertDescription>
         </Alert>
       )}
     </Card>

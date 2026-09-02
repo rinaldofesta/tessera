@@ -25,9 +25,9 @@ interface VerdictMosaicProps {
 }
 
 const TILE: Record<TileState, string> = {
-  pending: "border-[var(--line)] bg-[var(--raised)]",
-  pass: "border-[var(--verdict-reliable)]/55 bg-[var(--verdict-reliable)]/22",
-  fail: "border-[var(--verdict-unreliable)]/55 bg-[var(--verdict-unreliable)]/22",
+  pending: "border-line bg-raised",
+  pass: "border-verdict-reliable/55 bg-verdict-reliable/22",
+  fail: "border-verdict-unreliable/55 bg-verdict-unreliable/22",
 };
 
 /** One tile per answer — questions across, repeats down. The count is the honest
@@ -67,7 +67,7 @@ export function VerdictMosaic({
           />
         ))}
       </div>
-      <figcaption className="mt-2.5 font-mono text-[11px] text-[var(--faint)]">
+      <figcaption className="mt-2.5 font-mono text-[11px] text-faint">
         {tiles
           ? MOSAIC_COPY.resolved(
               states.filter((s) => s === "pass").length, total, questions, repeats)

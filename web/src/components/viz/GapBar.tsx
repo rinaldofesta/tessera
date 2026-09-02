@@ -35,7 +35,7 @@ export function GapBar({ passK, mean, k, className }: GapBarProps) {
     <div
       role="img"
       aria-label={GAP_COPY.aria(pct(p), k, pct(m), gapPp)}
-      className={cn("flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--raised)]", className)}
+      className={cn("flex h-2.5 w-full overflow-hidden rounded-full bg-raised", className)}
     >
       <div
         data-seg="pass"

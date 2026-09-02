@@ -20,6 +20,8 @@
   --verdict-reliable: #4ade80;
   --verdict-inconsistent: #fbbf24;
   --verdict-unreliable: #f87171;
+  --series-a: var(--primary);
+  --series-b: var(--faint);
 
   --background: #14161a;
   --foreground: #e8eaf0;
@@ -83,6 +85,8 @@
   --color-verdict-reliable: var(--verdict-reliable);
   --color-verdict-inconsistent: var(--verdict-inconsistent);
   --color-verdict-unreliable: var(--verdict-unreliable);
+  --color-series-a: var(--series-a);
+  --color-series-b: var(--series-b);
   --radius-xs: calc(var(--radius) * 0.5);
   --radius-sm: calc(var(--radius) * 0.75);
   --radius-md: calc(var(--radius) * 0.875);
@@ -143,4 +147,18 @@
   content: "▌";
   margin-left: 0.25rem;
   animation: term-blink 1.1s steps(1) infinite;
+}
+
+@media print {
+  .app-nav,
+  .report-actions,
+  .compare-picker {
+    display: none !important;
+  }
+  .report-details > :not(summary) {
+    display: block !important;
+  }
+  .report-headline {
+    break-inside: avoid;
+  }
 }
