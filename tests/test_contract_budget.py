@@ -5,8 +5,12 @@ def test_api_route_budget_and_deleted_surfaces(tmp_path):
     paths = create_app(home=tmp_path / "home").openapi()["paths"]
 
     # PR6a removes the four launcher-vocabulary paths and lowers this budget to 16.
-    assert len(paths) <= 19
+    assert len(paths) <= 16
     assert {
+        "/api/eval-setup",
+        "/api/orgs",
+        "/api/models",
+        "/api/model-discovery/rescan",
         "/api/trends",
         "/api/leaderboard",
         "/api/experiments",

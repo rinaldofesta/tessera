@@ -132,6 +132,7 @@ describe("RunHistory", () => {
     vi.mocked(api.getRun).mockResolvedValue({
       status: "done",
       error: null,
+      verdict: null,
       report: {
         header: {
           model: "anthropic/claude-sonnet-4", engine: "llm", grader: null, org: "meridian",

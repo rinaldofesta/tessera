@@ -1,8 +1,8 @@
 """Provider configuration: what is set, and how to set it.
 
 Responses carry environment-variable NAMES and booleans, never values. The write path
-returns configuration-derived status only — confirming reachability would mean probing
-on the request path, which the discovery design forbids.
+returns configuration-derived status only — saving local configuration does not make a
+remote reachability claim.
 """
 
 from __future__ import annotations
@@ -72,21 +72,5 @@ def save_provider(provider_id: str, body: ProviderUpdate, request: Request):
     except env_writer.EnvValueError as exc:
         raise HTTPException(422, str(exc)) from None      # `from None`: no value in the chain
 
-    def invalidate() -> None:
-        request.app.state.discovery_cache.invalidate()
-
-    env_writer.apply_updates(request.app.state.env_file, updates, invalidate=invalidate)
+    env_writer.apply_updates(request.app.state.env_file, updates, invalidate=lambda: None)
     return _view(provider_id)
-
-
-@router.post("/api/model-discovery/rescan", response_model=R.RescanResult)
-def rescan(request: Request):
-    cache = request.app.state.discovery_cache
-    cache.invalidate()
-    models, statuses = cache.get()
-    return {
-        "sources": [
-            {"source": s.source, "status": s.status, "detail": s.detail} for s in statuses
-        ],
-        "model_count": len(models),
-    }

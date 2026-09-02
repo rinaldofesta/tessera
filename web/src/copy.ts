@@ -4,20 +4,59 @@
 
 import type { ProbeDef } from "./types";
 
-export const SHELL_COPY = {
-  brand: "tessera",
-  newEvaluation: "New evaluation",
-  navLabel: "Primary navigation",
-  navItems: {
-    runs: "Runs",
-    suites: "Test suites",
-    providers: "Providers",
-  },
+export const NAV_COPY = {
+  brand: "Tessera",
+  label: "primary navigation",
+  run: "Run",
+  reports: "Reports",
+  connect: "Connect a model",
+  suites: "Suites",
+  howItWorks: "How it works",
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
-  apiOriginHint: "The backend this app is talking to",
-  shortcuts: "Keyboard: 1–3 switch views",
-  help: "Help & docs",
+} as const;
+
+export const RUN_COPY = {
+  ask: "Ask",
+  the: "the",
+  questions: "questions,",
+  timesEach: "times each.",
+  modelLabel: "model",
+  suiteLabel: "suite",
+  repeatsLabel: "times each",
+  customModel: "Type a model id…",
+  customModelPlaceholder: "provider/model",
+  customSuite: "Make your own suite…",
+  advanced: "Advanced — grading, grader, scaffold, seed",
+  engine: "grading engine",
+  deterministic: "deterministic",
+  llm: "ai grader",
+  grader: "grader model",
+  chooseGrader: "choose a grader",
+  graderRequired: "Choose a second model to grade the answers.",
+  selfGrading: "The grader must differ from the model under test.",
+  scaffold: "scaffold",
+  seed: "seed",
+  run: "Run",
+  running: "Starting…",
+  note: "about 2 minutes · nothing leaves your machine except the model calls",
+  pending: (questions: number, k: number) => `pending · ${questions} questions × ${k} repeats`,
+  runAnother: "Run another",
+} as const;
+
+export const CONNECT_COPY = {
+  title: "Connect a model",
+  subtitle: "Credentials stay on this machine and are never shown again.",
+  connected: "connected",
+  pasteKey: "paste a key",
+  url: "URL",
+  apiKey: "API key",
+  baseUrl: "base URL",
+  keyPlaceholder: "paste the key",
+  urlPlaceholder: "http://localhost:8080/v1",
+  save: "Save",
+  saving: "Saving…",
+  mlxHint: "Ollama, MLX, vLLM — paste the base URL; models are typed by id",
 } as const;
 
 export const CONFLICT: Record<string, { label: string; behavior: "answer" | "refuse"; desc: string }> = {
@@ -47,49 +86,6 @@ export const conflictLabel = (key: string) => CONFLICT[key]?.label ?? key;
 
 export const engineLabel = (engine: string) =>
   engine === "llm" ? "ai grader" : engine === "deterministic" ? "fixed rules" : engine;
-
-/** Display names for the built-in suites. A custom suite falls back to its id, which is
- *  the name its author gave it. */
-export const DATASET_LABELS: Record<string, string> = {
-  toy: "Toy starter",
-  meridian: "Meridian",
-};
-
-export const DATASET_DESCRIPTIONS: Record<string, string> = {
-  toy: "tiny 2-account starter — the fastest way to see a full run",
-  meridian: "the 22-question benchmark behind the public leaderboard",
-};
-
-export const LAUNCHER_COPY = {
-  customModel: "custom model…",
-  discoveryTitle: "model discovery",
-  discoveryLoading: "checking cached model status…",
-  discoveryHealthy: "all model sources are available",
-  discoveryUnavailable: (detail: string) => `model discovery unavailable: ${detail}`,
-  sourceStatus: (source: string, detail: string) => `${source}: ${detail}`,
-  rescan: "rescan",
-  rescanning: "rescanning…",
-  rescanFailed: (detail: string) => `rescan failed: ${detail}`,
-  curatedGroup: "curated — published leaderboard set",
-  discoveredGroup: "discovered — available beyond the curated set",
-  missingConfiguration: (envVars: string[]) =>
-    envVars.length > 0 ? `missing ${envVars.join(", ")}` : "configuration missing",
-  awaitingRescan: "configuration stored — rescan to verify",
-  noServer: "no server running",
-  runtimeUnreachable: "runtime unreachable",
-  unchecked: "unchecked",
-  underTest: "under test",
-  providersTitle: "provider configuration",
-  providersIntro: "Store missing provider settings here. Values are never shown again.",
-  providersUnavailable: (detail: string) => `provider configuration unavailable: ${detail}`,
-  configuredField: "already stored — leave blank to keep it",
-  missingField: "enter a value",
-  saveProvider: "store configuration",
-  savingProvider: "storing…",
-  providerSaved: (provider: string) =>
-    `${provider}: value stored but unverified — Rescan confirms reachability.`,
-  providerSaveFailed: (detail: string) => `couldn't store configuration: ${detail}`,
-} as const;
 
 // The scenario wizard's 5 authoring recipes (docs/tessera-lesson.html, module 5).
 // expected_behavior is never asked in the wizard — it's derived from CONFLICT[...].behavior.
@@ -131,8 +127,6 @@ export const RECIPES: Record<RecipeKey, { title: string; blurb: string; example:
   },
 };
 
-// ---- launcher rework: the guided three-step flow -----------------------------------
-
 export const MOSAIC_COPY = {
   caption: (questions: number, repeats: number, total: number) =>
     `${total} answers — ${questions} question${questions === 1 ? "" : "s"}, ${repeats} repeat${repeats === 1 ? "" : "s"} each`,
@@ -142,102 +136,6 @@ export const MOSAIC_COPY = {
     `${passed} of ${total} answers passed — ${questions} question${questions === 1 ? "" : "s"}, ${repeats} repeat${repeats === 1 ? "" : "s"} each`,
   aria: (questions: number, repeats: number) =>
     `Answer grid: ${questions} questions by ${repeats} repeats`,
-};
-
-export const WIZARD_COPY = {
-  step1: "Choose a suite",
-  step2: "Choose the model",
-  step3: "Confirm & launch",
-  q1: "What should we test?",
-  q1sub: "Pick the set of questions the model will be asked.",
-  q2: "Which model are we testing?",
-  q2sub: "Only models something has actually confirmed are listed.",
-  q3: "Ready to run",
-  continueToModel: "Continue — choose the model",
-  continueToConfirm: "Continue — confirm & launch",
-  launch: "Run evaluation",
-  back: "Back",
-  cancel: "Cancel",
-  suiteMeta: (questions: number, kind: string) =>
-    `${questions} question${questions === 1 ? "" : "s"} · ${kind}`,
-};
-
-export const MODEL_COPY = {
-  publishedGroup: "Published benchmark set — models with a leaderboard run",
-  providerGroup: "Available from your providers",
-  machineGroup: "On this machine",
-  filterPlaceholder: "Filter models…",
-  noMatch: "No model matches that filter.",
-  retired: "retired",
-  ready: "ready",
-  unchecked: "unchecked",
-  hiddenCount: (n: number) => `${n} hidden`,
-  hiddenWhy: "Models whose provider isn't set up, or whose runtime isn't running, aren't listed.",
-  addProvider: "Add a provider →",
-  rescan: "Rescan",
-  rescanning: "Rescanning…",
-  localGroup: "On this machine — not currently running",
-  needsServer: "on disk, no server",
-  runtimeOffline: "runtime not running",
-  copyCommand: "Copy start command",
-  copied: "Command copied",
-  customRow: "Use a custom model ID…",
-  customPlaceholder: "provider/model — e.g. openrouter/meta-llama/llama-4-maverick",
-  customHint: "Any model string inspect_ai accepts. Its provider's key must be configured.",
-};
-
-export const CONFIRM_COPY = {
-  summary: (questions: number, repeats: number, judge: string) =>
-    `${questions} question${questions === 1 ? "" : "s"}, asked ${repeats} time${repeats === 1 ? "" : "s"} each, graded by ${judge === "llm" ? "a second model" : "fixed rules"}.`,
-  suite: "Test suite",
-  model: "Model under test",
-  grading: "Grading",
-  repeats: "Repeats",
-  repeatsValue: (n: number) => `${n} · one wrong repeat fails the question`,
-  deterministic: "fixed rules — no second model needed",
-  llm: "ai grader — a second model marks the answers",
-  advanced: "Advanced settings — grading, repeats, grader model",
-  gradingLabel: "Grading engine",
-  graderLabel: "Grader model",
-  graderPlaceholder: "Choose a grader",
-  graderRequired: "The ai grader needs a second model to mark the answers.",
-  selfGrading: "The grader must differ from the model under test — a model can't grade itself.",
-  underTestSuffix: " (under test)",
-  repeatsLabel: "Repeats",
-  repeatsHint: "Each question is asked this many times; one wrong repeat fails it (strict pass^k).",
-  launching: "Starting…",
-};
-
-/** Provider display names. The API returns registry ids ("openai", "xai"); these are
- *  how the companies write themselves. An unknown id falls back to the id. */
-export const PROVIDER_LABELS: Record<string, string> = {
-  anthropic: "Anthropic",
-  openai: "OpenAI",
-  openrouter: "OpenRouter",
-  google: "Google",
-  groq: "Groq",
-  mistral: "Mistral",
-  xai: "xAI",
-  mlx: "MLX (local server)",
-  ollama: "Ollama",
-};
-
-export const PROVIDER_COPY = {
-  title: "Providers",
-  subtitle: "Keys are written to your local .env and never shown again.",
-  configuredGroup: "Configured",
-  notConfiguredGroup: "Not configured",
-  configured: "configured",
-  notConfigured: "not set",
-  add: "Add key",
-  replace: "Replace",
-  save: "Save",
-  saving: "Saving…",
-  saved: (provider: string) => `${provider} key stored`,
-  savedHint: "Stored, not yet verified — Rescan on the model step confirms what it reaches.",
-  saveFailed: "Couldn't store that key",
-  keyPlaceholder: "paste the key",
-  urlPlaceholder: "http://localhost:8080/v1",
 };
 
 export const MONITOR_COPY = {

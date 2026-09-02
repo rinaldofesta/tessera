@@ -1,172 +1,90 @@
-import { Suspense, lazy, useEffect } from "react";
-import {
-  CircleHelp,
-  ExternalLink,
-  Library,
-  KeyRound,
-  ListChecks,
-  Plus,
-} from "lucide-react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Suspense, lazy } from "react";
+import { NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { SHELL_COPY } from "@/copy";
+import { NAV_COPY } from "@/copy";
 import { useApiHealth } from "@/hooks";
-import { DEV_API_HOST } from "@/lib/backend";
 import { cn } from "@/lib/utils";
 
+const Connect = lazy(() => import("@/views/Connect"));
 const Datasets = lazy(() => import("@/views/Datasets"));
-const Providers = lazy(() => import("@/views/Providers"));
-const RunMonitor = lazy(() => import("@/views/RunMonitor"));
 const Run = lazy(() => import("@/views/Run"));
 const RunHistory = lazy(() => import("@/views/RunHistory"));
+const RunMonitor = lazy(() => import("@/views/RunMonitor"));
 
 const NAV = [
-  { to: "/runs", key: "1", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
-  { to: "/suites", key: "2", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
-  {
-    to: "/providers",
-    key: "3",
-    label: SHELL_COPY.navItems.providers,
-    icon: KeyRound,
-    end: false,
-  },
+  { to: "/", label: NAV_COPY.run, end: true },
+  { to: "/reports", label: NAV_COPY.reports, end: false },
+  { to: "/connect", label: NAV_COPY.connect, end: false },
+  { to: "/suites", label: NAV_COPY.suites, end: false },
 ] as const;
+
+function RootRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: "/", search }} replace />;
+}
+
+function ReportRedirect() {
+  const { id = "" } = useParams();
+  return <Navigate to={`/reports/${id}`} replace />;
+}
 
 export default function App() {
   const healthy = useApiHealth();
-  const navigate = useNavigate();
-  // in dev the SPA runs on vite's port and proxies /api to the backend; in the
-  // shipped app FastAPI serves this page itself, so the origin is already the backend's
-  const apiOrigin = import.meta.env.DEV ? DEV_API_HOST : window.location.host;
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement;
-      // only navigate when nothing interactive owns the keystroke — base-ui
-      // popups/dialogs render buttons and role=option divs, not form tags
-      if (
-        e.metaKey || e.ctrlKey || e.altKey ||
-        t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" ||
-        t.tagName === "BUTTON" || t.isContentEditable ||
-        t.closest?.('[role="dialog"], [role="alertdialog"], [role="listbox"], [role="option"], [role="menu"], [role="combobox"]')
-      )
-        return;
-      const item = NAV.find((n) => n.key === e.key);
-      if (item) navigate(item.to);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card px-4 py-5">
-        <div className="px-2 font-display text-2xl font-bold tracking-[-0.04em] text-foreground">
-          {SHELL_COPY.brand}
-        </div>
-
-        <Button
-          size="lg"
-          className="mt-6 w-full justify-start gap-2 shadow-sm shadow-primary/10"
-          // it renders an anchor, not a <button> — base-ui needs telling, or it
-          // strips the link's native semantics
-          nativeButton={false}
-          render={<NavLink to="/new" />}
-        >
-          <Plus aria-hidden="true" />
-          {SHELL_COPY.newEvaluation}
-        </Button>
-
-        <nav className="mt-7 space-y-1" aria-label={SHELL_COPY.navLabel}>
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-line bg-panel">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-7 gap-y-3 px-5 py-4 md:px-8">
+          <NavLink to="/" className="font-display text-xl font-bold tracking-tight text-foreground">
+            {NAV_COPY.brand}
+          </NavLink>
+          <nav className="order-3 flex w-full flex-wrap items-center gap-1 md:order-none md:w-auto" aria-label={NAV_COPY.label}>
+            {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                className={({ isActive }) =>
-                  cn(
-                    "relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:opacity-0",
-                    isActive
-                      ? "bg-primary/10 font-semibold text-primary before:opacity-100"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )
-                }
+                className={({ isActive }) => cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-raised hover:text-foreground",
+                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                )}
               >
-                <Icon aria-hidden="true" className="size-4" />
-                <span>{item.label}</span>
+                {item.label}
               </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto border-t border-border px-2 pt-5">
-          <div
-            className={cn(
-              "flex items-start gap-2 text-xs",
-              healthy ? "text-muted-foreground" : "font-medium text-verdict-unreliable",
-            )}
-            aria-live="polite"
-          >
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-4">
+            <a href="/learn" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              {NAV_COPY.howItWorks}
+            </a>
             <span
-              aria-hidden="true"
+              role="status"
+              aria-label={healthy ? NAV_COPY.apiConnected : NAV_COPY.apiDisconnected}
+              title={healthy ? NAV_COPY.apiConnected : NAV_COPY.apiDisconnected}
               className={cn(
-                "mt-1 size-2 shrink-0 rounded-full",
+                "size-2.5 rounded-full",
                 healthy ? "bg-verdict-reliable" : "bg-verdict-unreliable",
               )}
             />
-            <span>
-              {healthy ? SHELL_COPY.apiConnected : SHELL_COPY.apiDisconnected}
-              <span aria-hidden="true"> · </span>
-              <span
-                title={SHELL_COPY.apiOriginHint}
-                className={cn("font-mono text-[11px]", healthy && "text-faint")}
-              >
-                {apiOrigin}
-              </span>
-            </span>
           </div>
-
-          <p className="mt-4 text-[11px] text-faint">{SHELL_COPY.shortcuts}</p>
-
-          <a
-            href="/learn"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <CircleHelp aria-hidden="true" className="size-4" />
-            <span>{SHELL_COPY.help}</span>
-            <ExternalLink aria-hidden="true" className="ml-auto size-3.5" />
-          </a>
         </div>
-      </aside>
+      </header>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-7xl p-8">
-          <Suspense
-            fallback={
-              <div className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
-                Loading view…
-              </div>
-            }
-          >
-            <Routes>
-              <Route path="/" element={<Navigate to="/runs" replace />} />
-              <Route path="/runs" element={<RunHistory />} />
-              <Route path="/runs/:id" element={<RunMonitor />} />
-              <Route path="/suites" element={<Datasets />} />
-              <Route path="/new" element={<Run />} />
-              <Route path="/providers" element={<Providers />} />
-
-              <Route path="/datasets" element={<Navigate to="/suites" replace />} />
-              <Route path="/run" element={<Navigate to="/new" replace />} />
-              <Route path="*" element={<Navigate to="/runs" replace />} />
-            </Routes>
-          </Suspense>
-        </div>
+      <main className="mx-auto w-full max-w-7xl p-5 md:p-8">
+        <Suspense fallback={<div className="rounded-xl border border-line bg-panel p-5 text-sm text-faint">Loading…</div>}>
+          <Routes>
+            <Route path="/" element={<Run />} />
+            <Route path="/reports" element={<RunHistory />} />
+            <Route path="/reports/:id" element={<RunMonitor />} />
+            <Route path="/connect" element={<Connect />} />
+            <Route path="/suites" element={<Datasets />} />
+            <Route path="/new" element={<RootRedirect />} />
+            <Route path="/runs" element={<Navigate to="/reports" replace />} />
+            <Route path="/runs/:id" element={<ReportRedirect />} />
+            <Route path="/providers" element={<Navigate to="/connect" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       <Toaster position="bottom-right" richColors closeButton />
     </div>

@@ -1,7 +1,7 @@
 """FastAPI app: the Tessera Reliability Explorer API.
 
-Endpoints include launcher vocabulary, provider configuration, dataset authoring,
-folder-backed runs, the offline catalog, and paired run comparisons.
+Endpoints include provider configuration, dataset authoring, folder-backed runs,
+the offline catalog, and paired run comparisons.
 
 Handlers live in focused route modules and read their injected seams via
 request.app.state. Every JSON endpoint declares a response_model (see responses.py) —
@@ -28,7 +28,6 @@ from tessera.api import (
     routes_blueprints,
     routes_catalog,
     routes_comparisons,
-    routes_meta,
     routes_providers,
     routes_runs,
 )
@@ -39,33 +38,6 @@ def _resolve_env_file(env_file: Path | None) -> Path:
     """One authoritative absolute path. Resolved, never read, at construction time."""
     chosen = env_file if env_file is not None else paths.env_file()
     return Path(chosen).resolve()
-
-
-def _build_discovery_cache():
-    """Wire the three sources behind one cache. httpx is imported lazily so importing
-    the app stays cheap and the key-free test suite never opens a client it won't use."""
-    from tessera.api.discovery.cache import DiscoveryCache
-    from tessera.api.discovery.cloud import discover_cloud
-    from tessera.api.discovery.merge import merge
-    from tessera.api.discovery.mlx import discover_mlx
-    from tessera.api.discovery.ollama import discover_ollama
-
-    def collect():
-        import httpx
-        hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
-        with httpx.Client() as client:
-            results = [
-                discover_cloud(client, env=os.environ),
-                discover_ollama(client),
-                discover_mlx(client, hf_home=hf_home,
-                             base_url=os.environ.get("MLX_BASE_URL")),
-            ]
-        # The published set is routes_meta's TESSERA_MODELS-or-leaderboard resolution —
-        # imported rather than duplicated, so the two cannot drift.
-        from tessera.api.routes_meta import published_models
-        return merge(results, published=published_models())
-
-    return DiscoveryCache(collect=collect)
 
 
 async def _background_schedule(coro) -> None:
@@ -96,7 +68,7 @@ def lesson_path() -> Path:
 
 def create_app(home: Path | None = None, folder_eval_runner=None,
                schedule=_background_schedule, blueprint_dir: Path | None = None,
-               env_file: Path | None = None, discovery_cache=None) -> FastAPI:
+               env_file: Path | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -113,26 +85,6 @@ def create_app(home: Path | None = None, folder_eval_runner=None,
             logging.getLogger("tessera").info(
                 "reconciled interrupted runs: %s", ", ".join(interrupted),
             )
-        # Say at startup which configured providers cannot actually run: a key without
-        # its SDK fails mid-eval with a bare ModuleNotFoundError, long after the
-        # launcher promised the model. Discovery marks the models too; this is the
-        # operator-facing copy of the same fact.
-        from tessera.api.providers import PROVIDERS, is_configured, missing_sdk
-        missing = sorted({
-            package
-            for provider_id, spec in PROVIDERS.items()
-            if spec.needs_credentials and is_configured(spec, os.environ)
-            and (package := missing_sdk(provider_id))
-        })
-        if missing:
-            # Name the packages directly: anthropic/openai are base deps now (only the
-            # long tail — groq, mistralai — lives behind [providers]), so a blanket
-            # "pip install 'tessera-eval[providers]'" no longer installs every package
-            # this warning can name.
-            logging.getLogger("tessera").warning(
-                "configured providers missing their SDK: %s — pip install %s",
-                ", ".join(missing), " ".join(missing),
-            )
         yield
 
     app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
@@ -141,10 +93,6 @@ def create_app(home: Path | None = None, folder_eval_runner=None,
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or paths.suites_dir()
     app.state.env_file = _resolve_env_file(env_file)
-    # Injected like every other dependency: the default reaches the network and the
-    # filesystem, so tests must be able to supply a deterministic one or the
-    # key-free/network-free invariant is only aspirational.
-    app.state.discovery_cache = discovery_cache or _build_discovery_cache()
 
     @app.exception_handler(RequestValidationError)
     def _sanitized_validation_error(request: Request, exc: RequestValidationError):
@@ -162,7 +110,6 @@ def create_app(home: Path | None = None, folder_eval_runner=None,
 
     # The committed contract (scripts/gen-types.sh) is dumped with sorted keys, so
     # registration order no longer leaks into openapi.json.
-    app.include_router(routes_meta.router)
     app.include_router(routes_blueprints.router)
     # Catalog precedes runs by convention; dry-run is POST while the dynamic run route is GET.
     app.include_router(routes_catalog.router)
@@ -205,11 +152,18 @@ def _mount_spa(app: FastAPI, dist: Path | None = None) -> None:
 
     # Not part of the API contract: whether a bundle is present must not change
     # openapi.json (the checkout may have web/dist built; CI's contract job does not).
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def spa(full_path: str):
-        # Never let the SPA fallback swallow unmatched API routes — keep their 404s honest.
+    @app.api_route(
+        "/{full_path:path}",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        include_in_schema=False,
+    )
+    def spa(request: Request, full_path: str):
+        # Never let the SPA fallback swallow unmatched API routes — keep their 404s
+        # honest for every method, including routes removed from an earlier contract.
         if full_path.startswith("api/") or full_path == "api":
             raise HTTPException(404, "not found")
+        if request.method != "GET":
+            raise HTTPException(405, "method not allowed")
         return FileResponse(dist / "index.html")
 
 

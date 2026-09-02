@@ -54,17 +54,13 @@ def _folder_eval(**kwargs):
     return log
 
 
-def _client(tmp_path, *, folder_eval_runner=None, discovery_cache=None):
+def _client(tmp_path, *, folder_eval_runner=None):
     app = create_app(
         home=tmp_path / "home",
         folder_eval_runner=folder_eval_runner or _folder_eval,
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
         env_file=tmp_path / ".env",
-        # A stub by default: the real cache probes localhost:11434 and scans
-        # ~/.cache/huggingface, which would make this suite neither network-free nor
-        # deterministic — it would fail outright on a machine running Ollama.
-        discovery_cache=discovery_cache or _stub_cache(),
     )
     return TestClient(app)
 
@@ -85,7 +81,6 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
     app = create_app(
         home=home,
         blueprint_dir=tmp_path / "blueprints", env_file=tmp_path / ".env",
-        discovery_cache=_stub_cache(),
     )
 
     with caplog.at_level("INFO"), TestClient(app):
@@ -95,23 +90,8 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
     assert record.id in caplog.text
 
 
-def test_list_orgs(tmp_path):
-    r = _client(tmp_path).get("/api/orgs")
-    assert r.status_code == 200 and "toy" in r.json()
-
-
-def test_list_models(tmp_path):
-    r = _client(tmp_path).get("/api/models")
-    assert r.status_code == 200
-    models = r.json()
-    assert "anthropic/claude-sonnet-4-6" in models and len(models) >= 2
-    # the leaderboard additions (incl. the local open-weights option) stay offered
-    assert "anthropic/claude-haiku-4-5" in models and "ollama/qwen3.5:latest" in models
-    assert "anthropic/claude-fable-5" in models and "anthropic/claude-sonnet-5" in models
-
-
 def test_default_published_models_match_single_model_leaderboard(monkeypatch):
-    from tessera.api.routes_meta import published_models
+    from tessera.catalog import published_models
 
     monkeypatch.delenv("TESSERA_MODELS", raising=False)
     rows_path = Path(__file__).parents[1] / "docs" / "leaderboard.rows.json"
@@ -121,125 +101,6 @@ def test_default_published_models_match_single_model_leaderboard(monkeypatch):
         if row.get("harness", "single") == "single"
     }
     assert set(published_models()) == expected
-
-
-def test_list_models_env_override(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_MODELS", "a/x, b/y")
-    r = _client(tmp_path).get("/api/models")
-    assert r.status_code == 200 and r.json() == ["a/x", "b/y"]
-
-
-def test_list_models_env_whitespace_falls_back_to_published_set(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_MODELS", " , ,")
-    r = _client(tmp_path).get("/api/models")
-    assert r.status_code == 200 and "anthropic/claude-sonnet-4-6" in r.json()
-
-
-def test_eval_setup_defaults_do_not_claim_a_model_selection(tmp_path):
-    r = _client(tmp_path).get("/api/eval-setup")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["defaults"] == {
-        "engine": "deterministic",
-        "repeats": 3,
-        "grader": None,
-    }
-
-
-def test_eval_setup_model_readiness(tmp_path, monkeypatch):
-    # Readiness comes from what a source observed, never from an env var existing.
-    # Only sonnet was seen by a source; everything else is a published placeholder, and
-    # the ollama entry stays needs_config precisely because the daemon is offline.
-    from tessera.api.discovery.types import DiscoveredModel
-
-    monkeypatch.setenv("TESSERA_MODELS", "anthropic/sonnet,openai/gpt,mlx/foo,ollama/x")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    cache = _stub_cache(models=[
-        DiscoveredModel(
-            "anthropic/sonnet", "Sonnet", "anthropic", "ready", "cloud",
-            released="2026-08-01", retired=True,
-        ),
-    ])
-
-    r = _client(tmp_path, discovery_cache=cache).get("/api/eval-setup")
-    assert r.status_code == 200
-    assert r.json()["models"] == [
-        {"id": "anthropic/sonnet", "label": "Sonnet", "provider": "anthropic",
-         "readiness": "ready", "source": "cloud", "published": True,
-         "released": "2026-08-01", "retired": True, "detail": None},
-        {"id": "openai/gpt", "label": "gpt", "provider": "openai",
-         "readiness": "needs_config", "source": "published", "published": True,
-         "released": None, "retired": False, "detail": None},
-        {"id": "mlx/foo", "label": "foo", "provider": "unknown",
-         "readiness": "needs_config", "source": "published", "published": True,
-         "released": None, "retired": False, "detail": None},
-        {"id": "ollama/x", "label": "x", "provider": "ollama",
-         "readiness": "needs_config", "source": "published", "published": True,
-         "released": None, "retired": False, "detail": None},
-    ]
-
-
-def test_eval_setup_lists_builtin_and_stored_suites(tmp_path):
-    from tessera.api import blueprint_store
-    from tessera.orgs import get_blueprint
-
-    client = _client(tmp_path)
-    blueprint_store.save_blueprint(tmp_path / "blueprints", "mine", get_blueprint("toy"))
-
-    r = client.get("/api/eval-setup")
-    assert r.status_code == 200
-    suites = {suite["id"]: suite for suite in r.json()["suites"]}
-    toy = get_blueprint("toy")
-    # Everything is editable in this product: builtins are materialized into the store as
-    # editable JSON on first touch (seed_from_orgs). Only `kind` encodes origin.
-    assert suites["toy"] == {
-        "id": "toy", "kind": "builtin", "editable": True,
-        "claims": len(toy.claims), "questions": len(toy.probes),
-    }
-    assert suites["mine"] == {
-        "id": "mine", "kind": "custom", "editable": True,
-        "claims": len(toy.claims), "questions": len(toy.probes),
-    }
-
-
-def test_eval_setup_builtin_kind_survives_store_seeding(tmp_path):
-    # /api/orgs (seed=True) materializes every builtin into the store; the setup
-    # endpoint must still report those suites as kind "builtin", not "custom".
-    client = _client(tmp_path)
-    client.get("/api/orgs")
-
-    r = client.get("/api/eval-setup")
-    suites = {suite["id"]: suite for suite in r.json()["suites"]}
-    assert suites["toy"]["kind"] == "builtin"
-    assert all(s["kind"] == "builtin" for s in suites.values() if s["id"] in ("toy", "meridian"))
-
-
-def test_eval_setup_builtin_counts_match_the_runnable_store_copy(tmp_path, monkeypatch):
-    from tessera.api import blueprint_store
-    from tessera.models import Blueprint
-    from tessera.orgs import get_blueprint
-
-    store = tmp_path / "blueprints"
-    original = get_blueprint("toy")
-    edited = Blueprint(
-        claims=original.claims[:-2],
-        probes=[*original.probes[:2], original.probes[-1]],
-    )
-    blueprint_store.save_blueprint(store, "toy", edited)
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(store))
-
-    suites = {suite["id"]: suite for suite in _client(tmp_path).get("/api/eval-setup").json()["suites"]}
-    assert suites["toy"]["claims"] == len(edited.claims)
-    assert suites["toy"]["questions"] == len(edited.probes)
-
-
-def test_eval_setup_never_discloses_credential_values(tmp_path, monkeypatch):
-    sentinel = "sk-SENTINEL-123"
-    monkeypatch.setenv("ANTHROPIC_API_KEY", sentinel)
-
-    r = _client(tmp_path).get("/api/eval-setup")
-    assert r.status_code == 200
-    assert sentinel not in r.text
 
 
 def test_every_api_route_declares_a_response_model(tmp_path):
@@ -458,105 +319,9 @@ def test_blueprint_create_conflict_update_delete(tmp_path):
     assert c.delete("/api/blueprints/mine").status_code == 404
 
 
-def test_orgs_includes_saved_blueprint(tmp_path):
-    c = _client(tmp_path)
-    bp = c.get("/api/blueprints/toy").json()
-    c.post("/api/blueprints", json={"id": "mine", "blueprint": bp})
-    orgs = c.get("/api/orgs").json()
-    assert "mine" in orgs and "toy" in orgs          # authored dataset is now runnable
-
-
 def test_blueprint_create_invalid_400(tmp_path):
     c = _client(tmp_path)
     bad = {"claims": [], "probes": [{"probe_id": "p", "question": "q?",
            "conflict_type": "void", "expected_behavior": "answer"}]}  # void must refuse
     r = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
     assert r.status_code == 400
-
-
-def _stub_cache(models=(), statuses=None):
-    """A discovery cache with fixed contents.
-
-    The real one probes localhost:11434 and scans ~/.cache/huggingface, so tests that
-    used it were neither key-free nor network-free, and would fail outright on a machine
-    with an Ollama daemon running — a documented workflow for this project.
-    """
-    from tessera.api.discovery.types import SourceResult
-
-    resolved = list(statuses if statuses is not None else [
-        SourceResult("cloud", (), "ok"),
-        SourceResult("ollama", (), "offline", detail="daemon unreachable"),
-        SourceResult("mlx", (), "ok"),
-    ])
-
-    class _Fixed:
-        def get(self):
-            # Run the real merge, so the stub honours the cache's actual contract:
-            # published ids absent from every source come back as needs_config
-            # placeholders. Returning raw source output instead would test a shape the
-            # route never actually receives.
-            from tessera.api.discovery.merge import merge
-            from tessera.api.routes_meta import published_models
-            # Hang the seeded models off an existing source rather than inventing one,
-            # so the reported source set stays exactly the three real sources.
-            seeded = list(resolved)
-            if models:
-                head = seeded[0]
-                seeded[0] = SourceResult(head.source, tuple(models), head.status, head.detail)
-            return merge(seeded, published=published_models())
-
-        def invalidate(self):
-            pass
-
-    return _Fixed()
-
-
-def _client_with_cache(tmp_path, cache):
-    return TestClient(create_app(
-        home=tmp_path / "home",
-        schedule=_inline_schedule,
-        blueprint_dir=tmp_path / "blueprints",
-        env_file=tmp_path / ".env",
-        discovery_cache=cache,
-    ))
-
-
-def test_eval_setup_reports_source_status_alongside_models(tmp_path):
-    from tessera.api.discovery.types import DiscoveredModel
-    cache = _stub_cache(models=[
-        DiscoveredModel("anthropic/x", "x", "anthropic", "ready", "cloud"),
-    ])
-    body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
-    assert {s["source"] for s in body["sources"]} == {"cloud", "ollama", "mlx"}
-    assert all(
-        "source" in model
-        and "published" in model
-        and "released" in model
-        and "retired" in model
-        for model in body["models"]
-    )
-
-
-def test_eval_setup_never_reports_an_unreachable_ollama_model_as_ready(tmp_path, monkeypatch):
-    # The reproducible failure this phase exists to fix: the daemon is down, and the
-    # published list still names an ollama model.
-    monkeypatch.setenv("TESSERA_MODELS", "ollama/qwen3.5:latest,anthropic/claude-sonnet-4-6")
-    body = _client_with_cache(tmp_path, _stub_cache()).get("/api/eval-setup").json()
-    ollama = [m for m in body["models"] if m["provider"] == "ollama"]
-    assert ollama, "the published ollama model should still be listed"
-    assert all(m["readiness"] != "ready" for m in ollama)
-
-
-def test_eval_setup_renders_with_every_runtime_down_and_no_keys(tmp_path):
-    # Every source reports failure and nothing is discovered: the launcher must still
-    # render the published set, honestly marked, rather than 500 or return nothing.
-    from tessera.api.discovery.types import SourceResult
-    cache = _stub_cache(statuses=[
-        SourceResult("cloud", (), "ok"),
-        SourceResult("ollama", (), "offline", detail="daemon unreachable"),
-        SourceResult("mlx", (), "offline", detail="no server"),
-    ])
-    body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
-    assert body["models"]                                     # still renders
-    assert all(m["readiness"] != "ready" for m in body["models"])
-    assert "model" not in body["defaults"]

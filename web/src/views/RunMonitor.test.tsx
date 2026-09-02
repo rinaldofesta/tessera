@@ -9,8 +9,9 @@ vi.mock("@/api", () => ({
     watchRun: vi.fn(),
     getRun: vi.fn(),
     listRuns: vi.fn().mockResolvedValue([]),
-    evalSetup: vi.fn().mockResolvedValue({
-      suites: [], models: [], sources: [], defaults: { engine: "deterministic", repeats: 3 },
+    catalog: vi.fn().mockResolvedValue({
+      suites: [], models: [], providers: [], scorers: [], scaffolds: ["baseline"],
+      defaults: { engine: "deterministic", suite: "starter", k: 3, scaffold: "baseline", seed: 0 },
     }),
   },
 }));
@@ -56,7 +57,7 @@ describe("RunMonitor as run detail", () => {
   it("shows the scorecard and export buttons once the run is done", async () => {
     const source = new FakeSource();
     vi.mocked(api.watchRun).mockReturnValue(source as unknown as EventSource);
-    vi.mocked(api.getRun).mockResolvedValue({ status: "done", report, error: null });
+    vi.mocked(api.getRun).mockResolvedValue({ status: "done", report, verdict: null, error: null });
     view();
     source.onmessage!({ data: JSON.stringify({ status: "done", error: null }) });
     expect(await screen.findByText(/Reliable — correct behavior/)).toBeInTheDocument();

@@ -100,45 +100,6 @@ class BlueprintDeleted(BaseModel):
     deleted: str
 
 
-# ----- eval setup (launcher vocabulary) -----
-
-ModelReadiness = Literal["ready", "needs_config", "needs_server", "offline", "unverified"]
-SuiteKind = Literal["builtin", "custom"]
-
-
-class EvalSetupDefaults(BaseModel):
-    engine: Literal["deterministic"]
-    repeats: int
-    grader: str | None
-
-
-class EvalSetupModel(BaseModel):
-    id: str
-    label: str
-    provider: str
-    readiness: ModelReadiness
-    source: str
-    published: bool
-    released: str | None
-    retired: bool
-    detail: str | None = None
-
-
-class EvalSetupSuite(BaseModel):
-    id: str
-    kind: SuiteKind
-    editable: bool
-    claims: int
-    questions: int
-
-
-class EvalSetup(BaseModel):
-    defaults: EvalSetupDefaults
-    models: list[EvalSetupModel]
-    suites: list[EvalSetupSuite]
-    sources: list[SourceStatus]
-
-
 # ----- providers (credential configuration) -----
 
 ProviderReadiness = Literal["configured", "needs_config"]
@@ -155,14 +116,3 @@ class Provider(BaseModel):
     configured: bool
     readiness: ProviderReadiness
     fields: list[ProviderField]
-
-
-class SourceStatus(BaseModel):
-    source: str
-    status: Literal["ok", "offline", "skipped"]
-    detail: str | None
-
-
-class RescanResult(BaseModel):
-    sources: list[SourceStatus]
-    model_count: int

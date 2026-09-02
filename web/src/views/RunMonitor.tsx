@@ -34,8 +34,8 @@ export default function RunMonitor() {
 
     // RunStatus has no in-flight report, so these read-only endpoints provide the
     // fixed dimensions needed to render honest pending tiles from the first frame.
-    Promise.all([api.listRuns(true), api.evalSetup()])
-      .then(([runs, setup]) => {
+    Promise.all([api.listRuns(true), api.catalog()])
+      .then(([runs, catalog]) => {
         if (!active) return;
         const run = runs.find((candidate) => candidate.id === id);
         if (!run) return;
@@ -43,7 +43,9 @@ export default function RunMonitor() {
           model: run.model,
           suite: run.org,
           grading: run.judge,
-          questions: setup.suites.find((suite) => suite.id === run.org)?.questions ?? 0,
+          questions: catalog.suites.find(
+            (suite) => suite.name === run.org || suite.org === run.org,
+          )?.questions ?? 0,
           repeats: run.epochs,
         });
       })

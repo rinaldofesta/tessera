@@ -34,26 +34,16 @@ export interface RunSummary {
   mean_rate: number | null;
   archived: boolean;
 }
-export interface StartRunResult {
-  job_id: string;
-  status: "running" | "done" | "error";
-}
 export interface RunStatus {
   status: "running" | "done" | "error";
   report: Report | null;
+  verdict: Run["verdict"];
   error: string | null;
-}
-export interface RunConfig {
-  model: string;
-  judge: "llm" | "deterministic";
-  grader?: string | null;
-  org: string;
-  epochs: number;
-  scaffold: string;
-  seed: number;
 }
 export type Run = S["Run"];
 export type RunSpec = S["RunSpec"];
+export type Blocker = S["Blocker"];
+export type Plan = S["Plan"];
 export type ComparisonResult = S["ComparisonResult"];
 export type ComparisonIntervention = NonNullable<S["ComparisonRequest"]["intervention"]>;
 
@@ -67,12 +57,11 @@ export type ValidationError = S["ValidationIssue"];
 export type ValidationResult = S["ValidationResult"];
 export type Artifacts = S["Artifacts"];
 
-// ----- eval setup + providers (the guided launcher) -----
-export type EvalSetup = S["EvalSetup"];
-export type EvalSetupModel = S["EvalSetupModel"];
-export type EvalSetupSuite = S["EvalSetupSuite"];
+// ----- catalog + provider configuration -----
+export type Catalog = S["Catalog"];
+export type CatalogModel = S["CatalogModel"];
+export type CatalogProvider = S["CatalogProvider"];
+export type CatalogSuite = S["CatalogSuite"];
 export type Provider = S["Provider"];
 export type ProviderField = S["ProviderField"];
 export type ProviderUpdate = S["ProviderUpdate"];
-export type SourceStatus = S["SourceStatus"];
-export type RescanResult = S["RescanResult"];

@@ -88,8 +88,8 @@ def test_providers_expose_only_field_ids_and_never_values(tmp_path, monkeypatch)
         env={"ANTHROPIC_API_KEY": secret}, suites_dir=tmp_path,
     )["providers"]
 
-    assert next(p for p in providers if p["id"] == "anthropic")["fields"] == ["api_key"]
-    assert next(p for p in providers if p["id"] == "mlx")["fields"] == ["base_url"]
+    assert next(p for p in providers if p["id"] == "anthropic")["fields"] == [{"id": "api_key", "env_var": "ANTHROPIC_API_KEY"}]
+    assert next(p for p in providers if p["id"] == "mlx")["fields"] == [{"id": "base_url", "env_var": "MLX_BASE_URL"}]
     assert secret not in json.dumps(providers)
 
 

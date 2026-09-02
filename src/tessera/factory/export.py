@@ -1,7 +1,7 @@
 # src/tessera/factory/export.py
 """Freeze a variant + its answer key to JSON. Exporting into the API-served suites
 store (tessera.paths.suites_dir(), $TESSERA_BLUEPRINT_DIR if set) IS the reveal of a
-holdout seed (the blueprint becomes runnable by name and visible in /api/orgs); do not
+holdout seed (the blueprint becomes runnable by name and visible in /api/catalog); do not
 export a still-withheld seed there. See ADR-0008."""
 
 from __future__ import annotations

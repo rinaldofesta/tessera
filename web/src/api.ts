@@ -1,8 +1,7 @@
 import { toLegacyStatus } from "@/lib/runStatus";
 import type {
-  Artifacts, Blueprint, BlueprintMeta, ComparisonIntervention, ComparisonResult, EvalSetup,
-  Provider, ProviderUpdate, RescanResult, Run, RunConfig, RunSpec, RunStatus, RunSummary,
-  StartRunResult, ValidationResult,
+  Artifacts, Blueprint, BlueprintMeta, Catalog, ComparisonIntervention, ComparisonResult,
+  Provider, ProviderUpdate, Run, RunSpec, RunStatus, RunSummary, ValidationResult,
 } from "./types";
 
 function messageForDetail(detail: unknown): string {
@@ -52,19 +51,8 @@ export function toStatus(run: Run): RunStatus {
   return {
     status: toLegacyStatus(run.status),
     report: run.report,
+    verdict: run.verdict,
     error: run.error,
-  };
-}
-
-export function toSpec(cfg: RunConfig): RunSpec {
-  return {
-    model: cfg.model,
-    engine: cfg.judge,
-    grader: cfg.grader,
-    suite: cfg.org,
-    k: cfg.epochs,
-    scaffold: cfg.scaffold,
-    seed: cfg.seed,
   };
 }
 
@@ -75,26 +63,19 @@ export const api = {
       body: JSON.stringify({ a, b, intervention }),
     }).then(j<ComparisonResult>),
 
-  // orgs + models + runs
-  listOrgs: () => fetch("/api/orgs").then(j<string[]>),
-  listModels: () => fetch("/api/models").then(j<string[]>),
-  evalSetup: () => fetch("/api/eval-setup").then(j<EvalSetup>),
-  listProviders: () => fetch("/api/providers").then(j<Provider[]>),
+  // catalog + providers + runs
+  catalog: () => fetch("/api/catalog").then(j<Catalog>),
   saveProvider: (id: string, body: ProviderUpdate) =>
     fetch(`/api/providers/${encodeURIComponent(id)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(j<Provider>),
-  rescan: () =>
-    fetch("/api/model-discovery/rescan", { method: "POST" }).then(j<RescanResult>),
-  startRun: (cfg: RunConfig) =>
+  startRun: (spec: RunSpec) =>
     fetch("/api/runs", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify(toSpec(cfg)),
-    }).then(j<Run>).then((run): StartRunResult => ({
-      job_id: run.id, status: toSummary(run).status,
-    })),
+      body: JSON.stringify(spec),
+    }).then(j<Run>),
   getRun: (id: string) =>
     fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<Run>).then(toStatus),
   // EventSource isn't fetch-shaped, but network access still routes through this module.

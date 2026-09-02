@@ -264,7 +264,7 @@
           },
           "fields": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/CatalogProviderField"
             },
             "title": "Fields",
             "type": "array"
@@ -285,6 +285,24 @@
           "fields"
         ],
         "title": "CatalogProvider",
+        "type": "object"
+      },
+      "CatalogProviderField": {
+        "properties": {
+          "env_var": {
+            "title": "Env Var",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "env_var"
+        ],
+        "title": "CatalogProviderField",
         "type": "object"
       },
       "CatalogScorer": {
@@ -664,183 +682,6 @@
           "content"
         ],
         "title": "DocFile",
-        "type": "object"
-      },
-      "EvalSetup": {
-        "properties": {
-          "defaults": {
-            "$ref": "#/components/schemas/EvalSetupDefaults"
-          },
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/EvalSetupModel"
-            },
-            "title": "Models",
-            "type": "array"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/SourceStatus"
-            },
-            "title": "Sources",
-            "type": "array"
-          },
-          "suites": {
-            "items": {
-              "$ref": "#/components/schemas/EvalSetupSuite"
-            },
-            "title": "Suites",
-            "type": "array"
-          }
-        },
-        "required": [
-          "defaults",
-          "models",
-          "suites",
-          "sources"
-        ],
-        "title": "EvalSetup",
-        "type": "object"
-      },
-      "EvalSetupDefaults": {
-        "properties": {
-          "engine": {
-            "const": "deterministic",
-            "title": "Engine",
-            "type": "string"
-          },
-          "grader": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grader"
-          },
-          "repeats": {
-            "title": "Repeats",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "engine",
-          "repeats",
-          "grader"
-        ],
-        "title": "EvalSetupDefaults",
-        "type": "object"
-      },
-      "EvalSetupModel": {
-        "properties": {
-          "detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Detail"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          },
-          "published": {
-            "title": "Published",
-            "type": "boolean"
-          },
-          "readiness": {
-            "enum": [
-              "ready",
-              "needs_config",
-              "needs_server",
-              "offline",
-              "unverified"
-            ],
-            "title": "Readiness",
-            "type": "string"
-          },
-          "released": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Released"
-          },
-          "retired": {
-            "title": "Retired",
-            "type": "boolean"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "provider",
-          "readiness",
-          "source",
-          "published",
-          "released",
-          "retired"
-        ],
-        "title": "EvalSetupModel",
-        "type": "object"
-      },
-      "EvalSetupSuite": {
-        "properties": {
-          "claims": {
-            "title": "Claims",
-            "type": "integer"
-          },
-          "editable": {
-            "title": "Editable",
-            "type": "boolean"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "enum": [
-              "builtin",
-              "custom"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "questions": {
-            "title": "Questions",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "editable",
-          "claims",
-          "questions"
-        ],
-        "title": "EvalSetupSuite",
         "type": "object"
       },
       "ExpectedBehavior": {
@@ -1888,27 +1729,6 @@
         "title": "ReportProbe",
         "type": "object"
       },
-      "RescanResult": {
-        "properties": {
-          "model_count": {
-            "title": "Model Count",
-            "type": "integer"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/SourceStatus"
-            },
-            "title": "Sources",
-            "type": "array"
-          }
-        },
-        "required": [
-          "sources",
-          "model_count"
-        ],
-        "title": "RescanResult",
-        "type": "object"
-      },
       "ResolutionRule": {
         "description": "How a `resolvable` conflict is decided. Note authority can outrank recency: a\nsource that declares itself binding wins even over a fresher one.",
         "enum": [
@@ -2289,41 +2109,6 @@
           "asserted_at"
         ],
         "title": "SiloField",
-        "type": "object"
-      },
-      "SourceStatus": {
-        "properties": {
-          "detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Detail"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "ok",
-              "offline",
-              "skipped"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "source",
-          "status",
-          "detail"
-        ],
-        "title": "SourceStatus",
         "type": "object"
       },
       "ValidationError": {
@@ -2766,89 +2551,6 @@
           }
         },
         "summary": "Create Comparison"
-      }
-    },
-    "/api/eval-setup": {
-      "get": {
-        "description": "Return the typed, credential-safe vocabulary and defaults for the eval launcher.",
-        "operationId": "eval_setup_api_eval_setup_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvalSetup"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Eval Setup"
-      }
-    },
-    "/api/model-discovery/rescan": {
-      "post": {
-        "operationId": "rescan_api_model_discovery_rescan_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RescanResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Rescan"
-      }
-    },
-    "/api/models": {
-      "get": {
-        "description": "The published model set displayed by the Run form.",
-        "operationId": "list_models_api_models_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "type": "string"
-                  },
-                  "title": "Response List Models Api Models Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Models"
-      }
-    },
-    "/api/orgs": {
-      "get": {
-        "description": "Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a\ndataset authored on the Datasets page is immediately runnable here. Raises (500)\nif a custom org module fails to import \u2014 surfaced by the frontend as a warning.",
-        "operationId": "list_orgs_api_orgs_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "type": "string"
-                  },
-                  "title": "Response List Orgs Api Orgs Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Orgs"
       }
     },
     "/api/providers": {

@@ -27,7 +27,7 @@ def _provider_row(provider_id: str, env: Mapping[str, str]) -> dict:
         id=spec.id,
         label=PROVIDER_LABELS.get(provider_id, provider_id),
         connected=is_configured(spec, env),
-        fields=[field.id for field in spec.fields],
+        fields=[{"id": field.id, "env_var": field.env_var} for field in spec.fields],
     ).model_dump()
 
 
@@ -50,10 +50,8 @@ def connect(
 ) -> dict:
     """Validate and persist supported provider fields, returning status only.
 
-    `invalidate` runs after the write lands, exactly like routes_providers.py's
-    save_provider(): a caller sitting on a stale discovery cache (an app or another
-    long-lived process) must pass its own callback or the cache keeps reporting
-    the provider as unconfigured until they expire on their own."""
+    `invalidate` runs after the write lands so a long-lived caller can refresh any
+    configuration-derived state it owns."""
     spec = PROVIDERS.get(provider_id)
     if spec is None or not spec.needs_credentials:
         raise SpecError(f"unknown provider: {provider_id}")
