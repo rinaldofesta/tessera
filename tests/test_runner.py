@@ -30,10 +30,10 @@ def test_job_env_pins_blueprint_store_to_an_absolute_path(tmp_path, monkeypatch)
     # "unknown org" — the author->run loop only worked for built-in orgs.
     from tessera.api.runner import _job_env
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("TESSERA_HOME", str(tmp_path))
     monkeypatch.delenv("TESSERA_BLUEPRINT_DIR", raising=False)
     env = _job_env()
-    assert env["TESSERA_BLUEPRINT_DIR"] == str(tmp_path / "blueprints")
+    assert env["TESSERA_BLUEPRINT_DIR"] == str(tmp_path / "suites")
     assert env["TESSERA_OUT"].startswith("/tmp/tessera/run-")
 
 

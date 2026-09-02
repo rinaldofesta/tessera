@@ -3,12 +3,19 @@
 import pytest
 
 from tessera.models import Blueprint, ConflictType
-from tessera.orgs import get_blueprint, org_names
+from tessera.orgs import _store_dir, get_blueprint, org_names
 
 
 def test_registry_lists_builtins():
     names = org_names()
     assert "toy" in names and "your" in names
+
+
+def test_default_store_is_the_tessera_home_suites_directory(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_HOME", str(tmp_path))
+    monkeypatch.delenv("TESSERA_BLUEPRINT_DIR", raising=False)
+
+    assert _store_dir() == tmp_path / "suites"
 
 
 def test_get_blueprint_returns_valid_blueprints():

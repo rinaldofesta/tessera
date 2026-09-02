@@ -50,6 +50,45 @@
         "title": "Artifacts",
         "type": "object"
       },
+      "Blocker": {
+        "properties": {
+          "code": {
+            "enum": [
+              "unknown_suite",
+              "not_connected",
+              "grader_required",
+              "grader_not_allowed",
+              "self_grading",
+              "unknown_scaffold",
+              "unknown_provider"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "fix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "fix"
+        ],
+        "title": "Blocker",
+        "type": "object"
+      },
       "Blueprint": {
         "description": "A fragmented organization: the claims it knows and the probes we ask it.",
         "properties": {
@@ -149,6 +188,186 @@
           "file"
         ],
         "title": "Body_upload_report_api_reports_post",
+        "type": "object"
+      },
+      "Catalog": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/Defaults"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogProvider"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "scaffolds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scaffolds",
+            "type": "array"
+          },
+          "scorers": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogScorer"
+            },
+            "title": "Scorers",
+            "type": "array"
+          },
+          "suites": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogSuite"
+            },
+            "title": "Suites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suites",
+          "models",
+          "providers",
+          "scorers",
+          "scaffolds",
+          "defaults"
+        ],
+        "title": "Catalog",
+        "type": "object"
+      },
+      "CatalogModel": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "provider",
+          "connected"
+        ],
+        "title": "CatalogModel",
+        "type": "object"
+      },
+      "CatalogProvider": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "connected",
+          "fields"
+        ],
+        "title": "CatalogProvider",
+        "type": "object"
+      },
+      "CatalogScorer": {
+        "properties": {
+          "engine": {
+            "enum": [
+              "deterministic",
+              "llm"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "version"
+        ],
+        "title": "CatalogScorer",
+        "type": "object"
+      },
+      "CatalogSuite": {
+        "properties": {
+          "claims": {
+            "title": "Claims",
+            "type": "integer"
+          },
+          "editable": {
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "builtin",
+              "user"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "org": {
+            "title": "Org",
+            "type": "string"
+          },
+          "questions": {
+            "title": "Questions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "org",
+          "kind",
+          "questions",
+          "claims",
+          "editable"
+        ],
+        "title": "CatalogSuite",
         "type": "object"
       },
       "CategoryPairCounts": {
@@ -383,6 +602,41 @@
         ],
         "title": "ConflictType",
         "type": "string"
+      },
+      "Defaults": {
+        "properties": {
+          "engine": {
+            "default": "deterministic",
+            "enum": [
+              "deterministic",
+              "llm"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "k": {
+            "default": 3,
+            "title": "K",
+            "type": "integer"
+          },
+          "scaffold": {
+            "default": "baseline",
+            "title": "Scaffold",
+            "type": "string"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "suite": {
+            "default": "starter",
+            "title": "Suite",
+            "type": "string"
+          }
+        },
+        "title": "Defaults",
+        "type": "object"
       },
       "Diagnostic": {
         "description": "One aggregated failure signature from report.compare.diagnose_report.",
@@ -1470,6 +1724,74 @@
           "dropped"
         ],
         "title": "PairCounts",
+        "type": "object"
+      },
+      "Plan": {
+        "properties": {
+          "blockers": {
+            "items": {
+              "$ref": "#/components/schemas/Blocker"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "diagnostics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RunSpec"
+          },
+          "scorer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Version"
+          },
+          "suite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogSuite"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ready",
+          "blockers",
+          "diagnostics",
+          "request",
+          "suite",
+          "provider",
+          "scorer_version"
+        ],
+        "title": "Plan",
         "type": "object"
       },
       "PreflightRequest": {
@@ -2577,6 +2899,63 @@
         "title": "RunRequest",
         "type": "object"
       },
+      "RunSpec": {
+        "description": "The request as a user writes it: RunRequestSpec plus defaults and input bounds.\nShape only \u2014 the grader/engine and suite rules are runner.plan's blockers.",
+        "properties": {
+          "engine": {
+            "default": "deterministic",
+            "enum": [
+              "deterministic",
+              "llm"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "k": {
+            "default": 3,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "K",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "scaffold": {
+            "default": "baseline",
+            "title": "Scaffold",
+            "type": "string"
+          },
+          "seed": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "suite": {
+            "default": "starter",
+            "title": "Suite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "RunSpec",
+        "type": "object"
+      },
       "RunStatus": {
         "properties": {
           "error": {
@@ -3219,6 +3598,24 @@
           }
         },
         "summary": "Upsert Blueprint"
+      }
+    },
+    "/api/catalog": {
+      "get": {
+        "operationId": "catalog_api_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog"
       }
     },
     "/api/comparisons": {
@@ -4000,6 +4397,44 @@
           }
         },
         "summary": "Start Run"
+      }
+    },
+    "/api/runs/dry-run": {
+      "post": {
+        "operationId": "dry_run_api_runs_dry_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dry Run"
       }
     },
     "/api/runs/{job_id}": {

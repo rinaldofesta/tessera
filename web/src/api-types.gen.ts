@@ -79,6 +79,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/comparisons": {
         parameters: {
             query?: never;
@@ -455,6 +472,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/dry-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dry Run */
+        post: operations["dry_run_api_runs_dry_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{job_id}": {
         parameters: {
             query?: never;
@@ -560,6 +594,18 @@ export interface components {
                 };
             };
         };
+        /** Blocker */
+        Blocker: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "unknown_suite" | "not_connected" | "grader_required" | "grader_not_allowed" | "self_grading" | "unknown_scaffold" | "unknown_provider";
+            /** Fix */
+            fix: string | null;
+            /** Message */
+            message: string;
+        };
         /**
          * Blueprint
          * @description A fragmented organization: the claims it knows and the probes we ask it.
@@ -598,6 +644,72 @@ export interface components {
         Body_upload_report_api_reports_post: {
             /** File */
             file: string;
+        };
+        /** Catalog */
+        Catalog: {
+            defaults: components["schemas"]["Defaults"];
+            /** Models */
+            models: components["schemas"]["CatalogModel"][];
+            /** Providers */
+            providers: components["schemas"]["CatalogProvider"][];
+            /** Scaffolds */
+            scaffolds: string[];
+            /** Scorers */
+            scorers: components["schemas"]["CatalogScorer"][];
+            /** Suites */
+            suites: components["schemas"]["CatalogSuite"][];
+        };
+        /** CatalogModel */
+        CatalogModel: {
+            /** Connected */
+            connected: boolean;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Provider */
+            provider: string;
+        };
+        /** CatalogProvider */
+        CatalogProvider: {
+            /** Connected */
+            connected: boolean;
+            /** Fields */
+            fields: string[];
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
+        /** CatalogScorer */
+        CatalogScorer: {
+            /**
+             * Engine
+             * @enum {string}
+             */
+            engine: "deterministic" | "llm";
+            /** Version */
+            version: string;
+        };
+        /** CatalogSuite */
+        CatalogSuite: {
+            /** Claims */
+            claims: number;
+            /** Editable */
+            editable: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "builtin" | "user";
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Org */
+            org: string;
+            /** Questions */
+            questions: number;
         };
         /** CategoryPairCounts */
         CategoryPairCounts: {
@@ -685,6 +797,35 @@ export interface components {
          * @enum {string}
          */
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
+        /** Defaults */
+        Defaults: {
+            /**
+             * Engine
+             * @default deterministic
+             * @enum {string}
+             */
+            engine: "deterministic" | "llm";
+            /**
+             * K
+             * @default 3
+             */
+            k: number;
+            /**
+             * Scaffold
+             * @default baseline
+             */
+            scaffold: string;
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /**
+             * Suite
+             * @default starter
+             */
+            suite: string;
+        };
         /**
          * Diagnostic
          * @description One aggregated failure signature from report.compare.diagnose_report.
@@ -1060,6 +1201,21 @@ export interface components {
             /** P Value */
             p_value: number;
         };
+        /** Plan */
+        Plan: {
+            /** Blockers */
+            blockers: components["schemas"]["Blocker"][];
+            /** Diagnostics */
+            diagnostics: string[];
+            /** Provider */
+            provider: string | null;
+            /** Ready */
+            ready: boolean;
+            request: components["schemas"]["RunSpec"];
+            /** Scorer Version */
+            scorer_version: string | null;
+            suite: components["schemas"]["CatalogSuite"] | null;
+        };
         /** PreflightRequest */
         PreflightRequest: {
             /** Model */
@@ -1412,6 +1568,43 @@ export interface components {
              * @default 0
              */
             seed: number;
+        };
+        /**
+         * RunSpec
+         * @description The request as a user writes it: RunRequestSpec plus defaults and input bounds.
+         *     Shape only — the grader/engine and suite rules are runner.plan's blockers.
+         */
+        RunSpec: {
+            /**
+             * Engine
+             * @default deterministic
+             * @enum {string}
+             */
+            engine: "deterministic" | "llm";
+            /** Grader */
+            grader?: string | null;
+            /**
+             * K
+             * @default 3
+             */
+            k: number;
+            /** Model */
+            model: string;
+            /**
+             * Scaffold
+             * @default baseline
+             */
+            scaffold: string;
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /**
+             * Suite
+             * @default starter
+             */
+            suite: string;
         };
         /** RunStatus */
         RunStatus: {
@@ -1766,6 +1959,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_api_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Catalog"];
                 };
             };
         };
@@ -2390,6 +2603,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartRunResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dry_run_api_runs_dry_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunSpec"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plan"];
                 };
             };
             /** @description Validation Error */

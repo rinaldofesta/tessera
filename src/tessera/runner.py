@@ -1,10 +1,16 @@
-"""Adapters for the shared run payload."""
+"""Pure planning for Tessera runs; no model calls or filesystem writes."""
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from pathlib import Path
 
-from tessera.contract import Run
+from pydantic import ValidationError
+
+from tessera.catalog import resolve_suite
+from tessera.contract import Plan, Run, RunSpec
+from tessera.errors import SpecError
 from tessera.report.compare import diagnose_report
 from tessera.store import RunRecord
 
@@ -71,3 +77,93 @@ def run_result_payload(record: RunRecord, *, min_pass_k: float | None = None) ->
         error=data["error"],
     )
     return payload.model_dump()
+
+
+def _validated_spec(spec: dict | RunSpec) -> RunSpec:
+    """Shape validation only (defaults, literals, bounds); semantics are blockers.
+
+    Accepts an already-validated RunSpec unchanged (the HTTP route hands one in — it
+    was validated once at the FastAPI request boundary and re-running the same
+    validation here would just re-derive the identical instance) as well as a plain
+    dict (direct/CLI/test callers)."""
+    if isinstance(spec, RunSpec):
+        return spec
+    try:
+        return RunSpec.model_validate(spec)
+    except ValidationError as exc:
+        raise SpecError(str(exc)) from None
+
+
+def plan(
+    spec: dict | RunSpec, *, env: Mapping[str, str] = os.environ,
+    suites_dir: Path | None = None,
+) -> dict:
+    """Return an offline execution plan whose blockers explain how to make it ready."""
+    from tessera.api.providers import is_configured, provider_for_model
+    from tessera.evals.scoring import SCORER_VERSIONS
+    from tessera.evals.task import _SCAFFOLDS
+
+    request = _validated_spec(spec)
+    blockers = []
+    diagnostics: list[str] = []
+
+    try:
+        suite, suite_diagnostics = resolve_suite(request.suite, suites_dir=suites_dir)
+        diagnostics.extend(suite_diagnostics)
+    except SpecError as exc:
+        suite = None
+        blockers.append({"code": "unknown_suite", "message": str(exc), "fix": None})
+
+    provider_spec = provider_for_model(request.model)
+    provider_id = provider_spec.id if provider_spec else None
+    if provider_spec is None:
+        blockers.append({
+            "code": "unknown_provider",
+            "message": f"unknown provider for model '{request.model}'",
+            "fix": None,
+        })
+    elif provider_spec.needs_credentials and not is_configured(provider_spec, env):
+        blockers.append({
+            "code": "not_connected",
+            "message": f"provider '{provider_id}' is not connected",
+            "fix": f"tessera connect {provider_id}",
+        })
+
+    if request.engine == "llm" and not request.grader:
+        blockers.append({
+            "code": "grader_required",
+            "message": "grader is required when engine is 'llm'",
+            "fix": None,
+        })
+    elif request.engine == "deterministic" and request.grader is not None:
+        blockers.append({
+            "code": "grader_not_allowed",
+            "message": "grader only applies to engine 'llm'",
+            "fix": None,
+        })
+    elif request.grader == request.model:
+        blockers.append({
+            "code": "self_grading",
+            "message": "grader must differ from the model under test",
+            "fix": None,
+        })
+
+    if request.scaffold not in _SCAFFOLDS:
+        blockers.append({
+            "code": "unknown_scaffold",
+            "message": (
+                f"unknown scaffold '{request.scaffold}'; "
+                f"available: {', '.join(sorted(_SCAFFOLDS))}"
+            ),
+            "fix": None,
+        })
+
+    return Plan(
+        ready=not blockers,
+        blockers=blockers,
+        diagnostics=diagnostics,
+        request=request,
+        suite=suite,
+        provider=provider_id,
+        scorer_version=SCORER_VERSIONS[request.engine],
+    ).model_dump()
