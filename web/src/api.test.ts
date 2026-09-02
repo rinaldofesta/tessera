@@ -17,7 +17,7 @@ function run(overrides: Partial<Run> = {}): Run {
       suite: "meridian", model: "ollama/test", engine: "deterministic",
       grader: null, k: 5, scaffold: "refusal_aware", seed: 4,
     },
-    verdict: { pass_k_rate: 0.7, mean_rate: 0.9, label: "inconsistent" },
+    verdict: { pass_k_rate: 0.7, mean_rate: 0.9, label: "inconsistent", sentence: "Not reliable." },
     gate: null,
     report: null,
     receipt: null,

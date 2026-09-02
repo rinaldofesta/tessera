@@ -243,6 +243,7 @@ class Verdict(BaseModel):
     pass_k_rate: float
     mean_rate: float
     label: Literal["reliable", "inconsistent", "unreliable"]
+    sentence: str
 
 
 class Gate(BaseModel):

@@ -113,7 +113,10 @@ def discover_cloud(client, *, env: Mapping[str, str], timeout: float = 4.0) -> S
         # not change the answer.
         package = missing_sdk(provider_id)
         if package:
-            detail = f"needs the {package} package — pip install 'tessera[providers]'"
+            # Name the package directly, not the [providers] extra: anthropic/openai are
+            # base deps now, so "pip install 'tessera-eval[providers]'" would not actually
+            # install either one if it were somehow still missing.
+            detail = f"needs the {package} package — pip install {package}"
             for model_id in catalog:
                 _, _, label = model_id.rpartition("/")
                 models.append(DiscoveredModel(

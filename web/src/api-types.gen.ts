@@ -1748,6 +1748,8 @@ export interface components {
             mean_rate: number;
             /** Pass K Rate */
             pass_k_rate: number;
+            /** Sentence */
+            sentence: string;
         };
     };
     responses: never;

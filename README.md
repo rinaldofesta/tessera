@@ -26,7 +26,7 @@ and answer key into a temporary directory.
 ```bash
 uv venv
 uv pip install -e .
-.venv/bin/tessera-report src/tessera/data/examples/first-contact/log.eval
+.venv/bin/tessera report first-contact
 
 tessera_demo_dir=$(mktemp -d)
 .venv/bin/tessera-variant export --seed 42 --out "$tessera_demo_dir"
@@ -219,7 +219,7 @@ Tessera ships a product-grade web app — a **React + Vite + TypeScript** SPA se
 static assets by the **FastAPI** backend (one process, no Node at runtime):
 
 ```bash
-uv pip install -e ".[app]"
+uv pip install -e .   # fastapi, uvicorn and friends are base dependencies
 cd web && npm install && npm run build && cd ..   # build the SPA once
 .venv/bin/tessera-api   # = uvicorn tessera.api.app:create_app --factory --port 8000; serves the app + API
 ```

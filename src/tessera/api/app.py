@@ -134,9 +134,13 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
             and (package := missing_sdk(provider_id))
         })
         if missing:
+            # Name the packages directly: anthropic/openai are base deps now (only the
+            # long tail — groq, mistralai — lives behind [providers]), so a blanket
+            # "pip install 'tessera-eval[providers]'" no longer installs every package
+            # this warning can name.
             logging.getLogger("tessera").warning(
-                "configured providers missing their SDK: %s — pip install 'tessera[providers]'",
-                ", ".join(missing),
+                "configured providers missing their SDK: %s — pip install %s",
+                ", ".join(missing), " ".join(missing),
             )
         yield
 

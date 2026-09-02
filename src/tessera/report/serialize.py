@@ -14,7 +14,6 @@ from tessera.report.aggregate import (
     reduce_by_probe,
     summarize_axes,
 )
-from tessera.report.log_adapter import eval_log_to_records
 from tessera.report.models import CANONICAL_ORDER, ProbeEpoch, ProbeReliability
 
 
@@ -49,6 +48,10 @@ def _probe_to_dict(p: ProbeReliability) -> dict:
 
 def report_to_dict(log) -> dict:
     """Same pipeline as cli._build_report, serialized to a JSON-native dict."""
+    # Lazy: this is the only line here that needs inspect_ai, and every CLI verb that
+    # never touches a raw log (history, catalog, connect, …) should start without it.
+    from tessera.report.log_adapter import eval_log_to_records
+
     header, records = eval_log_to_records(log)
     probes = reduce_by_probe(records)
     by_key = {c.key: c for c in aggregate_by(probes)}

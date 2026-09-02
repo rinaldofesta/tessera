@@ -34,7 +34,6 @@ import psutil
 from tessera.api.receipts import receipt_from_log
 from tessera.catalog import suite_name_for_org
 from tessera.errors import SpecError, TesseraError
-from tessera.report.log_adapter import read_log
 from tessera.report.render import render_markdown
 from tessera.report.serialize import report_to_dict
 
@@ -431,6 +430,8 @@ class RunStore:
         with tempfile.TemporaryDirectory() as scratch:
             snapshot = Path(scratch) / "log.eval"
             snapshot.write_bytes(payload)
+            from tessera.report.log_adapter import read_log  # inspect_ai loads only on import
+
             log = read_log(snapshot)
             # Computed once: the report's location field is the only thing that differs
             # between "the log as read from the scratch snapshot" and "the log as stored",
