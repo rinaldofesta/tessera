@@ -9,16 +9,17 @@ interface AdvancedProps {
   spec: RunSpec;
   models: CatalogModel[];
   scaffolds: string[];
+  initialOpen: boolean;
   onChange: (patch: Partial<RunSpec>) => void;
 }
 
-export function Advanced({ spec, models, scaffolds, onChange }: AdvancedProps) {
+export function Advanced({ spec, models, scaffolds, initialOpen, onChange }: AdvancedProps) {
   const selfGrading = spec.engine === "llm" && spec.grader === spec.model;
   const missingGrader = spec.engine === "llm" && !spec.grader;
   const selectClass = "h-8 rounded-lg border border-line bg-raised px-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/40";
 
   return (
-    <Collapsible className="mt-6">
+    <Collapsible className="mt-6" defaultOpen={initialOpen}>
       <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm text-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary">
         <ChevronRight className="size-4 transition-transform group-data-[state=open]:rotate-90" />
         {RUN_COPY.advanced}

@@ -16,6 +16,7 @@ jobs:
       - run: uv lock --check
       - run: bash scripts/check-version.sh
       - run: uvx ruff@0.16.5 check .
+      - run: bash scripts/check-readme-assets.sh
 
   tests:
     runs-on: ubuntu-latest

@@ -105,7 +105,7 @@ Comparability is the protocol's product, and its rules are executable or gated, 
 
 **The headline is strict pass^k at k=3**: a probe counts only if all k repetitions pass. Mean accuracy is published alongside, as capability — never as the headline (§1).
 
-**Every row is frozen to the same protocol**: the deterministic engine and the full probe set ([ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)); the task prompt is shared, and since the §6 intervention selecting a different prompt is itself a recorded protocol dimension (`-T scaffold=…`, default `baseline` — the arm every leaderboard row uses), so per-model prompt tuning has no silent mechanism to exist. The freeze is enforced by code, not convention: the `tessera-leaderboard` generator refuses to mix rows with differing `scorer_version`, org, k, scaffold, or seed, aborting with a hard error — one leaderboard, one protocol — rather than emitting a table with a footnote.
+**Every row is frozen to the same protocol**: the deterministic engine and the full probe set ([ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)); the task prompt is shared, and since the §6 intervention selecting a different prompt is itself a recorded protocol dimension (`-T scaffold=…`, default `baseline` — the arm every leaderboard row uses), so per-model prompt tuning has no silent mechanism to exist. The freeze is enforced by code, not convention: the `tessera leaderboard` generator refuses to mix rows with differing `scorer_version`, org, k, scaffold, or seed, aborting with a hard error — one leaderboard, one protocol — rather than emitting a table with a footnote.
 
 **The blueprint is public — honesty over purity** ([ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md)). `meridian` is the answer key by design: anyone can reproduce a row with no grader key, and for the same reason training-data contamination becomes likelier over time. Rows are date-stamped, the risk is stated rather than silent, and seeded value-rotation variants are the planned mitigation once contamination becomes measurable.
 
@@ -143,7 +143,7 @@ The per-model profiles, each carrying its published note:
 
 **Adjudication disclosure.** Per the gate of §3.4, every probe that failed strict pass^3 in every row was adjudicated from its transcript before publication: 38 verdicts across the three API-model rows run on 2026-06-12 — 36 behavioral failures and 2 grades-on-wording under the documented contract — plus 12 on qwen3.5, of which 5 are the documented fallback grading format-noncompliant but substantively correct answers. (claude-sonnet-4-6's row had already passed the same gate at its 2026-06-11 baseline.) The decision on record is to publish with structural disclosure — the ANSWER fmt column in every row — rather than bend the scorer per model. A hardening of the fallback, `det-5`, is a recorded candidate (§7, §8); under it, qwen3.5's strict score would read approximately 68.2%.
 
-Every row above is reproducible with a single `inspect eval` invocation plus `tessera-leaderboard` over the resulting logs; the exact commands live in [`docs/leaderboard.md`](leaderboard.md).
+Every row above is reproducible with a single `tessera run` (or `inspect eval`) invocation plus `tessera leaderboard render` over the resulting logs; the exact commands live in [`docs/leaderboard.md`](leaderboard.md).
 
 **Note added 2026-07-07.** The live [`docs/leaderboard.md`](leaderboard.md) has grown past this snapshot: as of 2026-07-06 it carries eight single-model rows plus one out-of-protocol ensemble exhibition, and two newer models — claude-fable-5 and claude-opus-4-8 — are the first to hold the `unresolvable` column at 100%, overtaking this section's 40/0/0/0/0 headline. That finding stands as a property of the cohort evaluated on 2026-06-12, not of the frontier. The newer rows were produced under the same `det-4`/k=3 protocol, but their failed probes' adjudication is not part of this report.
 
@@ -181,7 +181,7 @@ Four findings:
 
 4. **Scope.** One hop, a tool-less consumer, the same model on both stages — the explicit non-goals of ADR-0007 bound the claim. The questions this baseline makes askable — a weaker consumer, a tool-using consumer, deeper chains — are taken up in §8.
 
-Both tables reproduce [`docs/delegation.md`](delegation.md), which carries the exact `inspect eval` and `tessera-leaderboard` commands to regenerate the pair.
+Both tables reproduce [`docs/delegation.md`](delegation.md), which carries the exact `inspect eval` and `tessera leaderboard` commands to regenerate the pair.
 
 ## 6. Experiment 3: the refusal-aware scaffold
 

@@ -6,7 +6,7 @@ translates the metrics into the language of production incidents and postmortems
 To generate one from any Inspect log:
 
 ```bash
-.venv/bin/python -m tessera.report ./logs/<run>.eval        # or: tessera-report <log> -o report.md
+tessera report ./logs/<run>.eval        # or: tessera report latest
 ```
 
 Every probe is scored on three axes — not just accuracy — and repeated under `pass^k`,

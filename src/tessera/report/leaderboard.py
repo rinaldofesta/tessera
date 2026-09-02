@@ -227,6 +227,10 @@ def _table_section(rows: list[dict], k: int) -> list[str]:
 
 
 def _methodology_section(org: str, k: int, scaffold: str, seed: int) -> list[str]:
+    # Lazy import: this module stays pure (module docstring) and catalog.py pulls in the
+    # provider modules. The CLI names suites; the protocol keeps the org id (ADR-0014).
+    from tessera.catalog import SUITE_ALIASES
+    suite = SUITE_ALIASES.get(org, org)
     return [
         "",
         "## Methodology",
@@ -250,18 +254,18 @@ def _methodology_section(org: str, k: int, scaffold: str, seed: int) -> list[str
         "",
         "This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — "
         "the committed source of truth (ADR-0010). Never edit the table by hand; CI "
-        "regenerates it from the manifest and fails on drift, and `--verify` re-derives "
-        "every log-backed row from its committed log (ADR-0012). To add or update a row, "
-        "produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it "
+        "regenerates it from the manifest and fails on drift, and `tessera leaderboard verify` "
+        "re-derives every log-backed row from its committed log (ADR-0012). To add or update a "
+        "row, produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it "
         "into the manifest, then regenerate and verify:",
         "",
         "```bash",
-        ".venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \\",
-        f"  --model <provider/model> -T org={org} -T judge=deterministic -T k={k} \\",
-        f"  -T seed={seed} -T scaffold={scaffold} --log-dir logs/leaderboard",
-        ".venv/bin/tessera-leaderboard --extract logs/leaderboard/<run>.eval  # -> a manifest row",
-        ".venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json -o docs/leaderboard.md",
-        ".venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json --verify",
+        f"tessera run --suite {suite} --model <provider/model> --k {k} --seed {seed} \\",
+        f"  --scaffold {scaffold}   # deterministic grading is the default",
+        "cp ~/.tessera/runs/<id>/log.eval logs/leaderboard/<run>.eval",
+        "tessera leaderboard extract logs/leaderboard/<run>.eval  # -> a manifest row",
+        "tessera leaderboard render --manifest docs/leaderboard.rows.json -o docs/leaderboard.md",
+        "tessera leaderboard verify --manifest docs/leaderboard.rows.json",
         "```",
     ]
 

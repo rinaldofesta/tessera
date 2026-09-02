@@ -76,7 +76,6 @@ export default function Run() {
   const suite = catalog?.suites.find((candidate) => candidate.name === spec?.suite);
   const provider = catalog?.providers.find((candidate) => candidate.id === plan?.provider);
   const connectionBlocker = plan?.blockers.find((blocker) => blocker.code === "not_connected");
-
   const pendingLabel = useMemo(
     () => RUN_COPY.pending(suite?.questions ?? 0, spec?.k ?? 0),
     [spec?.k, suite?.questions],
@@ -119,6 +118,10 @@ export default function Run() {
     );
   }
 
+  // Advanced starts open only when the prefilled spec differs from the catalog defaults.
+  const advancedInitiallyOpen = spec.engine !== catalog.defaults.engine || spec.grader !== null
+    || spec.scaffold !== catalog.defaults.scaffold || spec.seed !== catalog.defaults.seed;
+
   return (
     <div className="mx-auto grid max-w-6xl items-start gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       <section className="min-w-0 py-4">
@@ -145,7 +148,7 @@ export default function Run() {
           <span>{RUN_COPY.timesEach}</span>
         </div>
 
-        <Advanced spec={spec} models={catalog.models} scaffolds={catalog.scaffolds}
+        <Advanced spec={spec} models={catalog.models} scaffolds={catalog.scaffolds} initialOpen={advancedInitiallyOpen}
           onChange={(patch) => setSpec((current) => current && ({ ...current, ...patch }))} />
 
         <div className="mt-6">

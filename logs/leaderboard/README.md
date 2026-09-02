@@ -13,13 +13,13 @@ it are the exception, exactly like the holdout `COMMITMENT.json`/`REVEAL.json`.
 2. From the repo root, extract the row — the numbers come straight from the log and the
    path is stamped repo-relative:
    ```bash
-   .venv/bin/tessera-leaderboard --extract logs/leaderboard/claude-sonnet-4-6.eval
+   tessera leaderboard extract logs/leaderboard/claude-sonnet-4-6.eval
    ```
 3. Merge the emitted row into `docs/leaderboard.rows.json` (its `log` is now
    `{"path": "logs/leaderboard/claude-sonnet-4-6.eval", "sha256": "…"}`).
 4. Verify:
    ```bash
-   .venv/bin/tessera-leaderboard --manifest docs/leaderboard.rows.json --verify
+   tessera leaderboard verify --manifest docs/leaderboard.rows.json
    ```
    CI runs the same check: for every row with a non-null `log`, it re-derives the row from
    the committed log and fails on any digest or metric mismatch. Rows with `log: null` are

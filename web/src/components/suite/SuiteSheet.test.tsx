@@ -84,12 +84,15 @@ beforeEach(() => {
 });
 
 describe("SuiteSheet", () => {
-  it("opens from ?edit=new and validates names", async () => {
+  it("keeps the required-name message hidden until the field is touched", async () => {
     renderSheet();
     expect(await screen.findByRole("dialog", { name: "Make your own suite" })).toBeInTheDocument();
-    expect(screen.getByText("Enter a suite name.")).toBeInTheDocument();
+    expect(screen.queryByText("Enter a suite name.")).not.toBeInTheDocument();
 
     const name = screen.getByLabelText("suite name");
+    await userEvent.click(name);
+    await userEvent.tab();
+    expect(screen.getByText("Enter a suite name.")).toBeInTheDocument();
     await userEvent.type(name, "bad name");
     expect(screen.getByText("Start with a letter or digit and use only letters, digits, - or _.")).toBeInTheDocument();
     await userEvent.clear(name);
@@ -101,6 +104,12 @@ describe("SuiteSheet", () => {
     await userEvent.clear(name);
     await userEvent.type(name, "new");
     expect(screen.getByText("That name is reserved for a built-in suite or alias.")).toBeInTheDocument();
+  });
+
+  it("uses the dot-separated scenario count label", async () => {
+    renderSheet();
+    await screen.findByRole("dialog", { name: "Make your own suite" });
+    expect(screen.getByText("Scenarios · 0")).toBeInTheDocument();
   });
 
   it("validates the blueprint after a recipe is filled", async () => {
@@ -179,7 +188,7 @@ describe("SuiteSheet", () => {
     await userEvent.type(screen.getByLabelText("the value written in the docs"), "4");
     await userEvent.click(screen.getByRole("button", { name: "next" }));
     await userEvent.click(await screen.findByRole("button", { name: "insert" }));
-    expect(await screen.findByText(/scenarios \[1\]/)).toBeInTheDocument();
+    expect(await screen.findByText("Scenarios · 1")).toBeInTheDocument();
 
     // switching suites now should ask first instead of silently discarding the insert
     await userEvent.click(screen.getByRole("button", { name: "customer-care" }));
@@ -188,7 +197,7 @@ describe("SuiteSheet", () => {
     // canceling keeps the draft and the sheet on "new"
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument();
-    expect(screen.getByText(/scenarios \[1\]/)).toBeInTheDocument();
+    expect(screen.getByText("Scenarios · 1")).toBeInTheDocument();
   });
 
   it("falls back to the default suite in Run when the selected suite is deleted", async () => {
