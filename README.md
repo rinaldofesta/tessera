@@ -26,7 +26,7 @@ and answer key into a temporary directory.
 ```bash
 uv venv
 uv pip install -e .
-.venv/bin/tessera-report src/tessera/data/examples/first-contact/log.eval
+.venv/bin/tessera report first-contact
 
 tessera_demo_dir=$(mktemp -d)
 .venv/bin/tessera-variant export --seed 42 --out "$tessera_demo_dir"

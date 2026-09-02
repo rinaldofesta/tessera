@@ -3393,12 +3393,17 @@
           "pass_k_rate": {
             "title": "Pass K Rate",
             "type": "number"
+          },
+          "sentence": {
+            "title": "Sentence",
+            "type": "string"
           }
         },
         "required": [
           "pass_k_rate",
           "mean_rate",
-          "label"
+          "label",
+          "sentence"
         ],
         "title": "Verdict",
         "type": "object"

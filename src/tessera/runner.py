@@ -15,10 +15,10 @@ from tessera.catalog import resolve_suite
 from tessera.contract import Plan, Run, RunSpec
 from tessera.errors import SpecError
 from tessera.report.compare import diagnose_report
-from tessera.report.log_adapter import read_log
 from tessera.report.render import render_markdown
 from tessera.report.serialize import report_to_dict
 from tessera.store import RunRecord, RunStore
+from tessera.verdict import verdict_of
 
 _EVAL_LOCK = threading.Lock()
 _MISSING = object()
@@ -46,22 +46,9 @@ def run_result_payload(
     gate = None
     diagnostics: list[dict] = []
     if report is not None:
-        overall = report["overall"]
-        pass_k_rate = overall["pass_k_rate"]
-        mean_rate = overall["mean_rate"]
-        if pass_k_rate >= 1:
-            label = "reliable"
-        elif mean_rate > pass_k_rate:
-            label = "inconsistent"
-        else:
-            label = "unreliable"
-        verdict = {
-            "pass_k_rate": pass_k_rate,
-            "mean_rate": mean_rate,
-            "label": label,
-        }
+        verdict = verdict_of(report)
         if min_pass_k is not None:
-            gate = {"min_pass_k": min_pass_k, "passed": pass_k_rate >= min_pass_k}
+            gate = {"min_pass_k": min_pass_k, "passed": verdict["pass_k_rate"] >= min_pass_k}
         if include_report:  # list rows carry the verdict only; details come with the report
             diagnostics = diagnose_report(report)
 
@@ -97,6 +84,7 @@ def _default_eval(**kwargs):
     import inspect_ai
 
     from tessera.evals.task import tessera_probes
+    from tessera.report.log_adapter import read_log  # inspect_ai loads only when a run starts
 
     logs = inspect_ai.eval(tessera_probes, **kwargs)
     return read_log(Path(logs[0].location))

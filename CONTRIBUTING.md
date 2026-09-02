@@ -47,9 +47,8 @@ In order:
 ## Development setup
 
 - Python ≥ 3.10 (CI runs the suite + a web build + a contract-drift check).
-- `pip install -e ".[dev]"` gives you the eval, the CLIs
-  (`tessera-report`, `tessera-leaderboard`, `tessera-validate-transfer`) and the FastAPI/SPA product
-  (`tessera-api`).
+- `pip install -e ".[dev]"` gives you the eval; `tessera` is the command, alongside the
+  FastAPI/SPA product (`tessera-api`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.
 - A live eval run is the only thing that needs keys: the API reads `~/.tessera/.env`
   (or `$TESSERA_HOME/.env`, or the file named by `TESSERA_ENV_FILE`); for a checkout,

@@ -52,11 +52,15 @@ Leaderboard = "https://github.com/rinaldofesta/tessera/blob/main/docs/leaderboar
 Changelog = "https://github.com/rinaldofesta/tessera/blob/main/docs/adr/README.md"
 
 [project.scripts]
+tessera = "tessera.cli:main"
 tessera-report = "tessera.report.cli:main"
 tessera-leaderboard = "tessera.report.cli:leaderboard_main"
 tessera-api = "tessera.api.app:main"
 tessera-variant = "tessera.factory.export:main"
 tessera-validate-transfer = "tessera.validation.cli:main"
+
+[project.entry-points.inspect_ai]
+tessera = "tessera.evals.task"
 
 [build-system]
 requires = ["hatchling"]

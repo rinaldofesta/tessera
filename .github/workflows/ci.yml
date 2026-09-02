@@ -63,7 +63,11 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv venv
       - run: uv pip install -e .
-      - run: .venv/bin/tessera-report src/tessera/data/examples/first-contact/log.eval -o /tmp/first-contact.md
+      - name: Isolate Tessera state
+        run: echo "TESSERA_HOME=$(mktemp -d)" >> "$GITHUB_ENV"
+      - run: .venv/bin/tessera report first-contact > /tmp/first-contact.md
+      - run: .venv/bin/tessera catalog --json > /dev/null
+      - run: .venv/bin/tessera run --model anthropic/claude-sonnet-4-6 --dry-run --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['ready'] is False and d['blockers'][0]['fix']=='tessera connect anthropic'"
       - run: .venv/bin/tessera-variant export --seed 42 --out /tmp/tessera-demo
       - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json -o /tmp/transfer-validation.md
       - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json --json -o /tmp/transfer-validation.json
