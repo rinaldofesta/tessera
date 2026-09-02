@@ -60,7 +60,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv venv
       - run: uv pip install -e .
-      - run: .venv/bin/tessera-report examples/first-contact.eval -o /tmp/first-contact.md
+      - run: .venv/bin/tessera-report src/tessera/data/examples/first-contact/log.eval -o /tmp/first-contact.md
       - run: .venv/bin/tessera-variant export --seed 42 --out /tmp/tessera-demo
       - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json -o /tmp/transfer-validation.md
       - run: .venv/bin/tessera-validate-transfer examples/validation-study.example.json --json -o /tmp/transfer-validation.json

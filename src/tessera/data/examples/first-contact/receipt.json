@@ -1,0 +1,42 @@
+{
+  "artifact": {
+    "path": "src/tessera/data/examples/first-contact/log.eval",
+    "sha256": "38bd2551b847a36c337c3dd635a1fe711b72742b71af8752485e7f4e259038b3"
+  },
+  "execution_hash": "61d08268f57cc5ea13aafa1d41278625c5e238e5890f5adef54a5a142d31b5a6",
+  "protocol": {
+    "blueprint_sha256": null,
+    "engine": "llm",
+    "epochs": 3,
+    "grader": "openai/gpt-4o",
+    "harness": "single",
+    "org": null,
+    "scaffold": "baseline",
+    "scorer_version": null,
+    "seed": 0
+  },
+  "protocol_hash": "b8639783277d17922d20d7b761edb535b32e79f70bafb6ba1b814b837132cb92",
+  "runtime": {
+    "effective_models": [
+      "anthropic/claude-sonnet-4-6",
+      "openai/gpt-4o"
+    ],
+    "git_dirty": true,
+    "git_revision": "ef30645",
+    "inspect_ai_version": "0.3.232",
+    "reported_model": "anthropic/claude-sonnet-4-6",
+    "requested_model": "anthropic/claude-sonnet-4-6",
+    "tessera_version": "0.2.0"
+  },
+  "timing": {
+    "completed_at": "2026-06-04T18:26:43+00:00",
+    "duration_seconds": 23.0,
+    "started_at": "2026-06-04T18:26:20+00:00"
+  },
+  "usage": {
+    "billed_cost": null,
+    "input_tokens": 4229,
+    "output_tokens": 7780,
+    "total_tokens": 90671
+  }
+}

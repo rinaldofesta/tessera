@@ -6,7 +6,9 @@ top-level fields (no `_log` internals).
 
 from __future__ import annotations
 
-from inspect_ai.log import EvalLog
+from pathlib import Path
+
+from inspect_ai.log import EvalLog, read_eval_log
 
 from tessera.report.models import ProbeEpoch, ReportError, RunHeader
 
@@ -92,3 +94,8 @@ def eval_log_to_records(log: EvalLog) -> tuple[RunHeader, list[ProbeEpoch]]:
         harness=str(args.get("harness", "single")),
     )
     return header, records
+
+
+def read_log(path: Path) -> EvalLog:
+    """Read an Inspect log with attachments resolved — the one place that happens."""
+    return read_eval_log(str(path), resolve_attachments=True)

@@ -22,6 +22,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from importlib import resources
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -44,7 +45,12 @@ from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner
 from tessera.api.workbench_store import WorkbenchStore
 
-_DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
+# The bundled examples are run folders (<stem>/log.eval); routes_reports.logs_in lists
+# both that layout and flat <stem>.eval files, so the "examples:first-contact" ids hold.
+_DEFAULT_LOG_DIRS = {
+    "examples": Path(str(resources.files("tessera.data") / "examples")),
+    "logs": Path("logs"),
+}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
 _DEFAULT_IMPORT_DIR = Path("imports")
@@ -158,15 +164,16 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             ]},
         )
 
-    # Registration order IS the OpenAPI path order — the schema is the committed
-    # contract (scripts/gen-types.sh), so keep this order stable.
+    # The committed contract (scripts/gen-types.sh) is dumped with sorted keys, so
+    # registration order no longer leaks into openapi.json.
     app.include_router(routes_meta.router)
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
     app.include_router(routes_providers.router)
-    # New routers append AFTER every pre-existing one: registration order is the OpenAPI
-    # path order, so inserting mid-list reshuffles paths the contract already committed.
+    # New routers append AFTER every pre-existing one, by convention (keeps this list's
+    # diff small) — harmless either way, since openapi.json is dumped with sorted keys
+    # (scripts/gen-types.sh) and does not depend on registration order.
     app.include_router(routes_workbench.router)
     app.include_router(routes_preflight.router)
     app.include_router(routes_experiments.router)

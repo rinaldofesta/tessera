@@ -685,7 +685,10 @@ export interface components {
          * @enum {string}
          */
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
-        /** Diagnostic */
+        /**
+         * Diagnostic
+         * @description One aggregated failure signature from report.compare.diagnose_report.
+         */
         Diagnostic: {
             /** Count */
             count: number;

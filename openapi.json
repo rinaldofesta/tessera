@@ -385,6 +385,7 @@
         "type": "string"
       },
       "Diagnostic": {
+        "description": "One aggregated failure signature from report.compare.diagnose_report.",
         "properties": {
           "count": {
             "title": "Count",

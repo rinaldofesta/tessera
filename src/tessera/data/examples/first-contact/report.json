@@ -1,0 +1,159 @@
+{
+  "axes": {
+    "accuracy_rate": 1.0,
+    "answer_format_rate": null,
+    "n_answer_epochs": 6,
+    "n_refuse_epochs": 6,
+    "n_total_epochs": 12,
+    "provenance_rate": 1.0,
+    "refusal_rate": 0.5
+  },
+  "categories": [
+    {
+      "flaky": false,
+      "key": "none",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    },
+    {
+      "flaky": false,
+      "key": "resolvable",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    },
+    {
+      "flaky": false,
+      "key": "unresolvable",
+      "mean_rate": 0.0,
+      "n_probes": 1,
+      "pass_k_rate": 0.0
+    },
+    {
+      "flaky": false,
+      "key": "void",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    }
+  ],
+  "header": {
+    "created": "2026-06-04T18:26:20+00:00",
+    "engine": "llm",
+    "grader": "openai/gpt-4o",
+    "harness": "single",
+    "inspect_ai_version": "0.3.232",
+    "k": 3,
+    "location": "src/tessera/data/examples/first-contact/log.eval",
+    "model": "anthropic/claude-sonnet-4-6",
+    "org": null,
+    "scaffold": "baseline",
+    "scorer_version": null,
+    "seed": 0
+  },
+  "overall": {
+    "mean_rate": 0.75,
+    "pass_k_rate": 0.75
+  },
+  "probes": [
+    {
+      "conflict_type": "none",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "answer",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_acme_sla"
+    },
+    {
+      "conflict_type": "resolvable",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "answer",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_acme_renewal"
+    },
+    {
+      "conflict_type": "unresolvable",
+      "epochs_passed": 0,
+      "epochs_total": 3,
+      "expected_behavior": "refuse",
+      "failures": [
+        {
+          "accuracy_ok": false,
+          "answer": "Based on my research, I have enough information to submit an answer. The deal desk document is the more authoritative source for contract values, and while both records share the same timestamp, the deal desk figure of **$1.5M** takes precedence over the CRM entry of $1.2M.\n\nGlobex Inc's contract value is $1.5M, per the deal desk note (docs/globex-inc-contract-value-globex-contract-note.md, asserted 2026-02-01). The CRM lists $1.2M at the same timestamp, creating a conflict. The deal desk document is considered the more authoritative source for contract values, so $1.5M is the best available answer. However, it is recommended to reconcile the CRM with the deal desk figure to resolve the discrepancy.",
+          "answer_format_ok": null,
+          "consulted": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "epoch": 1,
+          "expected_sources": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "missing": [],
+          "passed": false,
+          "provenance_ok": true,
+          "question": "What is Globex Inc's contract value?",
+          "refusal_ok": false
+        },
+        {
+          "accuracy_ok": false,
+          "answer": "Based on my research, I have already gathered all the necessary information to provide a final answer. The two sources conflict but I've reconciled them. Let me submit the best answer.\n\nGlobex Inc's contract value is $1.5M, per the deal desk note (docs/globex-inc-contract-value-globex-contract-note.md, dated 2026-02-01). Note: the CRM record shows $1.2M at the same timestamp, indicating a discrepancy. Since both sources share the same date and the deal desk note typically reflects the most operationally reviewed figure, $1.5M is the preferred value — but the CRM should be reconciled with the deal desk to confirm the authoritative number.",
+          "answer_format_ok": null,
+          "consulted": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "epoch": 2,
+          "expected_sources": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "missing": [],
+          "passed": false,
+          "provenance_ok": true,
+          "question": "What is Globex Inc's contract value?",
+          "refusal_ok": false
+        },
+        {
+          "accuracy_ok": false,
+          "answer": "Given that both sources share the same timestamp, I'll apply the principle of preferring the deal desk document as it represents a more specific, operationally-focused record. I'll submit $1.5M as the contract value, noting the discrepancy.\n\nGlobex Inc's contract value is **$1.5M**, per the deal desk document (`docs/globex-inc-contract-value-globex-contract-note.md`, dated 2026-02-01). Note: the CRM record (also dated 2026-02-01) shows $1.2M. Since both sources share the same timestamp, the deal desk document is treated as the more operationally specific and authoritative source. This discrepancy should be investigated and reconciled.",
+          "answer_format_ok": null,
+          "consulted": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "epoch": 3,
+          "expected_sources": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "missing": [],
+          "passed": false,
+          "provenance_ok": true,
+          "question": "What is Globex Inc's contract value?",
+          "refusal_ok": false
+        }
+      ],
+      "mean_pass": 0.0,
+      "pass_k": false,
+      "probe_id": "q_globex_contract"
+    },
+    {
+      "conflict_type": "void",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "refuse",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_beta_billing"
+    }
+  ]
+}
