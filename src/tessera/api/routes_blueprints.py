@@ -44,7 +44,7 @@ def get_blueprint(blueprint_id: str, request: Request):
     try:
         bp = blueprint_store.get_blueprint(request.app.state.blueprint_dir, blueprint_id)
     except blueprint_store.BlueprintStoreError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     if bp is None:
         raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
     return bp
@@ -80,7 +80,7 @@ def create_blueprint(request: Request, payload: dict = Body(...)):
             raise HTTPException(409, f"blueprint '{blueprint_id}' already exists")
         blueprint_store.save_blueprint(request.app.state.blueprint_dir, blueprint_id, bp)
     except blueprint_store.BlueprintStoreError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     return {"id": blueprint_id}
 
 
@@ -92,7 +92,7 @@ def upsert_blueprint(blueprint_id: str, request: Request, blueprint: dict = Body
     try:
         blueprint_store.save_blueprint(request.app.state.blueprint_dir, blueprint_id, bp)
     except blueprint_store.BlueprintStoreError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     return {"id": blueprint_id}
 
 
@@ -102,7 +102,7 @@ def delete_blueprint(blueprint_id: str, request: Request):
         removed = blueprint_store.delete_blueprint(request.app.state.blueprint_dir,
                                                    blueprint_id)
     except blueprint_store.BlueprintStoreError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     if not removed:
         raise HTTPException(404, f"unknown blueprint: {blueprint_id}")
     return {"deleted": blueprint_id}

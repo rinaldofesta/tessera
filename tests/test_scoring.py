@@ -5,7 +5,6 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
 from inspect_ai.tool import ToolCall
 
 from tessera.compiler import compile_blueprint
-from tessera.examples.toy_org import build_toy_blueprint
 from tessera.evals.scoring import (
     consulted_claims,
     extract_final_answer,
@@ -14,6 +13,7 @@ from tessera.evals.scoring import (
     is_refusal,
     match_answer,
 )
+from tessera.examples.toy_org import build_toy_blueprint
 
 
 def _manifest(tmp_path):
@@ -270,8 +270,7 @@ def test_committed_refusal_line_passes_a_refuse_probe():
     assert g["refusal_ok"] is True and g["passed"] is True
 
 
-def test_grade_answer_probe_passes_only_with_accuracy_and_full_provenance(tmp_path):
-    manifest = _manifest(tmp_path)
+def test_grade_answer_probe_passes_only_with_accuracy_and_full_provenance():
     consulted = {"acme.renewal.crm", "acme.renewal.note"}
     g = grade_probe(
         expected_behavior="answer", expected_answer="2026-03-01",

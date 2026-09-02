@@ -15,12 +15,15 @@ from tessera.compiler import compile_blueprint
 from tessera.evals.dataset import blueprint_to_dataset
 from tessera.evals.delegation import delegated_solver
 from tessera.evals.scoring import (
-    delegated_reliability_scorer, deterministic_reliability_scorer, llm_reliability_scorer,
+    delegated_reliability_scorer,
+    deterministic_reliability_scorer,
+    llm_reliability_scorer,
 )
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.models import Blueprint
 from tessera.orgs import get_blueprint
-from tessera.silos.registry import SiloType, registry as silo_registry
+from tessera.silos.registry import SiloType
+from tessera.silos.registry import registry as silo_registry
 
 # --- The two scaffolds of the intervention study (H2) -------------------------------
 # Both state the SAME reconciliation policy and the SAME answer contract — Tessera scores

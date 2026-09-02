@@ -11,11 +11,20 @@ import sys
 from inspect_ai.log import read_eval_log
 
 from tessera.report.aggregate import (
-    aggregate_by, overall_mean_rate, overall_pass_k_rate, reduce_by_probe, summarize_axes,
+    aggregate_by,
+    overall_mean_rate,
+    overall_pass_k_rate,
+    reduce_by_probe,
+    summarize_axes,
 )
 from tessera.report.leaderboard import (
-    _is_safe_repo_relative_path, _repo_relative, _sha256_file, extract_rows,
-    render_leaderboard, render_manifest, row_metric_mismatches,
+    _is_safe_repo_relative_path,
+    _repo_relative,
+    _sha256_file,
+    extract_rows,
+    render_leaderboard,
+    render_manifest,
+    row_metric_mismatches,
 )
 from tessera.report.log_adapter import eval_log_to_records
 from tessera.report.models import ReportError

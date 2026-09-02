@@ -6,6 +6,17 @@ on:
   pull_request:
 
 jobs:
+  # Static gates: the lockfile matches pyproject, the three version declarations agree,
+  # and ruff is clean under the [tool.ruff] config in pyproject.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv lock --check
+      - run: bash scripts/check-version.sh
+      - run: uvx ruff@0.16.5 check .
+
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -15,12 +26,13 @@ jobs:
         python-version: ["3.10", "3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      # The suite is key-free by design: no model API key is ever needed here.
-      - run: pip install -e ".[dev,app]"
-      - run: pytest
+      # The suite is key-free by design: no model API key is ever needed here. --frozen
+      # installs exactly what uv.lock resolves, so CI tests the environment we ship.
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen pytest
 
   web:
     runs-on: ubuntu-latest

@@ -4,8 +4,13 @@ from pathlib import Path
 import pytest
 
 from tessera.validation.analysis import (
-    StudyError, _claim_language, _decisive_pairs, _rank_rows, analyze_study,
-    kendall_tau_b, render_markdown,
+    StudyError,
+    _claim_language,
+    _decisive_pairs,
+    _rank_rows,
+    analyze_study,
+    kendall_tau_b,
+    render_markdown,
 )
 from tessera.validation.cli import main
 

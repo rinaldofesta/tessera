@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from tessera.api.schemas import ExperimentRequest
 from tessera.api.scrub import scrub_error

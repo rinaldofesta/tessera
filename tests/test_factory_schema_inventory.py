@@ -1,7 +1,5 @@
 # tests/test_factory_schema_inventory.py
-import pytest
-from tessera.factory import schema
-from tessera.factory.schema import SCHEMA, CANONICAL_ANSWERS
+from tessera.factory.schema import CANONICAL_ANSWERS, SCHEMA
 
 
 def test_pool_sizes():

@@ -12,8 +12,8 @@ from inspect_ai.log import read_eval_log
 
 from tessera.api import responses as R
 from tessera.api.receipts import file_sha256, receipt_from_log, receipt_from_report
-from tessera.api.scrub import scrub_error
 from tessera.api.schemas import ComparisonRequest
+from tessera.api.scrub import scrub_error
 from tessera.report.compare import compare_reports, diagnose_report
 from tessera.report.models import ReportError
 from tessera.report.serialize import report_to_dict
@@ -114,14 +114,14 @@ async def import_evaluation(request: Request, file: UploadFile = File(...)):
                 os.unlink(tmp_path)
             except FileNotFoundError:
                 pass
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 — the upload itself could not be read
         if tmp_path:
             try:
                 os.unlink(tmp_path)
             except FileNotFoundError:
                 pass
-        raise HTTPException(400, scrub_error(f"cannot read log: {exc}"))
+        raise HTTPException(400, scrub_error(f"cannot read log: {exc}")) from exc
 
     # The log parsed cleanly — a failure from here on is a server-side persistence
     # problem, not a bad upload. Reporting it as "cannot read log" would be misleading,
@@ -165,7 +165,7 @@ def create_comparison(payload: ComparisonRequest, request: Request):
             receipt_a=arm_a["receipt"], receipt_b=arm_b["receipt"],
         )
     except ValueError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/api/evaluations/{evaluation_id}/diagnostics", response_model=list[R.Diagnostic])

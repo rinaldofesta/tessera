@@ -58,7 +58,7 @@ class Render(BaseModel):
     template: str | None = None
 
     @model_validator(mode="after")
-    def _prose_requires_template(self) -> "Render":
+    def _prose_requires_template(self) -> Render:
         if self.as_ is RenderAs.prose and not self.template:
             raise ValueError("prose render requires a 'template'")
         return self
@@ -77,7 +77,7 @@ class Claim(BaseModel):
     render: Render
 
     @model_validator(mode="after")
-    def _prose_template_renders(self) -> "Claim":
+    def _prose_template_renders(self) -> Claim:
         # The prose template is user-controlled and compiled with str.format(value=...).
         # A template referencing anything other than {value} ({nope}, {0}, {value[0]})
         # raises KeyError/IndexError/etc. in the compiler — an uncaught 500. Trial-render
@@ -110,7 +110,7 @@ class Probe(BaseModel):
     expected_sources: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _coherent(self) -> "Probe":
+    def _coherent(self) -> Probe:
         # Enforce that a probe's conflict_type, expected_behavior and fields agree, so an
         # incoherent probe (e.g. a 'void' that expects an answer) is rejected at authoring
         # time rather than silently mis-scored at eval time.
@@ -135,7 +135,7 @@ class Blueprint(BaseModel):
     probes: list[Probe] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _referential_integrity(self) -> "Blueprint":
+    def _referential_integrity(self) -> Blueprint:
         # claim_ids are unique and every probe reference / expected_source points at a real
         # claim. The compiler's manifest and the scorer's provenance check both assume this,
         # so we fail fast here instead of producing a dangling reference downstream.

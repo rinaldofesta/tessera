@@ -1,8 +1,13 @@
 # tests/test_factory_schema_types.py
 import dataclasses
+
 import pytest
+
 from tessera.factory.schema import (
-    FACTORY_VERSION, VALUE_TYPES, AnswerableSlot, ChainSlot, VoidSlot, Assignment,
+    FACTORY_VERSION,
+    VALUE_TYPES,
+    AnswerableSlot,
+    Assignment,
 )
 from tessera.models import ConflictType, ResolutionRule
 

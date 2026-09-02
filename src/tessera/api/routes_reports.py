@@ -77,7 +77,7 @@ def get_report(log_id: str, request: Request):
     try:
         return report_to_dict(read_eval_log(str(path), resolve_attachments=True))
     except ReportError as exc:
-        raise HTTPException(422, str(exc))
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/api/reports", response_model=R.Report)
@@ -89,8 +89,8 @@ async def upload_report(file: UploadFile = File(...)):
     try:
         return report_to_dict(read_eval_log(tmp_path, resolve_attachments=True))
     except ReportError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     except Exception as exc:                          # noqa: BLE001
-        raise HTTPException(400, f"cannot read log: {exc}")
+        raise HTTPException(400, f"cannot read log: {exc}") from exc
     finally:
         os.unlink(tmp_path)

@@ -8,12 +8,21 @@ from __future__ import annotations
 import random
 from datetime import date, timedelta
 
-from tessera.models import (
-    Claim, ConflictType, ExpectedBehavior, Probe, ResolutionRule,
-)
 from tessera.factory import values
 from tessera.factory.schema import (
-    SCHEMA, AnswerableSlot, Assignment, CANONICAL_ANSWERS, ChainSlot, VoidSlot,
+    CANONICAL_ANSWERS,
+    SCHEMA,
+    AnswerableSlot,
+    Assignment,
+    ChainSlot,
+    VoidSlot,
+)
+from tessera.models import (
+    Claim,
+    ConflictType,
+    ExpectedBehavior,
+    Probe,
+    ResolutionRule,
 )
 
 _BASE = date(2026, 1, 1)

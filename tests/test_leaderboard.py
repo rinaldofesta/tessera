@@ -44,9 +44,9 @@ def test_per_category_columns_canonical_order():
     # land in canonical none/resolvable/unresolvable/void order regardless.
     scrambled = {"void": 0.1, "none": 0.4, "unresolvable": 0.2, "resolvable": 0.3}
     md = render_leaderboard([_report(categories=scrambled)])
-    header_line = next(l for l in md.splitlines() if "| none |" in l)
+    header_line = next(line for line in md.splitlines() if "| none |" in line)
     assert "| none | resolvable | unresolvable | void |" in header_line
-    row_line = next(l for l in md.splitlines() if "claude-sonnet-4-6" in l)
+    row_line = next(line for line in md.splitlines() if "claude-sonnet-4-6" in line)
     cells = [c.strip() for c in row_line.split("|")]
     i = cells.index("40%")
     assert cells[i:i + 4] == ["40%", "30%", "20%", "10%"]

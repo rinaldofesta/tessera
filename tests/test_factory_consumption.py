@@ -1,7 +1,8 @@
 # tests/test_factory_consumption.py
 import pytest
-from tessera.orgs import get_blueprint
+
 from tessera.factory.generate import generate_variant
+from tessera.orgs import get_blueprint
 
 
 def test_default_seed_is_unchanged_meridian():

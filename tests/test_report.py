@@ -1,7 +1,12 @@
 import pytest
 
 from tessera.report.models import (
-    AxesSummary, CategoryReliability, ProbeEpoch, ProbeReliability, ReportError, RunHeader,
+    AxesSummary,
+    CategoryReliability,
+    ProbeEpoch,
+    ProbeReliability,
+    ReportError,
+    RunHeader,
 )
 
 
@@ -11,8 +16,8 @@ def test_probe_epoch_is_frozen_and_holds_fields():
                     consulted=("crm",), expected_sources=("crm",), question="q",
                     answer="a", expected_answer="x")
     assert pe.probe_id == "p" and pe.consulted == ("crm",)
-    with pytest.raises(Exception):
-        pe.passed = False  # frozen dataclass
+    with pytest.raises(AttributeError):  # dataclasses.FrozenInstanceError
+        pe.passed = False
 
 
 def test_report_error_is_exception():
@@ -330,6 +335,7 @@ def test_inspect_only_imported_by_adapter_and_cli():
 
 def test_cli_main_prints_report_to_stdout(tmp_path, capsys):
     from inspect_ai.log import write_eval_log
+
     from tessera.report.cli import main
     s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
                      accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
@@ -343,6 +349,7 @@ def test_cli_main_prints_report_to_stdout(tmp_path, capsys):
 
 def test_cli_main_writes_to_out_file(tmp_path):
     from inspect_ai.log import write_eval_log
+
     from tessera.report.cli import main
     s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
                      accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],

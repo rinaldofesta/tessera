@@ -8,7 +8,7 @@ Pure local file reads through the exact shared pipeline behind the CLI and the A
 
 import hashlib
 import json
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -23,7 +23,7 @@ from tessera.report.serialize import report_to_dict
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_log(path: str):
     return read_eval_log(path, resolve_attachments=True)
 

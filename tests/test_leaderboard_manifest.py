@@ -8,8 +8,13 @@ from pathlib import Path
 import pytest
 
 from tessera.report.leaderboard import (
-    LOG_DERIVED_FIELDS, _is_safe_repo_relative_path, _repo_relative, leaderboard_rows,
-    render_leaderboard, render_manifest, row_metric_mismatches,
+    LOG_DERIVED_FIELDS,
+    _is_safe_repo_relative_path,
+    _repo_relative,
+    leaderboard_rows,
+    render_leaderboard,
+    render_manifest,
+    row_metric_mismatches,
 )
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -123,7 +128,12 @@ def test_committed_manifest_renders_to_the_committed_markdown():
 
 def _write_eval_log(path):
     from inspect_ai.log import (
-        EvalConfig, EvalDataset, EvalLog, EvalSample, EvalSpec, write_eval_log,
+        EvalConfig,
+        EvalDataset,
+        EvalLog,
+        EvalSample,
+        EvalSpec,
+        write_eval_log,
     )
     from inspect_ai.scorer import Score
     samples = [
@@ -181,7 +191,12 @@ def _write_realistic_log(path):
     # Non-degenerate metrics (a passing category and a failing one, format flag set), reused
     # across the verify cases so a "mismatch names the field" assertion has real signal.
     from inspect_ai.log import (
-        EvalConfig, EvalDataset, EvalLog, EvalSample, EvalSpec, write_eval_log,
+        EvalConfig,
+        EvalDataset,
+        EvalLog,
+        EvalSample,
+        EvalSpec,
+        write_eval_log,
     )
     from inspect_ai.scorer import Score
 
@@ -287,7 +302,7 @@ def test_verify_requires_a_manifest(capsys):
 # --- harness as a displayed comparability axis (ADR-0011) --------------------------
 
 def _row_line(md, needle):
-    return next(l for l in md.splitlines() if l.startswith("| ") and needle in l)
+    return next(line for line in md.splitlines() if line.startswith("| ") and needle in line)
 
 
 def test_all_single_render_is_byte_identical_to_golden():

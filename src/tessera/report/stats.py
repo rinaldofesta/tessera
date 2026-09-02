@@ -8,8 +8,8 @@ p-values otherwise.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from math import comb
-from typing import Mapping
 
 
 def exact_mcnemar_p(b: int, c: int) -> float:

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import random
 
-from tessera.models import ConflictType, ResolutionRule
 from tessera.factory.schema import Assignment, Schema
+from tessera.models import ConflictType, ResolutionRule
 
 
 def assign_conflicts(schema: Schema, rng: random.Random) -> dict[str, Assignment]:

@@ -1,8 +1,9 @@
 # tests/test_factory_generate.py
 import pytest
-from tessera.factory.generate import generate_variant, CANONICAL_SEED
-from tessera.factory.validate import assert_variant_invariants
+
 from tessera.examples.meridian_org import build_meridian_blueprint
+from tessera.factory.generate import CANONICAL_SEED, generate_variant
+from tessera.factory.validate import assert_variant_invariants
 
 
 def test_canonical_seed_reproduces_meridian():

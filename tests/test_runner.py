@@ -130,6 +130,7 @@ def test_the_userinfo_pattern_stays_linear_on_long_input():
     # An unbounded scheme run before "://" backtracked quadratically: a multi-megabyte
     # exception could stall error handling and strand a job as "running".
     import time
+
     from tessera.api.scrub import scrub_error
     started = time.perf_counter()
     scrub_error("a" * 500_000)
@@ -174,6 +175,7 @@ def test_scrubbing_survives_the_environment_changing_underneath_it():
     import os
     import threading
     import time
+
     from tessera.api.scrub import scrub_error
 
     stop, failures = threading.Event(), []

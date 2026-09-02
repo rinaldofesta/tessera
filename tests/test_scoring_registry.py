@@ -1,8 +1,6 @@
-from tessera.evals.scoring import consulted_claims
-from tessera.silos.registry import SiloType
-
 import tessera.evals.scoring as scoring_mod
-from tessera.silos.registry import SiloRegistry
+from tessera.evals.scoring import consulted_claims
+from tessera.silos.registry import SiloRegistry, SiloType
 
 
 def test_consulted_claims_dispatches_to_registered_silo_type(monkeypatch):

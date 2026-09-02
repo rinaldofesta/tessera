@@ -1,5 +1,6 @@
 # tests/test_factory_construct_singlefield.py
 import random
+
 from tessera.factory.construct import construct
 from tessera.factory.schema import SCHEMA, Assignment
 from tessera.models import ConflictType, ResolutionRule
