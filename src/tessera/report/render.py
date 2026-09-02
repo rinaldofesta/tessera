@@ -8,6 +8,7 @@ from tessera.report.models import (
     CANONICAL_ORDER,
     AxesSummary,
     CategoryReliability,
+    ProbeEpoch,
     ProbeReliability,
     RunHeader,
 )
@@ -129,3 +130,59 @@ def render_report(header: RunHeader, overall_pass_k: float, overall_mean: float,
         "\n".join(footer),
     ]
     return "\n\n".join(sections) + "\n"
+
+
+def render_markdown(report: dict) -> str:
+    """Render a serialized report through the object-based compatibility surface."""
+    header_data = dict(report["header"])
+    header_data["harness"] = header_data.get("harness") or "single"
+    header = RunHeader(**header_data)
+    categories = [
+        CategoryReliability(
+            key=item["key"],
+            n_probes=item["n_probes"],
+            pass_k_rate=item["pass_k_rate"],
+            mean_rate=item["mean_rate"],
+        )
+        for item in report["categories"]
+    ]
+    axes = AxesSummary(**report["axes"])
+    probes = []
+    for item in report["probes"]:
+        failures = tuple(
+            ProbeEpoch(
+                probe_id=item["probe_id"],
+                epoch=failure["epoch"],
+                conflict_type=item.get("conflict_type", ""),
+                expected_behavior=item.get("expected_behavior", ""),
+                passed=failure["passed"],
+                accuracy_ok=failure["accuracy_ok"],
+                provenance_ok=failure["provenance_ok"],
+                refusal_ok=failure["refusal_ok"],
+                consulted=tuple(failure.get("consulted", [])),
+                expected_sources=tuple(failure.get("expected_sources", [])),
+                question=failure.get("question", ""),
+                answer=failure.get("answer", ""),
+                expected_answer="",
+                answer_format_ok=failure.get("answer_format_ok"),
+            )
+            for failure in item["failures"]
+        )
+        probes.append(ProbeReliability(
+            probe_id=item["probe_id"],
+            conflict_type=item["conflict_type"],
+            expected_behavior=item["expected_behavior"],
+            epochs_total=item["epochs_total"],
+            epochs_passed=item["epochs_passed"],
+            pass_k=item["pass_k"],
+            mean_pass=item["mean_pass"],
+            failures=failures,
+        ))
+    return render_report(
+        header,
+        report["overall"]["pass_k_rate"],
+        report["overall"]["mean_rate"],
+        categories,
+        axes,
+        probes,
+    )

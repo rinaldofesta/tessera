@@ -3127,6 +3127,7 @@ source = { editable = "." }
 dependencies = [
     { name = "inspect-ai" },
     { name = "mcp" },
+    { name = "psutil" },
     { name = "pydantic" },
 ]
 
@@ -3158,6 +3159,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.27,<2" },
     { name = "mistralai", marker = "extra == 'providers'" },
     { name = "openai", marker = "extra == 'providers'" },
+    { name = "psutil", specifier = ">=5.9" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "python-dotenv", marker = "extra == 'app'", specifier = ">=1.0" },

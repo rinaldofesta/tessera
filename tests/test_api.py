@@ -90,6 +90,52 @@ def test_get_report_rejects_path_traversal(tmp_path):
     assert _client(tmp_path).get("/api/logs/examples:..%2f..%2fsecret/report").status_code == 404
 
 
+def test_default_log_dirs_keep_bundled_example_aliases():
+    from tessera.api.app import _DEFAULT_LOG_DIRS
+    from tessera.api.routes_reports import _resolve, logs_in
+
+    stems = [stem for stem, _ in logs_in(_DEFAULT_LOG_DIRS["examples"])]
+    assert stems == ["first-contact", "gpt-4o"]
+    resolved = _resolve(_DEFAULT_LOG_DIRS, "examples:first-contact")
+    assert resolved is not None and resolved.name == "log.eval"
+    assert _resolve(_DEFAULT_LOG_DIRS, "examples:../first-contact") is None
+
+
+def test_logs_in_prefers_the_folder_layout_when_a_stem_has_both(tmp_path):
+    """A directory holding both `foo.eval` and `foo/log.eval` must not list the same
+    id twice — and whichever `logs_in` lists must be what `_resolve` returns."""
+    from tessera.api.routes_reports import _resolve, logs_in
+
+    (tmp_path / "foo.eval").write_bytes(b"flat")
+    (tmp_path / "foo").mkdir()
+    (tmp_path / "foo" / "log.eval").write_bytes(b"folder")
+
+    listed = logs_in(tmp_path)
+
+    assert [stem for stem, _ in listed] == ["foo"]
+    resolved = _resolve({"examples": tmp_path}, "examples:foo")
+    assert resolved == dict(listed)["foo"]
+    assert resolved.read_bytes() == b"folder"
+
+
+def test_default_api_log_source_lists_package_examples(tmp_path):
+    app = create_app(
+        eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
+        schedule=_inline_schedule,
+        blueprint_dir=tmp_path / "blueprints",
+        run_store=RunStore(tmp_path / "runs.db"),
+        env_file=tmp_path / ".env",
+        discovery_cache=_stub_cache(),
+    )
+
+    response = TestClient(app).get("/api/logs")
+
+    assert response.status_code == 200
+    assert {row["id"] for row in response.json()} >= {
+        "examples:first-contact", "examples:gpt-4o",
+    }
+
+
 def test_upload_report(tmp_path):
     log_path = tmp_path / "uploaded.eval"
     from inspect_ai.log import write_eval_log

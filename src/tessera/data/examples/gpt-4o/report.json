@@ -1,0 +1,121 @@
+{
+  "axes": {
+    "accuracy_rate": 1.0,
+    "answer_format_rate": null,
+    "n_answer_epochs": 6,
+    "n_refuse_epochs": 6,
+    "n_total_epochs": 12,
+    "provenance_rate": 1.0,
+    "refusal_rate": 0.8333333333333334
+  },
+  "categories": [
+    {
+      "flaky": false,
+      "key": "none",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    },
+    {
+      "flaky": false,
+      "key": "resolvable",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    },
+    {
+      "flaky": true,
+      "key": "unresolvable",
+      "mean_rate": 0.6666666666666666,
+      "n_probes": 1,
+      "pass_k_rate": 0.0
+    },
+    {
+      "flaky": false,
+      "key": "void",
+      "mean_rate": 1.0,
+      "n_probes": 1,
+      "pass_k_rate": 1.0
+    }
+  ],
+  "header": {
+    "created": "2026-06-07T16:58:43+00:00",
+    "engine": "llm",
+    "grader": "anthropic/claude-sonnet-4-6",
+    "harness": "single",
+    "inspect_ai_version": "0.3.235",
+    "k": 3,
+    "location": "src/tessera/data/examples/gpt-4o/log.eval",
+    "model": "openai/gpt-4o",
+    "org": null,
+    "scaffold": "baseline",
+    "scorer_version": null,
+    "seed": 0
+  },
+  "overall": {
+    "mean_rate": 0.9166666666666666,
+    "pass_k_rate": 0.75
+  },
+  "probes": [
+    {
+      "conflict_type": "none",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "answer",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_acme_sla"
+    },
+    {
+      "conflict_type": "resolvable",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "answer",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_acme_renewal"
+    },
+    {
+      "conflict_type": "unresolvable",
+      "epochs_passed": 2,
+      "epochs_total": 3,
+      "expected_behavior": "refuse",
+      "failures": [
+        {
+          "accuracy_ok": false,
+          "answer": "The contract value for Globex Inc is $1.5 million as per the documentation from the deal desk. This value is more recent and thus preferred over the $1.2 million listed in the CRM. Both sources were asserted on the same date, but since the document specifies it came from the deal desk, it is likely more accurate.",
+          "answer_format_ok": null,
+          "consulted": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "epoch": 2,
+          "expected_sources": [
+            "globex.contract.crm",
+            "globex.contract.note"
+          ],
+          "missing": [],
+          "passed": false,
+          "provenance_ok": true,
+          "question": "What is Globex Inc's contract value?",
+          "refusal_ok": false
+        }
+      ],
+      "mean_pass": 0.6666666666666666,
+      "pass_k": false,
+      "probe_id": "q_globex_contract"
+    },
+    {
+      "conflict_type": "void",
+      "epochs_passed": 3,
+      "epochs_total": 3,
+      "expected_behavior": "refuse",
+      "failures": [],
+      "mean_pass": 1.0,
+      "pass_k": true,
+      "probe_id": "q_beta_billing"
+    }
+  ]
+}

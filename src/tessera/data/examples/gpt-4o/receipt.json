@@ -1,0 +1,42 @@
+{
+  "artifact": {
+    "path": "src/tessera/data/examples/gpt-4o/log.eval",
+    "sha256": "bfb2f34e372d594f7d90634ec5f8f80e5fb6af0b80892335c3545ba375388f96"
+  },
+  "execution_hash": "19b44856de7be30a6ce7e612b40ae1b10e78b8870b393dda66af615b440dcf4c",
+  "protocol": {
+    "blueprint_sha256": null,
+    "engine": "llm",
+    "epochs": 3,
+    "grader": "anthropic/claude-sonnet-4-6",
+    "harness": "single",
+    "org": null,
+    "scaffold": "baseline",
+    "scorer_version": null,
+    "seed": 0
+  },
+  "protocol_hash": "0800e19584417481c85a09020bfbbf4604ade969867214819ff0215b4afda952",
+  "runtime": {
+    "effective_models": [
+      "anthropic/claude-sonnet-4-6",
+      "openai/gpt-4o"
+    ],
+    "git_dirty": true,
+    "git_revision": "628c755",
+    "inspect_ai_version": "0.3.235",
+    "reported_model": "openai/gpt-4o",
+    "requested_model": "openai/gpt-4o",
+    "tessera_version": "0.2.0"
+  },
+  "timing": {
+    "completed_at": "2026-06-07T16:58:53+00:00",
+    "duration_seconds": 10.0,
+    "started_at": "2026-06-07T16:58:43+00:00"
+  },
+  "usage": {
+    "billed_cost": null,
+    "input_tokens": 29194,
+    "output_tokens": 3278,
+    "total_tokens": 32472
+  }
+}

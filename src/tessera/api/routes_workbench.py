@@ -12,6 +12,7 @@ from inspect_ai.log import read_eval_log
 
 from tessera.api import responses as R
 from tessera.api.receipts import file_sha256, receipt_from_log, receipt_from_report
+from tessera.api.routes_reports import logs_in
 from tessera.api.schemas import ComparisonRequest
 from tessera.api.scrub import scrub_error
 from tessera.report.compare import compare_reports, diagnose_report
@@ -21,8 +22,8 @@ from tessera.report.serialize import report_to_dict
 router = APIRouter()
 
 
-def _record_log(request: Request, source: str, path: Path) -> None:
-    evaluation_id = f"{source}:{path.stem}"
+def _record_log(request: Request, source: str, stem: str, path: Path) -> None:
+    evaluation_id = f"{source}:{stem}"
     digest = file_sha256(path)
     existing = request.app.state.workbench_store.get_evaluation(evaluation_id)
     if existing and existing["artifact_sha256"] == digest:
@@ -45,9 +46,9 @@ def sync_library(request: Request) -> None:
     for source, directory in request.app.state.log_dirs.items():
         if not directory.exists():
             continue
-        for path in sorted(directory.glob("*.eval")):
+        for stem, path in logs_in(directory):
             try:
-                _record_log(request, source, path)
+                _record_log(request, source, stem, path)
             except Exception:  # noqa: BLE001 — one corrupt artifact must not hide the library
                 continue
     # The evaluation library intentionally includes archived runs: it is the durable

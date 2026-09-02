@@ -1,0 +1,21 @@
+{
+  "archived": false,
+  "created_at": "2026-06-04T18:26:20+00:00",
+  "error": null,
+  "finished_at": "2026-06-04T18:26:43+00:00",
+  "id": "first-contact",
+  "owner": null,
+  "request": {
+    "engine": "llm",
+    "grader": "openai/gpt-4o",
+    "k": 3,
+    "model": "anthropic/claude-sonnet-4-6",
+    "scaffold": "baseline",
+    "seed": 0,
+    "suite": ""
+  },
+  "schema_version": 1,
+  "source": "bundled",
+  "started_at": "2026-06-04T18:26:20+00:00",
+  "status": "completed"
+}

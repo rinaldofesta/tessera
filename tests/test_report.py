@@ -408,3 +408,30 @@ def test_scorecard_discloses_harness_when_not_single():
     from tessera.report.cli import _build_report
     log = _scorecard_log(task_args={"judge": "deterministic", "harness": "ensemble"})
     assert "**Harness:** ensemble" in _build_report(log)
+
+
+def test_render_markdown_matches_cli_for_golden_scorecard():
+    from tessera.report.cli import _build_report
+    from tessera.report.render import render_markdown
+    from tessera.report.serialize import report_to_dict
+
+    log = _scorecard_log()
+    assert render_markdown(report_to_dict(log)) == _build_report(log)
+
+
+@pytest.mark.parametrize("name", ["first-contact", "gpt-4o"])
+def test_render_markdown_matches_cli_for_bundled_logs(name):
+    from pathlib import Path
+
+    from inspect_ai.log import read_eval_log
+
+    from tessera.report.cli import _build_report
+    from tessera.report.render import render_markdown
+    from tessera.report.serialize import report_to_dict
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "src" / "tessera" / "data" / "examples" / name / "log.eval"
+    )
+    log = read_eval_log(str(path), resolve_attachments=True)
+    assert render_markdown(report_to_dict(log)) == _build_report(log)

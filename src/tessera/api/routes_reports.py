@@ -19,19 +19,31 @@ from tessera.report.serialize import report_to_dict
 router = APIRouter()
 
 
+def logs_in(directory: Path) -> list[tuple[str, Path]]:
+    """(stem, path) for every log in a whitelisted dir — flat `<stem>.eval` files or
+    run folders `<stem>/log.eval` (the layout of the bundled examples). If a stem has
+    both, the folder wins — same precedence `_resolve` uses — so a stem is never listed
+    twice under one id."""
+    by_stem = {p.stem: p for p in directory.glob("*.eval")}
+    by_stem.update({p.parent.name: p for p in directory.glob("*/log.eval")})
+    return sorted(by_stem.items())
+
+
 def _resolve(log_dirs: dict[str, Path], log_id: str) -> Path | None:
     """Map 'source:stem' -> a path inside the whitelisted dir, or None. No traversal."""
     source, _, stem = log_id.partition(":")
     base = log_dirs.get(source)
     if base is None or not stem:
         return None
-    candidate = (base / f"{stem}.eval").resolve()
-    if base.resolve() not in candidate.parents:
-        return None
-    return candidate if candidate.exists() else None
+    # Folder layout first: matches logs_in's precedence when a stem has both.
+    for candidate in (base / stem / "log.eval", base / f"{stem}.eval"):
+        candidate = candidate.resolve()
+        if base.resolve() in candidate.parents and candidate.exists():
+            return candidate
+    return None
 
 
-def _header_meta(source: str, path: Path) -> dict | None:
+def _header_meta(source: str, stem: str, path: Path) -> dict | None:
     try:
         log = read_eval_log(str(path), header_only=True)
     except Exception:
@@ -44,7 +56,7 @@ def _header_meta(source: str, path: Path) -> dict | None:
         gr = roles["grader"]
         grader = getattr(gr, "model", None) or str(gr)
     return {
-        "id": f"{source}:{path.stem}",
+        "id": f"{source}:{stem}",
         "source": source,
         "path": str(path),
         "model": str(spec.model),
@@ -62,8 +74,8 @@ def list_logs(request: Request):
     for source, d in request.app.state.log_dirs.items():
         if not d.exists():
             continue
-        for p in sorted(d.glob("*.eval")):
-            meta = _header_meta(source, p)
+        for stem, p in logs_in(d):
+            meta = _header_meta(source, stem, p)
             if meta is not None:
                 out.append(meta)
     return out
