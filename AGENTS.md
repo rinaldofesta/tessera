@@ -11,7 +11,7 @@ Tessera measures whether an agent answers questions over disagreeing company sou
 - `tessera catalog [SECTION] --json` returns `{"ok": true, ...requested catalog data..., "defaults": ...}`.
 - `tessera connect PROVIDER --key-stdin --json` returns `{"ok": true, "provider": ..., "probe": ...}`.
 - `tessera compare A B --json` returns `{"ok": true, "comparable": ..., ...paired results...}`.
-- `tessera ui --check --json` returns `{"ok": true, "api": "ok", "ui_bundle": ..., "home": ..., "env_file": ..., "env_file_present": ...}`.
+- `tessera ui --check --json` returns `{"ok": ..., "api": "ok", "ui_bundle": ..., "home": ..., "env_file": ..., "env_file_present": ...}`. `ok`/`ui_bundle` reflect whether the packaged UI bundle is present; a missing bundle is `"ok": false` with `"ui_bundle": null` and exits `4`, without the `{"error": ...}` envelope below.
 - `tessera guide [TOPIC] --json` returns either `{"ok": true, "topic": ..., "text": ...}` or `{"ok": true, "topics": [...]}` with `--list`.
 - `tessera init NAME --json` returns `{"ok": true, "path": ..., "name": ...}`.
 - `tessera validate REF --json` returns `{"ok": ..., "issues": [...], "questions": ..., "claims": ...}`.

@@ -124,13 +124,12 @@ def test_no_args_shows_successful_help_and_version():
     assert version.exit_code == 0 and version.stdout.startswith("tessera ")
 
 
-def test_ui_check_reports_checkout_bundle(tmp_path, monkeypatch):
-    checkout = tmp_path / "checkout"
-    bundle = checkout / "web" / "dist" / "index.html"
+def test_ui_check_reports_packaged_bundle(tmp_path, monkeypatch):
+    package = tmp_path / "package"
+    bundle = package / "web" / "index.html"
     bundle.parent.mkdir(parents=True)
     bundle.write_text("<main>Tessera</main>")
-    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
-    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: tmp_path / "package")
+    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
 
     result = RUNNER.invoke(app, ["ui", "--check"])
 
@@ -139,17 +138,20 @@ def test_ui_check_reports_checkout_bundle(tmp_path, monkeypatch):
     assert "api: ok" in result.stdout
 
 
-def test_ui_check_missing_bundle_json_shape(tmp_path, monkeypatch):
-    checkout = tmp_path / "checkout"
-    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
+def test_ui_check_missing_bundle_is_runtime_error(tmp_path, monkeypatch):
     monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: tmp_path / "package")
 
+    human = RUNNER.invoke(app, ["ui", "--check"])
     result = RUNNER.invoke(app, ["ui", "--check", "--json"])
 
     payload = _json(result)
-    assert result.exit_code == 0
+    assert human.exit_code == result.exit_code == 4
+    assert (
+        "ui bundle: MISSING — run `npm run build` in web/ "
+        "(a checkout) or reinstall the wheel"
+    ) in human.stdout
     assert payload == {
-        "ok": True,
+        "ok": False,
         "api": "ok",
         "ui_bundle": None,
         "home": os.environ["TESSERA_HOME"],

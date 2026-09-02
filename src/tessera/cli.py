@@ -226,7 +226,7 @@ def ui(
     check: bool = typer.Option(False, "--check"),
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Launch the local Tessera UI or check that it is ready."""
+    """Launch the local UI or check that its API and packaged bundle are ready."""
     from tessera.api.app import create_app, ui_dist
 
     if check:
@@ -236,7 +236,7 @@ def ui(
         bundle = bundle_dir / "index.html" if bundle_dir is not None else None
         env_file = checked_app.state.env_file
         payload = {
-            "ok": True,
+            "ok": bundle is not None,
             "api": "ok",
             "ui_bundle": str(bundle) if bundle is not None else None,
             "home": str(home),
@@ -250,12 +250,16 @@ def ui(
             typer.echo(
                 f"ui bundle: {bundle}"
                 if bundle is not None
-                else "ui bundle: not built (the API still serves /api/*)"
+                else (
+                    "ui bundle: MISSING — run `npm run build` in web/ "
+                    "(a checkout) or reinstall the wheel"
+                )
             )
             typer.echo(f"home: {home}")
             state = "present" if payload["env_file_present"] else "missing"
             typer.echo(f"env file: {env_file} ({state})")
-        # PR7 makes a missing bundle exit 4 once the wheel is expected to contain it.
+        if bundle is None:
+            raise typer.Exit(code=int(ExitCode.RUNTIME_ERROR))
         return
 
     selected_port = port if port is not None else int(os.environ.get("TESSERA_API_PORT", "8000"))

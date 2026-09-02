@@ -25,17 +25,12 @@ def test_learn_is_not_in_the_openapi_contract(tmp_path):
     assert "/learn" not in paths
 
 
-def test_mount_spa_prefers_package_data(tmp_path, monkeypatch):
+def test_mount_spa_serves_package_data(tmp_path, monkeypatch):
     package = tmp_path / "package"
     packaged_index = package / "web" / "index.html"
     packaged_index.parent.mkdir(parents=True)
     packaged_index.write_text("packaged UI")
-    checkout = tmp_path / "checkout"
-    checkout_index = checkout / "web" / "dist" / "index.html"
-    checkout_index.parent.mkdir(parents=True)
-    checkout_index.write_text("checkout UI")
     monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
-    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
     app = FastAPI()
 
     _mount_spa(app)

@@ -23,7 +23,6 @@ runs.db
 
 # React SPA (web/) — Node deps and build output
 web/node_modules/
-web/dist/
 web/*.tsbuildinfo
 # The SPA bundle Vite writes into the package for the wheel (built in CI, never committed)
 src/tessera/data/web/
