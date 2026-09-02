@@ -13,9 +13,17 @@ from fastapi import APIRouter, HTTPException, Request
 
 from tessera.api import responses as R
 from tessera.api.runner import run_eval_job
-from tessera.api.schemas import RunRequest
+from tessera.api.schemas import ArchiveRequest, RunRequest
 
 router = APIRouter()
+
+
+def _run_summary(row: dict) -> dict:
+    row = row.copy()
+    report = row.pop("report")
+    row["pass_k_rate"] = report["overall"]["pass_k_rate"] if report else None
+    row["mean_rate"] = report["overall"]["mean_rate"] if report else None
+    return row
 
 
 @router.post("/api/runs", response_model=R.StartRunResult)
@@ -29,15 +37,29 @@ async def start_run(req: RunRequest, request: Request):
     store = request.app.state.run_store
     job_id = store.create(req)
     await request.app.state.schedule(
-        run_eval_job(job_id, req, store, request.app.state.eval_runner))
+        run_eval_job(
+            job_id, req, store, request.app.state.eval_runner,
+            request.app.state.workbench_store,
+        ))
     job = store.get(job_id)
     return {"job_id": job_id, "status": job["status"] if job else "running"}
 
 
 @router.get("/api/runs", response_model=list[R.RunSummary])
-def list_runs(request: Request):
+def list_runs(request: Request, include_archived: bool = False):
     """Run history (newest first) with headline rates — for the monitor + dashboard."""
-    return request.app.state.run_store.list()
+    return request.app.state.run_store.list(include_archived=include_archived)
+
+
+@router.post("/api/runs/{job_id}/archive", response_model=R.RunSummary)
+def archive_run(job_id: str, request: Request, req: ArchiveRequest = ArchiveRequest()):
+    store = request.app.state.run_store
+    job = store.get(job_id)
+    if job is None:
+        raise HTTPException(404, f"unknown job: {job_id}")
+    if job["status"] == "running":
+        raise HTTPException(409, "a running evaluation cannot be archived")
+    return _run_summary(store.set_archived(job_id, req.archived))
 
 
 @router.get("/api/runs/{job_id}", response_model=R.RunStatus)

@@ -1,6 +1,7 @@
 """Key-free tests for the FastAPI app. Logs are fabricated on disk with write_eval_log;
 the live-run path uses an injected fake runner + inline scheduler — no model calls."""
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -43,7 +44,7 @@ def _write(dir_path: Path, name: str, log) -> None:
     write_eval_log(log, str(dir_path / name))
 
 
-def _client(tmp_path, *, eval_runner=None):
+def _client(tmp_path, *, eval_runner=None, discovery_cache=None):
     examples = tmp_path / "examples"
     logs = tmp_path / "logs"
     _write(examples, "first-contact.eval", _eval_log([_answer("q1", 1)]))
@@ -53,6 +54,11 @@ def _client(tmp_path, *, eval_runner=None):
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
         run_store=RunStore(tmp_path / "runs.db"),
+        env_file=tmp_path / ".env",
+        # A stub by default: the real cache probes localhost:11434 and scans
+        # ~/.cache/huggingface, which would make this suite neither network-free nor
+        # deterministic — it would fail outright on a machine running Ollama.
+        discovery_cache=discovery_cache or _stub_cache(),
     )
     return TestClient(app)
 
@@ -117,6 +123,20 @@ def test_list_models(tmp_path):
     assert "anthropic/claude-sonnet-4-6" in models and len(models) >= 2
     # the leaderboard additions (incl. the local open-weights option) stay offered
     assert "anthropic/claude-haiku-4-5" in models and "ollama/qwen3.5:latest" in models
+    assert "anthropic/claude-fable-5" in models and "anthropic/claude-sonnet-5" in models
+
+
+def test_default_published_models_match_single_model_leaderboard(monkeypatch):
+    from tessera.api.routes_meta import published_models
+
+    monkeypatch.delenv("TESSERA_MODELS", raising=False)
+    rows_path = Path(__file__).parents[1] / "docs" / "leaderboard.rows.json"
+    rows = json.loads(rows_path.read_text())["rows"]
+    expected = {
+        row["model"] for row in rows
+        if row.get("harness", "single") == "single"
+    }
+    assert set(published_models()) == expected
 
 
 def test_list_models_env_override(tmp_path, monkeypatch):
@@ -125,36 +145,53 @@ def test_list_models_env_override(tmp_path, monkeypatch):
     assert r.status_code == 200 and r.json() == ["a/x", "b/y"]
 
 
-def test_list_models_env_whitespace_falls_back_to_default(tmp_path, monkeypatch):
+def test_list_models_env_whitespace_falls_back_to_published_set(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_MODELS", " , ,")
     r = _client(tmp_path).get("/api/models")
     assert r.status_code == 200 and "anthropic/claude-sonnet-4-6" in r.json()
 
 
-def test_eval_setup_defaults_use_the_resolved_model_list(tmp_path):
+def test_eval_setup_defaults_do_not_claim_a_model_selection(tmp_path):
     r = _client(tmp_path).get("/api/eval-setup")
     assert r.status_code == 200
     body = r.json()
     assert body["defaults"] == {
         "engine": "deterministic",
         "repeats": 3,
-        "model": _client(tmp_path).get("/api/models").json()[0],
         "grader": None,
     }
 
 
 def test_eval_setup_model_readiness(tmp_path, monkeypatch):
+    # Readiness comes from what a source observed, never from an env var existing.
+    # Only sonnet was seen by a source; everything else is a published placeholder, and
+    # the ollama entry stays needs_config precisely because the daemon is offline.
+    from tessera.api.discovery.types import DiscoveredModel
+
     monkeypatch.setenv("TESSERA_MODELS", "anthropic/sonnet,openai/gpt,mlx/foo,ollama/x")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    cache = _stub_cache(models=[
+        DiscoveredModel(
+            "anthropic/sonnet", "Sonnet", "anthropic", "ready", "cloud",
+            released="2026-08-01", retired=True,
+        ),
+    ])
 
-    r = _client(tmp_path).get("/api/eval-setup")
+    r = _client(tmp_path, discovery_cache=cache).get("/api/eval-setup")
     assert r.status_code == 200
     assert r.json()["models"] == [
-        {"id": "anthropic/sonnet", "label": "sonnet", "provider": "anthropic", "readiness": "ready"},
-        {"id": "openai/gpt", "label": "gpt", "provider": "openai", "readiness": "missing_credentials"},
-        {"id": "mlx/foo", "label": "foo", "provider": "mlx", "readiness": "unknown"},
-        {"id": "ollama/x", "label": "x", "provider": "ollama", "readiness": "ready"},
+        {"id": "anthropic/sonnet", "label": "Sonnet", "provider": "anthropic",
+         "readiness": "ready", "source": "cloud", "published": True,
+         "released": "2026-08-01", "retired": True, "detail": None},
+        {"id": "openai/gpt", "label": "gpt", "provider": "openai",
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
+        {"id": "mlx/foo", "label": "foo", "provider": "unknown",
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
+        {"id": "ollama/x", "label": "x", "provider": "ollama",
+         "readiness": "needs_config", "source": "published", "published": True,
+         "released": None, "retired": False, "detail": None},
     ]
 
 
@@ -230,12 +267,24 @@ def test_every_api_route_declares_a_response_model(tmp_path):
     from tessera.api.app import create_app
     from tessera.api.run_store import RunStore
 
+    def api_routes(node):
+        # Walk recursively via original_router: newer FastAPI keeps included routers as
+        # lazy _IncludedRouter entries instead of flattening their routes into
+        # app.routes, so iterating app.routes directly finds ZERO /api/ routes and this
+        # guard silently passes while checking nothing.
+        for route in getattr(node, "routes", []):
+            if isinstance(route, APIRoute):
+                yield route
+            elif (inner := getattr(route, "original_router", None)) is not None:
+                yield from api_routes(inner)
+
     app = create_app(run_store=RunStore(tmp_path / "runs.db"),
                      blueprint_dir=tmp_path / "bp")
     exempt = {"/api/runs/{job_id}/events"}        # SSE stream, not JSON
-    for route in app.routes:
-        if isinstance(route, APIRoute) and route.path.startswith("/api/") and route.path not in exempt:
-            assert route.response_model is not None, f"{route.path} has no response_model"
+    checked = [r for r in api_routes(app) if r.path.startswith("/api/") and r.path not in exempt]
+    assert checked, "found no /api/ routes to check — the guard is inert, not passing"
+    for route in checked:
+        assert route.response_model is not None, f"{route.path} has no response_model"
 
 
 def test_run_rejects_unknown_judge(tmp_path):
@@ -425,3 +474,93 @@ def test_blueprint_create_invalid_400(tmp_path):
            "conflict_type": "void", "expected_behavior": "answer"}]}  # void must refuse
     r = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
     assert r.status_code == 400
+
+
+def _stub_cache(models=(), statuses=None):
+    """A discovery cache with fixed contents.
+
+    The real one probes localhost:11434 and scans ~/.cache/huggingface, so tests that
+    used it were neither key-free nor network-free, and would fail outright on a machine
+    with an Ollama daemon running — a documented workflow for this project.
+    """
+    from tessera.api.discovery.types import SourceResult
+
+    resolved = list(statuses if statuses is not None else [
+        SourceResult("cloud", (), "ok"),
+        SourceResult("ollama", (), "offline", detail="daemon unreachable"),
+        SourceResult("mlx", (), "ok"),
+    ])
+
+    class _Fixed:
+        def get(self):
+            # Run the real merge, so the stub honours the cache's actual contract:
+            # published ids absent from every source come back as needs_config
+            # placeholders. Returning raw source output instead would test a shape the
+            # route never actually receives.
+            from tessera.api.discovery.merge import merge
+            from tessera.api.routes_meta import published_models
+            # Hang the seeded models off an existing source rather than inventing one,
+            # so the reported source set stays exactly the three real sources.
+            seeded = list(resolved)
+            if models:
+                head = seeded[0]
+                seeded[0] = SourceResult(head.source, tuple(models), head.status, head.detail)
+            return merge(seeded, published=published_models())
+
+        def invalidate(self):
+            pass
+
+    return _Fixed()
+
+
+def _client_with_cache(tmp_path, cache):
+    return TestClient(create_app(
+        eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
+        log_dirs={"logs": tmp_path / "logs"},
+        schedule=_inline_schedule,
+        blueprint_dir=tmp_path / "blueprints",
+        run_store=RunStore(tmp_path / "runs.db"),
+        env_file=tmp_path / ".env",
+        discovery_cache=cache,
+    ))
+
+
+def test_eval_setup_reports_source_status_alongside_models(tmp_path):
+    from tessera.api.discovery.types import DiscoveredModel
+    cache = _stub_cache(models=[
+        DiscoveredModel("anthropic/x", "x", "anthropic", "ready", "cloud"),
+    ])
+    body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
+    assert {s["source"] for s in body["sources"]} == {"cloud", "ollama", "mlx"}
+    assert all(
+        "source" in model
+        and "published" in model
+        and "released" in model
+        and "retired" in model
+        for model in body["models"]
+    )
+
+
+def test_eval_setup_never_reports_an_unreachable_ollama_model_as_ready(tmp_path, monkeypatch):
+    # The reproducible failure this phase exists to fix: the daemon is down, and the
+    # published list still names an ollama model.
+    monkeypatch.setenv("TESSERA_MODELS", "ollama/qwen3.5:latest,anthropic/claude-sonnet-4-6")
+    body = _client_with_cache(tmp_path, _stub_cache()).get("/api/eval-setup").json()
+    ollama = [m for m in body["models"] if m["provider"] == "ollama"]
+    assert ollama, "the published ollama model should still be listed"
+    assert all(m["readiness"] != "ready" for m in ollama)
+
+
+def test_eval_setup_renders_with_every_runtime_down_and_no_keys(tmp_path):
+    # Every source reports failure and nothing is discovered: the launcher must still
+    # render the published set, honestly marked, rather than 500 or return nothing.
+    from tessera.api.discovery.types import SourceResult
+    cache = _stub_cache(statuses=[
+        SourceResult("cloud", (), "ok"),
+        SourceResult("ollama", (), "offline", detail="daemon unreachable"),
+        SourceResult("mlx", (), "offline", detail="no server"),
+    ])
+    body = _client_with_cache(tmp_path, cache).get("/api/eval-setup").json()
+    assert body["models"]                                     # still renders
+    assert all(m["readiness"] != "ready" for m in body["models"])
+    assert "model" not in body["defaults"]

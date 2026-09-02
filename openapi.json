@@ -31,7 +31,7 @@
     "/api/models": {
       "get": {
         "summary": "List Models",
-        "description": "The canonical model choices for the Run form (model under test + grader).",
+        "description": "The published model set displayed by the Run form.",
         "operationId": "list_models_api_models_get",
         "responses": {
           "200": {
@@ -44,6 +44,25 @@
                   },
                   "type": "array",
                   "title": "Response List Models Api Models Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "summary": "Leaderboard",
+        "description": "The committed public-leaderboard manifest served verbatim to the SPA.",
+        "operationId": "leaderboard_api_leaderboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardManifest"
                 }
               }
             }
@@ -436,39 +455,18 @@
       }
     },
     "/api/runs": {
-      "get": {
-        "summary": "List Runs",
-        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
-        "operationId": "list_runs_api_runs_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RunSummary"
-                  },
-                  "type": "array",
-                  "title": "Response List Runs Api Runs Get"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "summary": "Start Run",
         "operationId": "start_run_api_runs_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RunRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -477,6 +475,100 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StartRunResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Runs",
+        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
+        "operationId": "list_runs_api_runs_get",
+        "parameters": [
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "title": "Response List Runs Api Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{job_id}/archive": {
+      "post": {
+        "summary": "Archive Run",
+        "operationId": "archive_run_api_runs__job_id__archive_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveRequest",
+                "default": {
+                  "archived": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSummary"
                 }
               }
             }
@@ -653,10 +745,538 @@
           }
         }
       }
+    },
+    "/api/providers": {
+      "get": {
+        "summary": "List Providers",
+        "operationId": "list_providers_api_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "type": "array",
+                  "title": "Response List Providers Api Providers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/providers/{provider_id}": {
+      "put": {
+        "summary": "Save Provider",
+        "operationId": "save_provider_api_providers__provider_id__put",
+        "parameters": [
+          {
+            "name": "provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/model-discovery/rescan": {
+      "post": {
+        "summary": "Rescan",
+        "operationId": "rescan_api_model_discovery_rescan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RescanResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations": {
+      "get": {
+        "summary": "List Evaluations",
+        "operationId": "list_evaluations_api_evaluations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Evaluations Api Evaluations Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations/{evaluation_id}/report": {
+      "get": {
+        "summary": "Evaluation Report",
+        "operationId": "evaluation_report_api_evaluations__evaluation_id__report_get",
+        "parameters": [
+          {
+            "name": "evaluation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evaluation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations/import": {
+      "post": {
+        "summary": "Import Evaluation",
+        "operationId": "import_evaluation_api_evaluations_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_evaluation_api_evaluations_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/comparisons": {
+      "post": {
+        "summary": "Create Comparison",
+        "operationId": "create_comparison_api_comparisons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations/{evaluation_id}/diagnostics": {
+      "get": {
+        "summary": "Evaluation Diagnostics",
+        "operationId": "evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get",
+        "parameters": [
+          {
+            "name": "evaluation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evaluation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Diagnostic"
+                  },
+                  "title": "Response Evaluation Diagnostics Api Evaluations  Evaluation Id  Diagnostics Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preflights": {
+      "post": {
+        "summary": "Run Preflight",
+        "operationId": "run_preflight_api_preflights_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreflightRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreflightResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments": {
+      "get": {
+        "summary": "List Experiments",
+        "operationId": "list_experiments_api_experiments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Experiment"
+                  },
+                  "type": "array",
+                  "title": "Response List Experiments Api Experiments Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start Experiment",
+        "operationId": "start_experiment_api_experiments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{experiment_id}": {
+      "get": {
+        "summary": "Get Experiment",
+        "operationId": "get_experiment_api_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Experiment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{experiment_id}/resume": {
+      "post": {
+        "summary": "Resume Experiment",
+        "operationId": "resume_experiment_api_experiments__experiment_id__resume_post",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{experiment_id}/comparisons/{variant_id}": {
+      "get": {
+        "summary": "Experiment Comparison",
+        "operationId": "experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          },
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          },
+          {
+            "name": "intervention",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "model",
+                    "org",
+                    "engine",
+                    "grader",
+                    "k",
+                    "scaffold",
+                    "seed",
+                    "harness"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Intervention"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentComparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ArchiveRequest": {
+        "properties": {
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "ArchiveRequest"
+      },
       "Artifacts": {
         "properties": {
           "manifest": {
@@ -768,6 +1388,20 @@
         ],
         "title": "BlueprintMeta"
       },
+      "Body_import_evaluation_api_evaluations_import_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_evaluation_api_evaluations_import_post"
+      },
       "Body_upload_report_api_reports_post": {
         "properties": {
           "file": {
@@ -781,6 +1415,62 @@
           "file"
         ],
         "title": "Body_upload_report_api_reports_post"
+      },
+      "CategoryPairCounts": {
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "title": "Matched"
+          },
+          "a_wins": {
+            "type": "integer",
+            "title": "A Wins"
+          },
+          "b_wins": {
+            "type": "integer",
+            "title": "B Wins"
+          },
+          "both_pass": {
+            "type": "integer",
+            "title": "Both Pass"
+          },
+          "both_fail": {
+            "type": "integer",
+            "title": "Both Fail"
+          },
+          "discordant": {
+            "type": "integer",
+            "title": "Discordant"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "dropped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dropped"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched",
+          "a_wins",
+          "b_wins",
+          "both_pass",
+          "both_fail",
+          "discordant",
+          "p_value",
+          "dropped",
+          "key"
+        ],
+        "title": "CategoryPairCounts"
       },
       "Claim": {
         "properties": {
@@ -841,6 +1531,113 @@
         "title": "Claim",
         "description": "An atomic knowledge unit that lives in exactly one silo."
       },
+      "ComparisonDiagnostics": {
+        "properties": {
+          "a": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            },
+            "type": "array",
+            "title": "A"
+          },
+          "b": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            },
+            "type": "array",
+            "title": "B"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "ComparisonDiagnostics"
+      },
+      "ComparisonRequest": {
+        "properties": {
+          "evaluation_a": {
+            "type": "string",
+            "title": "Evaluation A"
+          },
+          "evaluation_b": {
+            "type": "string",
+            "title": "Evaluation B"
+          },
+          "intervention": {
+            "type": "string",
+            "enum": [
+              "model",
+              "org",
+              "engine",
+              "grader",
+              "k",
+              "scaffold",
+              "seed",
+              "harness"
+            ],
+            "title": "Intervention",
+            "default": "model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_a",
+          "evaluation_b"
+        ],
+        "title": "ComparisonRequest"
+      },
+      "ComparisonResult": {
+        "properties": {
+          "compatible": {
+            "type": "boolean",
+            "title": "Compatible"
+          },
+          "intervention": {
+            "type": "string",
+            "title": "Intervention"
+          },
+          "changed_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Dimensions"
+          },
+          "unexpected_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unexpected Dimensions"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/PairCounts"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryPairCounts"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/ComparisonDiagnostics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "compatible",
+          "intervention",
+          "changed_dimensions",
+          "unexpected_dimensions",
+          "overall",
+          "categories",
+          "diagnostics"
+        ],
+        "title": "ComparisonResult"
+      },
       "ConflictType": {
         "type": "string",
         "enum": [
@@ -851,6 +1648,29 @@
         ],
         "title": "ConflictType",
         "description": "The four-way taxonomy at the heart of the eval: what kind of disagreement (if\nany) the silos hold for a probe. It decides whether the right move is to answer or\nto refuse, and `unresolvable` is the column that actually separates reliable agents\nfrom confident fabricators."
+      },
+      "Diagnostic": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "signature",
+          "count"
+        ],
+        "title": "Diagnostic"
       },
       "DocFile": {
         "properties": {
@@ -888,13 +1708,21 @@
             },
             "type": "array",
             "title": "Suites"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
           }
         },
         "type": "object",
         "required": [
           "defaults",
           "models",
-          "suites"
+          "suites",
+          "sources"
         ],
         "title": "EvalSetup"
       },
@@ -908,10 +1736,6 @@
           "repeats": {
             "type": "integer",
             "title": "Repeats"
-          },
-          "model": {
-            "type": "string",
-            "title": "Model"
           },
           "grader": {
             "anyOf": [
@@ -929,7 +1753,6 @@
         "required": [
           "engine",
           "repeats",
-          "model",
           "grader"
         ],
         "title": "EvalSetupDefaults"
@@ -952,10 +1775,46 @@
             "type": "string",
             "enum": [
               "ready",
-              "missing_credentials",
-              "unknown"
+              "needs_config",
+              "needs_server",
+              "offline",
+              "unverified"
             ],
             "title": "Readiness"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "published": {
+            "type": "boolean",
+            "title": "Published"
+          },
+          "released": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released"
+          },
+          "retired": {
+            "type": "boolean",
+            "title": "Retired"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
           }
         },
         "type": "object",
@@ -963,7 +1822,11 @@
           "id",
           "label",
           "provider",
-          "readiness"
+          "readiness",
+          "source",
+          "published",
+          "released",
+          "retired"
         ],
         "title": "EvalSetupModel"
       },
@@ -1004,6 +1867,150 @@
         ],
         "title": "EvalSetupSuite"
       },
+      "EvaluationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "log",
+              "pinned",
+              "import"
+            ],
+            "title": "Kind"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "epochs": {
+            "type": "integer",
+            "title": "Epochs"
+          },
+          "pass_k_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Rate"
+          },
+          "artifact_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Path"
+          },
+          "artifact_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Sha256"
+          },
+          "protocol_hash": {
+            "type": "string",
+            "title": "Protocol Hash"
+          },
+          "execution_hash": {
+            "type": "string",
+            "title": "Execution Hash"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/RunReceipt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "status",
+          "created_at",
+          "model",
+          "org",
+          "engine",
+          "grader",
+          "epochs",
+          "pass_k_rate",
+          "mean_rate",
+          "artifact_path",
+          "artifact_sha256",
+          "protocol_hash",
+          "execution_hash",
+          "receipt"
+        ],
+        "title": "EvaluationSummary"
+      },
       "ExpectedBehavior": {
         "type": "string",
         "enum": [
@@ -1012,6 +2019,382 @@
         ],
         "title": "ExpectedBehavior",
         "description": "What a correct agent does on this probe \u2014 the outcome the scorer grades against."
+      },
+      "Experiment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "error",
+              "stopped"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "baseline_variant": {
+            "type": "string",
+            "title": "Baseline Variant"
+          },
+          "request": {
+            "$ref": "#/components/schemas/ExperimentRequest"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "total_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at",
+          "baseline_variant",
+          "request",
+          "error",
+          "total_cost",
+          "cells"
+        ],
+        "title": "Experiment"
+      },
+      "ExperimentCell": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "variant_id": {
+            "type": "string",
+            "title": "Variant Id"
+          },
+          "repeat_index": {
+            "type": "integer",
+            "title": "Repeat Index"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "done",
+              "error",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "experiment_id",
+          "variant_id",
+          "repeat_index",
+          "status",
+          "run_id",
+          "error"
+        ],
+        "title": "ExperimentCell"
+      },
+      "ExperimentComparison": {
+        "properties": {
+          "compatible": {
+            "type": "boolean",
+            "title": "Compatible"
+          },
+          "intervention": {
+            "type": "string",
+            "title": "Intervention"
+          },
+          "changed_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Dimensions"
+          },
+          "unexpected_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unexpected Dimensions"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/PairCounts"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryPairCounts"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/ComparisonDiagnostics"
+          },
+          "paired_repeats": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Paired Repeats"
+          },
+          "dropped_repeats": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dropped Repeats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "compatible",
+          "intervention",
+          "changed_dimensions",
+          "unexpected_dimensions",
+          "overall",
+          "categories",
+          "diagnostics",
+          "paired_repeats",
+          "dropped_repeats"
+        ],
+        "title": "ExperimentComparison"
+      },
+      "ExperimentRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "baseline_variant": {
+            "type": "string",
+            "title": "Baseline Variant"
+          },
+          "intervention": {
+            "type": "string",
+            "enum": [
+              "model",
+              "org",
+              "engine",
+              "grader",
+              "k",
+              "scaffold",
+              "seed",
+              "harness"
+            ],
+            "title": "Intervention",
+            "default": "model"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentVariant"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 2,
+            "title": "Variants"
+          },
+          "repeats": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Repeats",
+            "default": 1
+          },
+          "max_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cost"
+          },
+          "max_consecutive_errors": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Consecutive Errors",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "baseline_variant",
+          "variants"
+        ],
+        "title": "ExperimentRequest"
+      },
+      "ExperimentStarted": {
+        "properties": {
+          "experiment_id": {
+            "type": "string",
+            "title": "Experiment Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "error",
+              "stopped"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "experiment_id",
+          "status"
+        ],
+        "title": "ExperimentStarted"
+      },
+      "ExperimentVariant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "judge": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "deterministic"
+            ],
+            "title": "Judge",
+            "default": "deterministic"
+          },
+          "org": {
+            "type": "string",
+            "title": "Org",
+            "default": "toy"
+          },
+          "epochs": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Epochs",
+            "default": 3
+          },
+          "scaffold": {
+            "type": "string",
+            "enum": [
+              "baseline",
+              "refuse-aware"
+            ],
+            "title": "Scaffold",
+            "default": "baseline"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "model"
+        ],
+        "title": "ExperimentVariant"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1025,6 +2408,182 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LeaderboardManifest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "exhibitions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Exhibitions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "LeaderboardManifest"
+      },
+      "LeaderboardRow": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "pass_k_rate": {
+            "type": "number",
+            "title": "Pass K Rate"
+          },
+          "mean_rate": {
+            "type": "number",
+            "title": "Mean Rate"
+          },
+          "categories": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Categories"
+          },
+          "answer_format_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Format Rate"
+          },
+          "scorer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Version"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K"
+          },
+          "scaffold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scaffold"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "harness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Harness"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "log": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "model",
+          "pass_k_rate",
+          "mean_rate",
+          "categories",
+          "k"
+        ],
+        "title": "LeaderboardRow"
       },
       "LogMeta": {
         "properties": {
@@ -1126,6 +2685,181 @@
         ],
         "title": "ManifestEntry"
       },
+      "PairCounts": {
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "title": "Matched"
+          },
+          "a_wins": {
+            "type": "integer",
+            "title": "A Wins"
+          },
+          "b_wins": {
+            "type": "integer",
+            "title": "B Wins"
+          },
+          "both_pass": {
+            "type": "integer",
+            "title": "Both Pass"
+          },
+          "both_fail": {
+            "type": "integer",
+            "title": "Both Fail"
+          },
+          "discordant": {
+            "type": "integer",
+            "title": "Discordant"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "dropped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dropped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched",
+          "a_wins",
+          "b_wins",
+          "both_pass",
+          "both_fail",
+          "discordant",
+          "p_value",
+          "dropped"
+        ],
+        "title": "PairCounts"
+      },
+      "PreflightRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "require_tools": {
+            "type": "boolean",
+            "title": "Require Tools",
+            "default": true
+          },
+          "refresh": {
+            "type": "boolean",
+            "title": "Refresh",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "PreflightRequest"
+      },
+      "PreflightResult": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "effective_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Model"
+          },
+          "tool_call": {
+            "type": "boolean",
+            "title": "Tool Call"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "latency_seconds": {
+            "type": "number",
+            "title": "Latency Seconds"
+          },
+          "checked_at": {
+            "type": "string",
+            "title": "Checked At"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PreflightUsage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "effective_model",
+          "tool_call",
+          "ok",
+          "error",
+          "latency_seconds",
+          "checked_at",
+          "cached",
+          "usage"
+        ],
+        "title": "PreflightResult"
+      },
+      "PreflightUsage": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          },
+          "billed_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billed Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "total_tokens",
+          "billed_cost"
+        ],
+        "title": "PreflightUsage"
+      },
       "Probe": {
         "properties": {
           "probe_id": {
@@ -1187,6 +2921,373 @@
         ],
         "title": "Probe",
         "description": "A question that references claims and declares expected behavior."
+      },
+      "Provider": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "readiness": {
+            "type": "string",
+            "enum": [
+              "configured",
+              "needs_config"
+            ],
+            "title": "Readiness"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "configured",
+          "readiness",
+          "fields"
+        ],
+        "title": "Provider"
+      },
+      "ProviderField": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "env_var": {
+            "type": "string",
+            "title": "Env Var"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "env_var",
+          "configured"
+        ],
+        "title": "ProviderField"
+      },
+      "ProviderUpdate": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProviderUpdate"
+      },
+      "ReceiptArtifact": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "title": "ReceiptArtifact"
+      },
+      "ReceiptProtocol": {
+        "properties": {
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org"
+          },
+          "blueprint_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blueprint Sha256"
+          },
+          "scaffold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scaffold"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "harness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Harness"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "grader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grader"
+          },
+          "epochs": {
+            "type": "integer",
+            "title": "Epochs"
+          },
+          "scorer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org",
+          "blueprint_sha256",
+          "scaffold",
+          "seed",
+          "harness",
+          "engine",
+          "grader",
+          "epochs",
+          "scorer_version"
+        ],
+        "title": "ReceiptProtocol"
+      },
+      "ReceiptRuntime": {
+        "properties": {
+          "requested_model": {
+            "type": "string",
+            "title": "Requested Model"
+          },
+          "reported_model": {
+            "type": "string",
+            "title": "Reported Model"
+          },
+          "effective_models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effective Models"
+          },
+          "inspect_ai_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspect Ai Version"
+          },
+          "tessera_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tessera Version"
+          },
+          "git_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Revision"
+          },
+          "git_dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Dirty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requested_model",
+          "reported_model",
+          "effective_models",
+          "inspect_ai_version",
+          "tessera_version",
+          "git_revision",
+          "git_dirty"
+        ],
+        "title": "ReceiptRuntime"
+      },
+      "ReceiptTiming": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at",
+          "completed_at",
+          "duration_seconds"
+        ],
+        "title": "ReceiptTiming"
+      },
+      "ReceiptUsage": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          },
+          "billed_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billed Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "total_tokens",
+          "billed_cost"
+        ],
+        "title": "ReceiptUsage"
       },
       "Render": {
         "properties": {
@@ -1612,6 +3713,27 @@
         ],
         "title": "ReportProbe"
       },
+      "RescanResult": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "model_count": {
+            "type": "integer",
+            "title": "Model Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "model_count"
+        ],
+        "title": "RescanResult"
+      },
       "ResolutionRule": {
         "type": "string",
         "enum": [
@@ -1620,6 +3742,44 @@
         ],
         "title": "ResolutionRule",
         "description": "How a `resolvable` conflict is decided. Note authority can outrank recency: a\nsource that declares itself binding wins even over a fresher one."
+      },
+      "RunReceipt": {
+        "properties": {
+          "protocol_hash": {
+            "type": "string",
+            "title": "Protocol Hash"
+          },
+          "execution_hash": {
+            "type": "string",
+            "title": "Execution Hash"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/ReceiptProtocol"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/ReceiptRuntime"
+          },
+          "artifact": {
+            "$ref": "#/components/schemas/ReceiptArtifact"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/ReceiptTiming"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ReceiptUsage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_hash",
+          "execution_hash",
+          "protocol",
+          "runtime",
+          "artifact",
+          "timing",
+          "usage"
+        ],
+        "title": "RunReceipt"
       },
       "RunRequest": {
         "properties": {
@@ -1658,6 +3818,21 @@
             "minimum": 1.0,
             "title": "Epochs",
             "default": 3
+          },
+          "scaffold": {
+            "type": "string",
+            "enum": [
+              "baseline",
+              "refuse-aware"
+            ],
+            "title": "Scaffold",
+            "default": "baseline"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 0
           }
         },
         "type": "object",
@@ -1796,6 +3971,11 @@
               }
             ],
             "title": "Mean Rate"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
           }
         },
         "type": "object",
@@ -1838,6 +4018,41 @@
           "asserted_at"
         ],
         "title": "SiloField"
+      },
+      "SourceStatus": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "offline",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "detail"
+        ],
+        "title": "SourceStatus"
       },
       "StartRunResult": {
         "properties": {

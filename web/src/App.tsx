@@ -2,14 +2,17 @@ import { Suspense, lazy, useEffect } from "react";
 import {
   CircleHelp,
   ExternalLink,
+  GitCompare,
   Home,
   Library,
+  KeyRound,
   ListChecks,
   Plus,
   Trophy,
 } from "lucide-react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import { SHELL_COPY } from "@/copy";
 import { useApiHealth } from "@/hooks";
 import { DEV_API_HOST } from "@/lib/backend";
@@ -18,22 +21,40 @@ import { cn } from "@/lib/utils";
 // one chunk per view: recharts (Dashboard's trend line) stays out of the others
 const Dashboard = lazy(() => import("@/views/Dashboard"));
 const Datasets = lazy(() => import("@/views/Datasets"));
+const Compare = lazy(() => import("@/views/Compare"));
 const Leaderboard = lazy(() => import("@/views/Leaderboard"));
-const Results = lazy(() => import("@/views/Results"));
+const Providers = lazy(() => import("@/views/Providers"));
+const RunMonitor = lazy(() => import("@/views/RunMonitor"));
 const Run = lazy(() => import("@/views/Run"));
+const RunHistory = lazy(() => import("@/views/RunHistory"));
 
 const NAV = [
   { to: "/", key: "1", label: SHELL_COPY.navItems.home, icon: Home, end: true },
   { to: "/runs", key: "2", label: SHELL_COPY.navItems.runs, icon: ListChecks, end: false },
-  { to: "/suites", key: "3", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  { to: "/compare", key: "3", label: SHELL_COPY.navItems.compare, icon: GitCompare, end: false },
+  { to: "/suites", key: "4", label: SHELL_COPY.navItems.suites, icon: Library, end: false },
+  {
+    to: "/providers",
+    key: "5",
+    label: SHELL_COPY.navItems.providers,
+    icon: KeyRound,
+    end: false,
+  },
   {
     to: "/leaderboard",
-    key: "4",
+    key: "6",
     label: SHELL_COPY.navItems.leaderboard,
     icon: Trophy,
     end: false,
   },
 ] as const;
+
+function ExperimentsRedirect() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("tab", "experiments");
+  return <Navigate to={{ pathname: "/compare", search: `?${params}` }} replace />;
+}
 
 export default function App() {
   const healthy = useApiHealth();
@@ -157,20 +178,25 @@ export default function App() {
           >
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/runs" element={<Results />} />
+              <Route path="/runs" element={<RunHistory />} />
+              <Route path="/compare" element={<Compare />} />
+              <Route path="/runs/:id" element={<RunMonitor />} />
+              <Route path="/experiments" element={<ExperimentsRedirect />} />
               <Route path="/suites" element={<Datasets />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/new" element={<Run />} />
+              <Route path="/providers" element={<Providers />} />
 
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/datasets" element={<Navigate to="/suites" replace />} />
               <Route path="/run" element={<Navigate to="/new" replace />} />
-              <Route path="/results" element={<Navigate to="/runs" replace />} />
+              <Route path="/results" element={<Navigate to="/compare" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>
       </main>
+      <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
 }

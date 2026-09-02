@@ -1,6 +1,9 @@
 import type {
-  Artifacts, Blueprint, BlueprintMeta, LogMeta, Report, RunConfig, RunStatus,
-  RunSummary, StartRunResult, TrendPoint, ValidationResult,
+  Artifacts, Blueprint, BlueprintMeta, EvalSetup, LogMeta, Provider, ProviderUpdate,
+  ComparisonIntervention, ComparisonResult, Diagnostic, EvaluationSummary, Experiment,
+  ExperimentComparison, ExperimentRequest, ExperimentStarted, PreflightResult,
+  LeaderboardManifest, RescanResult, Report, RunConfig, RunStatus, RunSummary, StartRunResult, TrendPoint,
+  ValidationResult,
 } from "./types";
 
 async function j<T>(res: Response): Promise<T> {
@@ -27,21 +30,77 @@ export const api = {
     fd.append("file", file);
     return fetch("/api/reports", { method: "POST", body: fd }).then(j<Report>);
   },
+  listEvaluations: () => fetch("/api/evaluations").then(j<EvaluationSummary[]>),
+  getEvaluationReport: (id: string) =>
+    fetch(`/api/evaluations/${encodeURIComponent(id)}/report`).then(j<Report>),
+  evaluationDiagnostics: (id: string) =>
+    fetch(`/api/evaluations/${encodeURIComponent(id)}/diagnostics`).then(j<Diagnostic[]>),
+  importEvaluation: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch("/api/evaluations/import", { method: "POST", body: fd })
+      .then(j<EvaluationSummary>);
+  },
+  compareEvaluations: (evaluation_a: string, evaluation_b: string,
+                       intervention: ComparisonIntervention) =>
+    fetch("/api/comparisons", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ evaluation_a, evaluation_b, intervention }),
+    }).then(j<ComparisonResult>),
 
   // orgs + models + runs
   listOrgs: () => fetch("/api/orgs").then(j<string[]>),
   listModels: () => fetch("/api/models").then(j<string[]>),
+  evalSetup: () => fetch("/api/eval-setup").then(j<EvalSetup>),
+  listProviders: () => fetch("/api/providers").then(j<Provider[]>),
+  saveProvider: (id: string, body: ProviderUpdate) =>
+    fetch(`/api/providers/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(j<Provider>),
+  rescan: () =>
+    fetch("/api/model-discovery/rescan", { method: "POST" }).then(j<RescanResult>),
   startRun: (cfg: RunConfig) =>
     fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
       .then(j<StartRunResult>),
   getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<RunStatus>),
   // EventSource isn't fetch-shaped, but network access still routes through this module.
   watchRun: (id: string) => new EventSource(`/api/runs/${id}/events`),
-  listRuns: () => fetch("/api/runs").then(j<RunSummary[]>),
+  listRuns: (includeArchived = false) =>
+    fetch(`/api/runs${includeArchived ? "?include_archived=true" : ""}`).then(j<RunSummary[]>),
+  setRunArchived: (id: string, archived: boolean) =>
+    fetch(`/api/runs/${encodeURIComponent(id)}/archive`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ archived }),
+    }).then(j<RunSummary>),
+  leaderboard: () => fetch("/api/leaderboard").then(j<LeaderboardManifest>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);
     return fetch(`/api/trends?${p}`).then(j<TrendPoint[]>);
   },
+  preflight: (model: string, refresh = false) =>
+    fetch("/api/preflights", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, require_tools: true, refresh }),
+    }).then(j<PreflightResult>),
+
+  // controlled experiments
+  startExperiment: (payload: ExperimentRequest) =>
+    fetch("/api/experiments", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(j<ExperimentStarted>),
+  listExperiments: () => fetch("/api/experiments").then(j<Experiment[]>),
+  getExperiment: (id: string) =>
+    fetch(`/api/experiments/${encodeURIComponent(id)}`).then(j<Experiment>),
+  resumeExperiment: (id: string) =>
+    fetch(`/api/experiments/${encodeURIComponent(id)}/resume`, { method: "POST" })
+      .then(j<ExperimentStarted>),
+  compareExperiment: (id: string, variant: string,
+                      intervention: ComparisonIntervention = "model") =>
+    fetch(`/api/experiments/${encodeURIComponent(id)}/comparisons/${encodeURIComponent(variant)}?intervention=${encodeURIComponent(intervention)}`)
+      .then(j<ExperimentComparison>),
 
   // blueprints (datasets)
   listBlueprints: () => fetch("/api/blueprints").then(j<BlueprintMeta[]>),

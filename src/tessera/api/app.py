@@ -19,18 +19,69 @@ web/src/api-types.gen.ts is generated from.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
-from tessera.api import routes_blueprints, routes_meta, routes_reports, routes_runs
+from tessera.api import (
+    routes_blueprints,
+    routes_experiments,
+    routes_meta,
+    routes_preflight,
+    routes_providers,
+    routes_reports,
+    routes_runs,
+    routes_workbench,
+)
+from tessera.api.preflight import PreflightCache, default_preflight_runner
 from tessera.api.run_store import RunStore
 from tessera.api.runner import default_eval_runner
+from tessera.api.workbench_store import WorkbenchStore
 
 _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
+_DEFAULT_IMPORT_DIR = Path("imports")
+_DEFAULT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+
+
+def _resolve_env_file(env_file: Path | None) -> Path:
+    """One authoritative absolute path. Resolved, never read, at construction time."""
+    override = os.environ.get("TESSERA_ENV_FILE")
+    chosen = env_file or (Path(override) if override else _DEFAULT_ENV_FILE)
+    return Path(chosen).resolve()
+
+
+def _build_discovery_cache():
+    """Wire the three sources behind one cache. httpx is imported lazily so importing
+    the app stays cheap and the key-free test suite never opens a client it won't use."""
+    from tessera.api.discovery.cache import DiscoveryCache
+    from tessera.api.discovery.cloud import discover_cloud
+    from tessera.api.discovery.merge import merge
+    from tessera.api.discovery.mlx import discover_mlx
+    from tessera.api.discovery.ollama import discover_ollama
+
+    def collect():
+        import httpx
+        hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        with httpx.Client() as client:
+            results = [
+                discover_cloud(client, env=os.environ),
+                discover_ollama(client),
+                discover_mlx(client, hf_home=hf_home,
+                             base_url=os.environ.get("MLX_BASE_URL")),
+            ]
+        # The published set is routes_meta's TESSERA_MODELS-or-leaderboard resolution —
+        # imported rather than duplicated, so the two cannot drift.
+        from tessera.api.routes_meta import published_models
+        return merge(results, published=published_models())
+
+    return DiscoveryCache(collect=collect)
 
 
 async def _background_schedule(coro) -> None:
@@ -43,13 +94,70 @@ _LESSON = Path("docs/tessera-lesson.html")
 
 def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
-               blueprint_dir: Path | None = None) -> FastAPI:
-    app = FastAPI(title="Tessera Reliability Explorer")
+               blueprint_dir: Path | None = None, env_file: Path | None = None,
+               discovery_cache=None, workbench_store: WorkbenchStore | None = None,
+               import_dir: Path | None = None, preflight_runner=default_preflight_runner,
+               preflight_cache: PreflightCache | None = None) -> FastAPI:
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # interpolate=False: dotenv expands ${VAR} inside BOTH quoting styles, which
+        # would corrupt any credential containing "${". Credentials are literals.
+        # override=False: a variable already exported in the shell wins over the file.
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(app.state.env_file, interpolate=False, override=False)
+        except ImportError:
+            pass
+        app.state.workbench_store.recover_interrupted()
+        # Say at startup which configured providers cannot actually run: a key without
+        # its SDK fails mid-eval with a bare ModuleNotFoundError, long after the
+        # launcher promised the model. Discovery marks the models too; this is the
+        # operator-facing copy of the same fact.
+        from tessera.api.providers import PROVIDERS, is_configured, missing_sdk
+        missing = sorted({
+            package
+            for provider_id, spec in PROVIDERS.items()
+            if spec.needs_credentials and is_configured(spec, os.environ)
+            and (package := missing_sdk(provider_id))
+        })
+        if missing:
+            logging.getLogger("tessera").warning(
+                "configured providers missing their SDK: %s — pip install 'tessera[providers]'",
+                ", ".join(missing),
+            )
+        yield
+
+    app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
     app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
+    app.state.workbench_store = workbench_store or WorkbenchStore(app.state.run_store.db_path)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
+    app.state.import_dir = import_dir or (
+        Path(app.state.run_store.db_path).parent / _DEFAULT_IMPORT_DIR
+    )
+    app.state.env_file = _resolve_env_file(env_file)
+    # Injected like every other dependency: the default reaches the network and the
+    # filesystem, so tests must be able to supply a deterministic one or the
+    # key-free/network-free invariant is only aspirational.
+    app.state.discovery_cache = discovery_cache or _build_discovery_cache()
+    app.state.preflight_cache = preflight_cache or PreflightCache(preflight_runner)
+
+    @app.exception_handler(RequestValidationError)
+    def _sanitized_validation_error(request: Request, exc: RequestValidationError):
+        # pydantic puts the rejected value in `input` (and sometimes `ctx`), so the
+        # default 422 hands a submitted credential straight back. Keep the location
+        # and the reason; drop anything derived from the submission itself.
+        return JSONResponse(
+            status_code=422,
+            content={"detail": [
+                {"type": err.get("type", ""), "loc": list(err.get("loc", ())),
+                 "msg": err.get("msg", "")}
+                for err in exc.errors()
+            ]},
+        )
 
     # Registration order IS the OpenAPI path order — the schema is the committed
     # contract (scripts/gen-types.sh), so keep this order stable.
@@ -57,6 +165,12 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
     app.include_router(routes_runs.router)
+    app.include_router(routes_providers.router)
+    # New routers append AFTER every pre-existing one: registration order is the OpenAPI
+    # path order, so inserting mid-list reshuffles paths the contract already committed.
+    app.include_router(routes_workbench.router)
+    app.include_router(routes_preflight.router)
+    app.include_router(routes_experiments.router)
 
     _mount_learn(app)
     _mount_spa(app)
@@ -101,12 +215,6 @@ app = create_app()
 
 def main() -> None:
     import uvicorn
-
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
 
     uvicorn.run("tessera.api.app:app", host="127.0.0.1",
                 port=int(os.environ.get("TESSERA_API_PORT", "8000")))

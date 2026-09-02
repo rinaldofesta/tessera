@@ -25,6 +25,15 @@ dependencies = [
 dev = [
     "pytest>=8",
 ]
+# Provider SDKs inspect_ai imports at run time. Without these a model whose key is
+# configured still fails mid-run with a ModuleNotFoundError; discovery marks such
+# models needs_config and names the missing package.
+providers = [
+    "anthropic",
+    "openai",
+    "groq",
+    "mistralai",
+]
 app = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
