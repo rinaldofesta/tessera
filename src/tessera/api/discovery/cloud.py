@@ -113,7 +113,7 @@ def discover_cloud(client, *, env: Mapping[str, str], timeout: float = 4.0) -> S
         # not change the answer.
         package = missing_sdk(provider_id)
         if package:
-            detail = f"needs the {package} package — pip install 'tessera[providers]'"
+            detail = f"needs the {package} package — pip install 'tessera-eval[providers]'"
             for model_id in catalog:
                 _, _, label = model_id.rpartition("/")
                 models.append(DiscoveredModel(

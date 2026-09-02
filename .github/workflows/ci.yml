@@ -93,7 +93,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: pip install -e ".[app]" "fastapi==0.136.3" "pydantic==2.13.4"
+      - run: pip install -e . "fastapi==0.136.3" "pydantic==2.13.4"
       - run: npm ci
         working-directory: web
       - run: PYTHON=python bash scripts/gen-types.sh

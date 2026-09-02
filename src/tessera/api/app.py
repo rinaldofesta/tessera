@@ -135,7 +135,7 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
         })
         if missing:
             logging.getLogger("tessera").warning(
-                "configured providers missing their SDK: %s — pip install 'tessera[providers]'",
+                "configured providers missing their SDK: %s — pip install 'tessera-eval[providers]'",
                 ", ".join(missing),
             )
         yield

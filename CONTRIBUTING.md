@@ -9,7 +9,7 @@ you how to contribute without fighting the repo.
 
 ```bash
 git clone https://github.com/rinaldofesta/tessera && cd tessera
-python -m venv .venv && .venv/bin/pip install -e ".[dev,app]"
+python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/python -m pytest          # the whole suite: key-free and offline
 ```
 
@@ -47,7 +47,7 @@ In order:
 ## Development setup
 
 - Python ≥ 3.10 (CI runs the suite + a web build + a contract-drift check).
-- `pip install -e ".[dev,app]"` gives you the eval, the report CLIs
+- `pip install -e ".[dev]"` gives you the eval, the CLIs
   (`tessera-report`, `tessera-leaderboard`, `tessera-validate-transfer`) and the FastAPI/SPA product
   (`tessera-api`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.

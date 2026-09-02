@@ -219,7 +219,7 @@ Tessera ships a product-grade web app — a **React + Vite + TypeScript** SPA se
 static assets by the **FastAPI** backend (one process, no Node at runtime):
 
 ```bash
-uv pip install -e ".[app]"
+uv pip install -e .   # fastapi, uvicorn and friends are base dependencies
 cd web && npm install && npm run build && cd ..   # build the SPA once
 .venv/bin/tessera-api   # = uvicorn tessera.api.app:create_app --factory --port 8000; serves the app + API
 ```
