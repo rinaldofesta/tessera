@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ApiError, api } from "@/api";
+import { api } from "@/api";
 import { LiveRunPanel } from "@/components/LiveRunPanel";
 import { VerdictMosaic } from "@/components/VerdictMosaic";
 import { Advanced } from "@/components/run/Advanced";
@@ -13,34 +13,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RUN_COPY } from "@/copy";
 import { useCatalog } from "@/hooks";
 import { messageOf } from "@/lib/format";
-import type { Blocker, RunSpec } from "@/types";
-
-function blockersFrom(error: unknown): Blocker[] {
-  if (!(error instanceof ApiError) || error.status !== 422 || !Array.isArray(error.detail)) return [];
-  return error.detail.filter((value): value is Blocker => (
-    typeof value === "object" && value !== null &&
-    typeof (value as { code?: unknown }).code === "string" &&
-    typeof (value as { message?: unknown }).message === "string"
-  ));
-}
-
-// Mirrors the two multi-segment/aliased prefixes src/tessera/api/providers.py resolves
-// specially (`provider_for_model`) — a naive first-segment split gets both wrong for a
-// custom-typed model: MLX's provider id isn't its own first segment, and `grok/` is an
-// alias for the `xai` provider, not a distinct "grok" provider.
-function providerIdForModel(modelId: string): string {
-  if (modelId.startsWith("openai-api/mlx/")) return "mlx";
-  if (modelId.startsWith("grok/")) return "xai";
-  return modelId.split("/", 1)[0];
-}
+import type { Plan, RunSpec } from "@/types";
 
 const REPEAT_OPTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
 
 export default function Run() {
   const { catalog, error: catalogError, reload: reloadCatalog } = useCatalog();
   const [spec, setSpec] = useState<RunSpec | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [planNonce, setPlanNonce] = useState(0);
   const [launching, setLaunching] = useState(false);
-  const [blockers, setBlockers] = useState<Blocker[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<{
     jobId: string;
@@ -50,59 +32,47 @@ export default function Run() {
     questions: number;
   } | null>(null);
   const [params] = useSearchParams();
-  const fromId = params.get("from");
-  const prefilledFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!catalog) return;
-    setSpec((current) => current ?? {
-      model: catalog.models[0]?.id ?? "",
-      suite: catalog.defaults.suite,
-      engine: catalog.defaults.engine,
-      grader: null,
-      k: catalog.defaults.k,
-      scaffold: catalog.defaults.scaffold,
-      seed: catalog.defaults.seed,
+    setSpec((current) => {
+      if (current) return current;
+      const numeric = (key: "k" | "seed", fallback: number) => {
+        const raw = params.get(key);
+        // `raw` guards the empty string too — Number("") is 0, which is finite, so
+        // `k=&seed=` in the URL would otherwise silently launch with zero repeats.
+        const value = raw ? Number(raw) : NaN;
+        return Number.isFinite(value) ? value : fallback;
+      };
+      const engine = params.get("engine");
+      return {
+        model: params.get("model") ?? catalog.models[0]?.id ?? "",
+        suite: params.get("suite") ?? catalog.defaults.suite,
+        engine: engine === "llm" || engine === "deterministic" ? engine : catalog.defaults.engine,
+        grader: params.has("grader") ? params.get("grader") || null : null,
+        k: numeric("k", catalog.defaults.k),
+        scaffold: params.get("scaffold") ?? catalog.defaults.scaffold,
+        seed: numeric("seed", catalog.defaults.seed),
+      };
     });
-  }, [catalog]);
+  }, [catalog, params]);
 
   useEffect(() => {
-    if (!fromId || !catalog || !spec || prefilledFor.current === fromId) return;
-    // Claim the id before the fetch starts, not after it resolves: `spec` is a
-    // dependency (needed to catch the moment defaults first populate it), so every
-    // later edit re-runs this effect too — claiming early is what makes the guard
-    // above actually stop a second `listRuns` call from firing on each keystroke.
-    prefilledFor.current = fromId;
-    let alive = true;
-    api.listRuns(true)
-      .then((runs) => {
-        const source = runs.find((run) => run.id === fromId);
-        if (!alive || !source) return;
-        setSpec((current) => current && ({
-          ...current,
-          model: source.model,
-          suite: source.org,
-          engine: source.judge === "llm" ? "llm" : "deterministic",
-          grader: source.grader,
-          k: source.epochs,
-        }));
-      })
-      .catch(() => {});
-    // If the user edits the form before this resolves, the re-run's cleanup flips
-    // `alive` false — the prefill is dropped rather than clobbering their edit.
-    return () => { alive = false; };
-  }, [catalog, fromId, spec]);
+    if (!spec) return;
+    let active = true;
+    setPlan(null);
+    setError(null);
+    const timer = setTimeout(() => {
+      api.dryRun(spec)
+        .then((next) => { if (active) setPlan(next); })
+        .catch((caught) => { if (active) setError(messageOf(caught)); });
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [spec, planNonce]);
 
   const suite = catalog?.suites.find((candidate) => candidate.name === spec?.suite);
-  const model = catalog?.models.find((candidate) => candidate.id === spec?.model);
-  const providerId = model?.provider ?? (spec ? providerIdForModel(spec.model) : undefined);
-  const provider = catalog?.providers.find((candidate) => candidate.id === providerId);
-  const needsConnection = !!provider && (
-    !provider.connected || blockers.some((blocker) => blocker.code === "not_connected")
-  );
-  const advancedBlocked = spec?.engine === "llm" && (
-    !spec.grader || spec.grader === spec.model
-  );
+  const provider = catalog?.providers.find((candidate) => candidate.id === plan?.provider);
+  const connectionBlocker = plan?.blockers.find((blocker) => blocker.code === "not_connected");
 
   const pendingLabel = useMemo(
     () => RUN_COPY.pending(suite?.questions ?? 0, spec?.k ?? 0),
@@ -110,9 +80,8 @@ export default function Run() {
   );
 
   async function launch() {
-    if (!spec || activeRun || launching || advancedBlocked) return;
+    if (!spec || !plan?.ready || activeRun || launching) return;
     setLaunching(true);
-    setBlockers([]);
     setError(null);
     try {
       const run = await api.startRun(spec);
@@ -124,17 +93,15 @@ export default function Run() {
         questions: suite?.questions ?? 0,
       });
     } catch (caught) {
-      const nextBlockers = blockersFrom(caught);
-      if (nextBlockers.length > 0) setBlockers(nextBlockers);
-      else setError(messageOf(caught));
+      setError(messageOf(caught));
     } finally {
       setLaunching(false);
     }
   }
 
   function connected() {
-    setBlockers((current) => current.filter((blocker) => blocker.code !== "not_connected"));
     reloadCatalog();
+    setPlanNonce((nonce) => nonce + 1);
   }
 
   if (!catalog || !spec) {
@@ -171,12 +138,12 @@ export default function Run() {
           onChange={(patch) => setSpec((current) => current && ({ ...current, ...patch }))} />
 
         <div className="mt-6">
-          {needsConnection && provider ? (
+          {connectionBlocker && provider ? (
             <ConnectCard provider={provider} onConnected={connected} />
           ) : (
             <div className="flex flex-wrap items-center gap-3">
               <Button size="lg" onClick={launch}
-                disabled={!spec.model || !spec.suite || advancedBlocked || launching || !!activeRun}>
+                disabled={!plan?.ready || launching || !!activeRun}>
                 {launching ? RUN_COPY.running : RUN_COPY.run}
               </Button>
               <p className="text-xs text-faint">{RUN_COPY.note}</p>
@@ -184,10 +151,10 @@ export default function Run() {
           )}
         </div>
 
-        {(error || blockers.length > 0) && (
+        {(error || (plan?.blockers.length ?? 0) > 0) && (
           <div className="mt-4 grid gap-1 text-sm text-verdict-unreliable" role="alert">
             {error && <p>{error}</p>}
-            {blockers.map((blocker) => <p key={`${blocker.code}-${blocker.message}`}>{blocker.message}</p>)}
+            {plan?.blockers.map((blocker) => <p key={`${blocker.code}-${blocker.message}`}>{blocker.message}</p>)}
           </div>
         )}
       </section>

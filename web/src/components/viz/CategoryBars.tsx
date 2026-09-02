@@ -34,7 +34,7 @@ export function CategoryBars({ groups }: { groups: Group[] }) {
                 </div>
               ) : (
                 <div key={s.id} className="flex items-center gap-2">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--raised)]">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-raised">
                     <div
                       data-bar
                       className="h-full rounded-full"

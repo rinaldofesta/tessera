@@ -1,85 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api, toStatus, toSummary } from "./api";
-import type { Run } from "./types";
-
-function run(overrides: Partial<Run> = {}): Run {
-  return {
-    ok: true,
-    id: "run-1",
-    status: "completed",
-    source: "run",
-    archived: false,
-    schema_version: 1,
-    created_at: "2026-09-02T10:00:00Z",
-    started_at: "2026-09-02T10:00:01Z",
-    finished_at: "2026-09-02T10:01:00Z",
-    request: {
-      suite: "meridian", model: "ollama/test", engine: "deterministic",
-      grader: null, k: 5, scaffold: "refusal_aware", seed: 4,
-    },
-    verdict: { pass_k_rate: 0.7, mean_rate: 0.9, label: "inconsistent", sentence: "Not reliable." },
-    gate: null,
-    report: null,
-    receipt: null,
-    diagnostics: [],
-    paths: { dir: "/runs/run-1", log: null, report_json: null, report_md: null },
-    error: null,
-    ...overrides,
-  };
-}
+import { api } from "./api";
+import { runFixture } from "./test/fixtures";
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("run API adapter", () => {
-  it.each([
-    ["queued", "running"],
-    ["running", "running"],
-    ["completed", "done"],
-    ["failed", "error"],
-    ["interrupted", "error"],
-  ] as const)("maps %s to %s", (status, expected) => {
-    expect(toSummary(run({ status })).status).toBe(expected);
-    expect(toStatus(run({ status })).status).toBe(expected);
+describe("run API", () => {
+  it("returns the server Run without an adapter", async () => {
+    const run = runFixture();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(run))));
+    await expect(api.getRun("run-1")).resolves.toEqual(run);
   });
 
-  it("maps the ADR-0002 request and verdict into the old summary fields", () => {
-    expect(toSummary(run())).toEqual({
-      id: "run-1", status: "done", error: null, model: "ollama/test",
-      org: "meridian", judge: "deterministic", grader: null, epochs: 5,
-      created_at: "2026-09-02T10:00:00Z", finished_at: "2026-09-02T10:01:00Z",
-      pass_k_rate: 0.7, mean_rate: 0.9, archived: false,
-    });
-  });
-
-  it("surfaces blocker messages from a RunSpec", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      detail: [
-        { code: "not_connected", message: "provider is not connected", fix: "connect" },
-        { code: "unknown_suite", message: "suite is unknown", fix: null },
-      ],
-    }), { status: 422, headers: { "content-type": "application/json" } })));
-
-    await expect(api.startRun({
-      model: "openai/test", engine: "deterministic", grader: null,
-      suite: "missing", k: 3, scaffold: "baseline", seed: 0,
-    })).rejects.toMatchObject({
-      message: "provider is not connected; suite is unknown", status: 422,
-    });
-  });
-
-  it("posts folder-run comparison refs with the new request vocabulary", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    }));
+  it("posts dry-run specs and comparisons with the default intervention", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("{}")));
     vi.stubGlobal("fetch", fetchMock);
-
-    await api.compareRuns("first-contact", "gpt-4o", "model");
-
-    expect(fetchMock).toHaveBeenCalledWith("/api/comparisons", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ a: "first-contact", b: "gpt-4o", intervention: "model" }),
+    const spec = runFixture().request;
+    await api.dryRun(spec);
+    await api.compareRuns("a", "b");
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/runs/dry-run", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(spec),
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/comparisons", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: "a", b: "b", intervention: "model" }),
     });
   });
 });

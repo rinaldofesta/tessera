@@ -1,130 +1,39 @@
 import { describe, expect, it } from "vitest";
-import type { Report } from "@/types";
-import { esc, exportReportHtml, exportReportJson, reportFilename } from "./exportReport";
+import { reportFixture, runFixture } from "@/test/fixtures";
+import { exportReportHtml, reportFilename } from "./exportReport";
 
-const XSS = '<script>alert("pwn")</script>';
-
-const report: Report = {
-  header: {
-    model: "anthropic/claude-sonnet-4",
-    engine: "llm",
-    grader: "openai/gpt-5.2",
-    org: "meridian",
-    k: 3,
-    created: "2026-08-29T14:02:11Z",
-    location: "logs/x.eval",
-    scorer_version: "det-4",
-    inspect_ai_version: null,
-    scaffold: "baseline",
-    seed: 0,
-    harness: "single",
-  },
-  overall: { pass_k_rate: 0.5, mean_rate: 0.75 },
-  categories: [
-    { key: "unresolvable", n_probes: 2, pass_k_rate: 0.5, mean_rate: 0.75, flaky: true },
-  ],
-  axes: {
-    accuracy_rate: 0.8,
-    provenance_rate: 0.9,
-    refusal_rate: 0.5,
-    n_answer_epochs: 4,
-    n_refuse_epochs: 2,
-    n_total_epochs: 6,
-    answer_format_rate: null,
-  },
-  probes: [
-    {
-      probe_id: "p1",
-      conflict_type: "unresolvable",
-      expected_behavior: "refuse",
-      epochs_total: 3,
-      epochs_passed: 1,
-      pass_k: false,
-      mean_pass: 0.33,
-      failures: [
-        {
-          epoch: 2,
-          passed: false,
-          accuracy_ok: true,
-          provenance_ok: true,
-          refusal_ok: false,
-          question: `what is the ${XSS} rate?`,
-          answer: `the rate is ${XSS}`,
-          consulted: [`wiki/${XSS}`],
-          expected_sources: ["policy"],
-          missing: ["policy"],
-          answer_format_ok: null,
-        },
-      ],
-    },
-  ],
+const ATTACK = `<script>alert(1)</script> " ' &`;
+const report = {
+  ...reportFixture,
+  header: { ...reportFixture.header, model: ATTACK, org: ATTACK, created: ATTACK, location: ATTACK },
+  categories: [{ ...reportFixture.categories[0], key: ATTACK }],
+  probes: [{ ...reportFixture.probes[0], probe_id: ATTACK, conflict_type: ATTACK, failures: [{ ...reportFixture.probes[0].failures[0], question: ATTACK, answer: ATTACK, consulted: [ATTACK], expected_sources: [ATTACK], missing: [ATTACK] }] }],
 };
-
-describe("esc", () => {
-  it("escapes the five HTML metacharacters", () => {
-    expect(esc(`<a href="x" title='y'>&`)).toBe(
-      "&lt;a href=&quot;x&quot; title=&#39;y&#39;&gt;&amp;",
-    );
-  });
+const receipt = runFixture().receipt!;
+const run = runFixture({
+  id: ATTACK, created_at: ATTACK, report,
+  request: { ...runFixture().request, model: ATTACK, suite: ATTACK },
+  verdict: { ...runFixture().verdict!, sentence: ATTACK },
+  diagnostics: [{ kind: ATTACK, signature: ATTACK, count: 1 }], paths: { ...runFixture().paths, log: ATTACK },
+  receipt: { ...receipt, protocol_hash: ATTACK, artifact: { ...receipt.artifact, path: ATTACK }, runtime: { ...receipt.runtime, requested_model: ATTACK } },
 });
 
 describe("exportReportHtml", () => {
-  const html = exportReportHtml(report);
-
-  it("contains no script tags at all, even from report strings", () => {
-    expect(html.toLowerCase()).not.toContain("<script");
-    expect(html).toContain("&lt;script&gt;");
+  const html = exportReportHtml(run);
+  it("escapes every run-derived string", () => {
+    expect(html).not.toContain(ATTACK);
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt; &quot; &#39; &amp;");
   });
-
-  it("is a self-contained document with the run identity", () => {
+  it("is standalone and offline", () => {
     expect(html).toContain("<!doctype html>");
-    expect(html).toContain("claude-sonnet-4");
-    expect(html).toContain("meridian");
-    expect(html).toContain("pass^3");
-  });
-
-  it("renders every failure behind a native details element", () => {
-    expect(html).toContain("<details");
-    expect(html).toContain("repeat 2");
-    expect(html).toContain("inconsistent · ✗ p1");
-  });
-
-  it("formats the header timestamp like the scorecard", () => {
-    expect(html).toContain("2026-08-29 14:02");
-    expect(html).not.toContain("2026-08-29T14:02:11Z");
-  });
-
-  it("renders and escapes the answer-format axis when present", () => {
-    const withAnswerFormat: Report = {
-      ...report,
-      axes: { ...report.axes, answer_format_rate: 0.9 },
-    };
-    const formatHtml = exportReportHtml(withAnswerFormat);
-
-    expect(formatHtml).toContain("&lt;value&gt;");
-    expect(formatHtml).not.toContain("<value>");
-  });
-});
-
-describe("exportReportJson", () => {
-  it("round-trips the report", () => {
-    expect(JSON.parse(exportReportJson(report))).toEqual(report);
+    expect(html).not.toMatch(/(href|src)\s*=\s*["']https?:|@import|url\(\s*["']?https?:/i);
+    expect(html).toContain("system-ui");
   });
 });
 
 describe("reportFilename", () => {
-  it("builds a safe, dated name from org and model", () => {
-    expect(reportFilename(report, "html")).toBe("tessera-meridian-claude-sonnet-4-2026-08-29.html");
-  });
-  it("sanitizes characters that don't belong in filenames", () => {
-    const weird = { ...report, header: { ...report.header, model: "a b/c:d" } };
-    expect(reportFilename(weird, "json")).toBe("tessera-meridian-c-d-2026-08-29.json");
-  });
-  it("sanitizes hostile created values", () => {
-    const weird = { ...report, header: { ...report.header, created: "../../\x00 x" } };
-    const filename = reportFilename(weird, "html");
-    expect(filename).toMatch(/^[A-Za-z0-9._-]+$/);
-    expect(filename.endsWith(".html")).toBe(true);
-    expect(filename).not.toContain("..");
+  it("keeps the safe suite-model-date shape", () => {
+    expect(reportFilename(reportFixture, "html")).toBe("tessera-starter-claude-sonnet-4-2026-09-02.html");
   });
 });

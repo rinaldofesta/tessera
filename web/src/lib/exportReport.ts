@@ -1,26 +1,17 @@
-import { SCORECARD_COPY, VERDICT_COPY, conflictLabel } from "@/copy";
-import { downloadText } from "./download";
+import { tilesFrom } from "@/components/VerdictMosaic";
 import { gapPoints } from "@/components/viz/GapBar";
 import { whyFailed } from "@/components/viz/VerdictBadge";
-import { fmtTs, pct, shortModel } from "@/lib/format";
-import type { Report } from "@/types";
+import { GAP_COPY, REPORT_COPY, conflictLabel } from "@/copy";
+import type { Report, Run } from "@/types";
+import { downloadText } from "./download";
+import { escapeHtml } from "./escapeHtml";
+import { fmtTs, pct, shortModel } from "./format";
 
-/** Escape the five HTML metacharacters. Every report string passes through here. */
-export function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+export { escapeHtml as esc } from "./escapeHtml";
+const e = (value: unknown) => escapeHtml(String(value ?? "—"));
 
-/** Restrict a user-derived filename segment to safe, portable characters. */
-export function filenameSegment(s: string): string {
-  return s
-    .replace(/[^A-Za-z0-9._-]+/g, "-")
-    .replace(/\.{2,}/g, "-")
-    .replace(/^-+|-+$/g, "");
+export function filenameSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/\.{2,}/g, "-").replace(/^-+|-+$/g, "");
 }
 
 export function reportFilename(report: Report, ext: "html" | "json"): string {
@@ -28,113 +19,59 @@ export function reportFilename(report: Report, ext: "html" | "json"): string {
   return `tessera-${filenameSegment(report.header.org ?? "run")}-${filenameSegment(shortModel(report.header.model))}-${date}.${ext}`;
 }
 
-export function exportReportJson(report: Report): string {
-  return JSON.stringify(report, null, 2);
-}
+export const exportReportJson = (report: Report): string => JSON.stringify(report, null, 2);
 
-export function downloadReport(report: Report, format: "html" | "json"): void {
-  const text = format === "html" ? exportReportHtml(report) : exportReportJson(report);
-  downloadText(
-    reportFilename(report, format),
-    text,
-    format === "html" ? "text/html" : "application/json",
-  );
+export function downloadReport(run: Run, format: "html" | "json" = "html"): void {
+  if (!run.report) throw new Error("This run has no report to export.");
+  const text = format === "html" ? exportReportHtml(run) : exportReportJson(run.report);
+  downloadText(reportFilename(run.report, format), text, format === "html" ? "text/html" : "application/json");
 }
 
 const CSS = `
-  :root { color-scheme: dark; }
-  body { margin: 0 auto; max-width: 860px; padding: 40px 24px; background: #14161a; color: #e8eaf0;
-    font: 14px/1.6 -apple-system, "Segoe UI", sans-serif; }
-  h1 { font-size: 24px; letter-spacing: -0.02em; margin: 0 0 4px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.16em; color: #9aa1b0; margin: 28px 0 10px; }
-  .muted { color: #9aa1b0; } .faint { color: #6b7280; font-size: 12px; }
-  .card { background: #1c1f26; border: 1px solid #2e3340; border-radius: 12px; padding: 14px 16px; margin: 8px 0; }
-  .verdict-bad { border-color: #f87171; } .verdict-ok { border-color: #4ade80; }
-  .tiles { display: flex; gap: 10px; flex-wrap: wrap; } .tiles .card { flex: 1; min-width: 140px; margin: 0; }
-  .tiles b { font-size: 22px; display: block; }
-  .bar { height: 10px; background: #232732; border-radius: 5px; overflow: hidden; display: flex; margin: 4px 0 2px; }
-  .bar i { display: block; height: 100%; background: #8b93ff; } .bar i.full { background: #4ade80; }
-  .bar em { display: block; height: 100%;
-    background: repeating-linear-gradient(45deg, rgba(251,191,36,.6) 0 3px, transparent 3px 6px); }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  td { padding: 4px 8px 4px 0; vertical-align: top; }
-  details { margin: 8px 0; } summary { cursor: pointer; font-weight: 600; }
-  blockquote { margin: 4px 0; padding-left: 10px; border-left: 2px solid #2e3340; color: #9aa1b0; font-style: italic; }
+  :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0 auto;max-width:900px;padding:40px 24px;background:#14161a;color:#e8eaf0;font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}h1{font-size:30px;margin:4px 0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:#9aa1b0;margin:28px 0 10px}.muted{color:#9aa1b0}.faint{color:#6b7280;font-size:12px}.card{background:#1c1f26;border:1px solid #2e3340;border-radius:12px;padding:14px 16px;margin:8px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat b{display:block;font-size:24px}.mosaic{display:grid;gap:3px;margin:18px 0}.mosaic i{aspect-ratio:1;border:1px solid;border-radius:3px}.mosaic .pass{background:#21482d;border-color:#4ade80}.mosaic .fail{background:#522b2e;border-color:#f87171}.bar{height:10px;background:#232732;border-radius:999px;overflow:hidden;display:flex}.bar div:first-child{background:#8b93ff}.bar .gap{background:repeating-linear-gradient(45deg,#8b6419 0 3px,transparent 3px 6px)}.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#9aa1b0}.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:50%}.legend .every{background:#8b93ff}.legend .sometimes{background:#fbbf24}.legend .never{background:#232732;border:1px solid #2e3340}table{border-collapse:collapse;width:100%}td,th{padding:6px 8px;text-align:left;border-bottom:1px solid #2e3340;vertical-align:top}blockquote{margin:4px 0;padding-left:10px;border-left:2px solid #f87171;color:#9aa1b0}.receipt{word-break:break-word}@media print{:root{color-scheme:light}body{background:#fff;color:#15171b;padding:20px}.card{background:#fff;border-color:#c9cdd6}.muted,.faint,h2{color:#4b5563}.bar{background:#e5e7eb}.mosaic .pass{background:#c9f5d5}.mosaic .fail{background:#fbd2d2}details>*{display:block!important}}
 `;
 
 function bar(passK: number, mean: number): string {
-  const clamp01 = (x: number) => (Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
-  const p = clamp01(passK);
-  const m = Math.max(clamp01(mean), p);
-  const fill = `<i${p >= 1 - 1e-9 ? ' class="full"' : ""} style="width:${(p * 100).toFixed(2)}%"></i>`;
-  const gap = `<em style="width:${((m - p) * 100).toFixed(2)}%"></em>`;
-  return `<div class="bar">${fill}${gap}</div>`;
+  const p = Math.min(1, Math.max(0, passK));
+  const m = Math.max(p, Math.min(1, Math.max(0, mean)));
+  return `<div class="bar"><div style="width:${e((p * 100).toFixed(2))}%"></div><div class="gap" style="width:${e(((m - p) * 100).toFixed(2))}%"></div></div>`;
 }
 
-/** Self-contained, script-free scorecard document. Native <details> for failures. */
-export function exportReportHtml(report: Report): string {
-  const h = report.header;
-  const failed = report.probes.filter((p) => !p.pass_k);
-  const failedCats = report.categories.filter((c) => c.pass_k_rate < 1);
-  const gapPp = gapPoints(report.overall.pass_k_rate, report.overall.mean_rate);
+// Falls back to report.header/run.request the same way the on-screen Details receipt
+// table does, so the exported HTML never shows "—" where Details shows a real value.
+const receiptRows = (run: Run): [string, unknown][] => run.receipt ? [
+  ["scorer version", run.receipt.protocol.scorer_version ?? run.report?.header.scorer_version ?? null],
+  ["scaffold", run.receipt.protocol.scaffold ?? run.request.scaffold],
+  ["seed", run.receipt.protocol.seed ?? run.request.seed], ["repeats", run.receipt.protocol.epochs], ["protocol hash", run.receipt.protocol_hash], ["execution hash", run.receipt.execution_hash],
+  ["artifact path", run.receipt.artifact.path], ["artifact sha256", run.receipt.artifact.sha256], ["blueprint sha256", run.receipt.protocol.blueprint_sha256],
+  ["engine", run.receipt.protocol.engine], ["grader", run.receipt.protocol.grader], ["harness", run.receipt.protocol.harness],
+  ["suite org", run.receipt.protocol.org], ["requested model", run.receipt.runtime.requested_model], ["reported model", run.receipt.runtime.reported_model],
+  ["effective models", run.receipt.runtime.effective_models.join(", ")], ["Tessera version", run.receipt.runtime.tessera_version],
+  ["Inspect version", run.receipt.runtime.inspect_ai_version], ["git revision", run.receipt.runtime.git_revision], ["git dirty", run.receipt.runtime.git_dirty],
+  ["started", run.receipt.timing.started_at], ["completed", run.receipt.timing.completed_at], ["duration seconds", run.receipt.timing.duration_seconds],
+  ["input tokens", run.receipt.usage.input_tokens], ["output tokens", run.receipt.usage.output_tokens], ["total tokens", run.receipt.usage.total_tokens],
+  ["billed cost", run.receipt.usage.billed_cost], ["log path", run.paths.log],
+] : [["log path", run.paths.log]];
 
-  const verdict = failedCats.length === 0
-    ? `<div class="card verdict-ok"><b>✓</b> ${esc(SCORECARD_COPY.reliableVerdict(h.k))}</div>`
-    : `<div class="card verdict-bad"><b>✗</b> ${esc(
-        SCORECARD_COPY.notReliableVerdict(failedCats.map((c) => conflictLabel(c.key)).join(", ")),
-      )}</div>`;
-
-  const categories = report.categories
-    .map(
-      (c) => `<div class="card">
-        <table><tr><td>${esc(conflictLabel(c.key))}</td>
-        <td style="text-align:right"><b>${pct(c.pass_k_rate)}</b> <span class="faint">${esc(SCORECARD_COPY.categoryLine(h.k, pct(c.mean_rate)))}</span></td></tr></table>
-        ${bar(c.pass_k_rate, c.mean_rate)}</div>`,
-    )
-    .join("");
-
-  const axes = `<div class="tiles">
-    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisAccuracy)}</span><b>${pct(report.axes.accuracy_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisAccuracySub(report.axes.n_answer_epochs))}</span></div>
-    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisProvenance)}</span><b>${pct(report.axes.provenance_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisProvenanceSub(report.axes.n_total_epochs))}</span></div>
-    <div class="card"><span class="faint">${esc(SCORECARD_COPY.axisRefusal)}</span><b>${pct(report.axes.refusal_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisRefusalSub(report.axes.n_refuse_epochs))}</span></div>
-    ${report.axes.answer_format_rate != null ? `<div class="card"><span class="faint">${esc(SCORECARD_COPY.axisFormat)}</span><b>${pct(report.axes.answer_format_rate)}</b><span class="faint">${esc(SCORECARD_COPY.axisFormatSub)}</span></div>` : ""}
-  </div>`;
-
-  const failures = failed.length === 0
-    ? `<p class="muted">${esc(SCORECARD_COPY.noFailures(report.probes.length))}</p>`
-    : failed
-        .map(
-          (p) => `<details class="card"><summary>${esc(VERDICT_COPY[p.epochs_passed > 0 ? "inconsistent" : "unreliable"])} · ✗ ${esc(p.probe_id)} · ${esc(
-            conflictLabel(p.conflict_type),
-          )} <span class="faint">${esc(SCORECARD_COPY.probesPassed(p.epochs_passed, p.epochs_total))}</span></summary>
-          ${p.failures[0] ? `<p><span class="muted">${esc(SCORECARD_COPY.question)}</span> ${esc(p.failures[0].question)}</p>` : ""}
-          <p><span class="muted">${esc(SCORECARD_COPY.expected)}</span> ${esc(p.expected_behavior === "refuse" ? SCORECARD_COPY.expectRefuse : SCORECARD_COPY.expectAnswer)}</p>
-          ${p.failures
-            .map(
-              (f) => `<p><b>${esc(SCORECARD_COPY.repeatFailed(f.epoch, whyFailed(p.expected_behavior, f)))}</b></p>
-              <blockquote>"${esc(f.answer)}"</blockquote>
-              <p class="faint">${esc(SCORECARD_COPY.consulted(f.consulted.join(", ") || SCORECARD_COPY.none))}${
-                f.missing.length > 0 ? ` · ${esc(SCORECARD_COPY.missing)} <b>${esc(f.missing.join(", "))}</b>` : ""
-              }</p>`,
-            )
-            .join("")}</details>`,
-        )
-        .join("");
-
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tessera — ${esc(shortModel(h.model))} on ${esc(h.org ?? "run")}</title><style>${CSS}</style></head><body>
-<h1>${esc(shortModel(h.model))}</h1>
-<p class="muted">${h.org ? `${esc(h.org)} · ` : ""}${esc(SCORECARD_COPY.gradedBy(h.engine, h.grader ?? null))} · ${esc(SCORECARD_COPY.protocol(report.probes.length, h.k))} · ${esc(fmtTs(h.created))}</p>
-<p class="faint">${esc(SCORECARD_COPY.scorer(h.scorer_version ?? null))}${h.seed != null ? ` · ${esc(SCORECARD_COPY.seed(h.seed))}` : ""}${h.scaffold && h.scaffold !== "baseline" ? ` · ${esc(SCORECARD_COPY.scaffold(h.scaffold))}` : ""}${h.harness && h.harness !== "single" ? ` · ${esc(SCORECARD_COPY.harness(h.harness))}` : ""}</p>
-${verdict}
-<div class="tiles">
-  <div class="card"><span class="faint">${esc(SCORECARD_COPY.reliability)}</span><b>${pct(report.overall.pass_k_rate)}</b><span class="faint">${esc(SCORECARD_COPY.reliabilitySub(h.k))}</span></div>
-  <div class="card"><span class="faint">${esc(SCORECARD_COPY.average)}</span><b>${pct(report.overall.mean_rate)}</b><span class="faint">${esc(SCORECARD_COPY.averageSubWithGap(gapPp))}</span></div>
-</div>
-<h2>${esc(SCORECARD_COPY.byCategory)}</h2>${categories}
-<h2>${esc(SCORECARD_COPY.byAxis)}</h2>${axes}
-<p class="faint">${esc(SCORECARD_COPY.axesNote)}</p>
-<h2>${esc(SCORECARD_COPY.failures)}</h2>${failures}
-</body></html>`;
+/** Standalone, script-free report. All run-derived values pass through `escapeHtml`. */
+export function exportReportHtml(run: Run): string {
+  const report = run.report;
+  const verdict = run.verdict;
+  if (!report || !verdict) throw new Error("This run has no completed report.");
+  const gap = gapPoints(verdict.pass_k_rate, verdict.mean_rate);
+  const tiles = tilesFrom(report).map((tile) => tile === "pass" ? '<i class="pass"></i>' : '<i class="fail"></i>').join("");
+  const categories = report.categories.map((category) => `<tr><td>${e(conflictLabel(category.key))}</td><td>${e(pct(category.pass_k_rate))}</td><td>${e(pct(category.mean_rate))}</td></tr>`).join("");
+  const axes = [[REPORT_COPY.axisAccuracy, report.axes.accuracy_rate], [REPORT_COPY.axisProvenance, report.axes.provenance_rate], [REPORT_COPY.axisRefusal, report.axes.refusal_rate]]
+    .map(([label, value]) => `<div class="card stat"><span class="faint">${e(label)}</span><b>${e(pct(value as number | null))}</b></div>`).join("");
+  const failures = report.probes.flatMap((probe) => probe.failures.map((failure) => `<div class="card"><b>${e(probe.probe_id)} · ${e(conflictLabel(probe.conflict_type))} · ${e(whyFailed(probe.expected_behavior, failure))}</b><p>${e(failure.question)}</p><blockquote>${e(failure.answer)}</blockquote><p class="faint">${e(`repeat ${failure.epoch} · consulted: ${failure.consulted.join(", ") || "(none)"} · expected: ${failure.expected_sources.join(", ") || "(none)"} · missing: ${failure.missing.join(", ") || "(none)"}`)}</p></div>`)).join("") || `<p class="muted">${e(REPORT_COPY.noFailures(report.probes.length))}</p>`;
+  const diagnostics = run.diagnostics.map((item) => `<li>${e(item.kind)} · ${e(item.signature)} · ${e(item.count)}</li>`).join("") || `<li>${e("none")}</li>`;
+  const receipt = receiptRows(run).map(([label, value]) => `<tr><th>${e(label)}</th><td>${e(value)}</td></tr>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tessera — ${e(run.request.model)} on ${e(run.request.suite)}</title><style>${CSS}</style></head><body>
+<p class="faint">${e(run.request.suite)} · ${e(run.request.model)} · ${e(run.request.k)} repeats · ${e(fmtTs(run.created_at))} · ${e(run.id)}</p><h1>${e(verdict.sentence)}</h1>
+<div class="mosaic" style="grid-template-columns:repeat(${e(Math.max(1, report.probes.length))},minmax(0,44px))">${tiles}</div><p class="faint">${e(`${report.probes.length} questions × ${run.request.k} repeats · one square per answer`)}</p>
+${bar(verdict.pass_k_rate, verdict.mean_rate)}<div class="legend"><span><i class="every"></i>${e(GAP_COPY.rightEveryTime)} ${e(pct(verdict.pass_k_rate))}</span><span><i class="sometimes"></i>${e(GAP_COPY.onlySometimes)} +${e(gap)} pp</span><span><i class="never"></i>${e(GAP_COPY.never)}</span></div>
+<div class="grid"><div class="card stat"><span class="faint">${e(`pass^${run.request.k} — ${GAP_COPY.rightEveryTime}`)}</span><b>${e(pct(verdict.pass_k_rate))}</b></div><div class="card stat"><span class="faint">${e("mean — right on average")}</span><b>${e(pct(verdict.mean_rate))}</b></div></div>
+<h2>${e(REPORT_COPY.categories)}</h2><table><thead><tr><th>${e("category")}</th><th>${e(`pass^${run.request.k}`)}</th><th>${e("mean")}</th></tr></thead><tbody>${categories}</tbody></table>
+<h2>${e(REPORT_COPY.axes)}</h2><div class="grid">${axes}</div><h2>${e(REPORT_COPY.failures)}</h2>${failures}
+<h2>${e(REPORT_COPY.diagnostics)}</h2><ul>${diagnostics}</ul><h2>${e(REPORT_COPY.receipt)}</h2><table class="receipt">${receipt}</table></body></html>`;
 }
