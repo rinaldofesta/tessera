@@ -2,13 +2,15 @@ import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 const limit = 1_000_000;
-const assets = join(process.cwd(), "dist", "assets");
+const assets = join(process.cwd(), "..", "src", "tessera", "data", "web", "assets");
 
 let files;
 try {
   files = (await readdir(assets)).filter((name) => name.endsWith(".js"));
 } catch {
-  console.error("Bundle check failed: dist/assets is missing. Run npm run build first.");
+  console.error(
+    "Bundle check failed: src/tessera/data/web/assets is missing. Run npm run build first.",
+  );
   process.exit(1);
 }
 

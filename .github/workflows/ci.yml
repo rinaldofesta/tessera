@@ -52,9 +52,69 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check:bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-bundle
+          path: src/tessera/data/web
+          if-no-files-found: error
+
+  # Distribution proof: the UI survives checkout -> sdist -> downstream wheel rebuild.
+  build:
+    needs: [web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-bundle
+          path: src/tessera/data/web
+      - run: uv build
+      - run: uvx twine check dist/*
+      - name: Rebuild the wheel from the sdist without Node
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"; tar -xzf dist/*.tar.gz -C "$work"; src="$(find "$work" -maxdepth 1 -mindepth 1 -type d)"
+          # Node is absent in this job by construction (no setup-node) — the wheel must build from the sdist alone
+          (cd "$src" && uv build --wheel --out-dir "$work/dist")
+          uv venv "$work/venv" --python 3.12 && uv pip install --python "$work/venv/bin/python" "$work"/dist/*.whl
+          echo "REBUILD_VENV=$work/venv" >> "$GITHUB_ENV"
+          echo "REBUILD_DIST=$work/dist" >> "$GITHUB_ENV"
+      - name: Exercise the rebuilt wheel's command surface
+        run: |
+          set -euo pipefail
+          cd "$(mktemp -d)"; export TESSERA_HOME="$(mktemp -d)"; T="$REBUILD_VENV/bin/tessera"
+          $T ui --check
+          $T report first-contact --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']['pass_k_rate']==0.75"
+          # Captured to a variable, not piped straight into `grep -q`: grep can exit (and
+          # close the pipe) before the producer finishes writing, and under `pipefail` a
+          # SIGPIPE'd producer can fail the pipeline even though the match itself succeeded.
+          guide_list="$($T guide --list)"
+          grep -q start <<<"$guide_list"
+          wheel_list="$(unzip -l "$REBUILD_DIST"/*.whl)"
+          grep -q 'tessera/data/web/index.html' <<<"$wheel_list"
+      - name: Reject secrets in distributions
+        run: |
+          set -euo pipefail
+          # Capture each archive listing into a variable first: piping straight into
+          # `grep ... && exit 1 || true` makes a tar/unzip read failure (corrupt archive,
+          # missing tool) indistinguishable from "no secrets found" under `pipefail`,
+          # since grep (the rightmost pipeline stage) still exits 1 on no-match either way.
+          sdist_list="$(tar -tzf dist/*.tar.gz)"
+          if grep -E '\.env$|\.env\.' <<<"$sdist_list"; then exit 1; fi
+          wheel_list="$(unzip -l dist/*.whl)"
+          if grep -Ei 'secret|api_key|\.env' <<<"$wheel_list"; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist
+          if-no-files-found: error
 
   # Public proof path: the installed wheel must work away from the checkout with no real key.
   quickstart:
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +122,10 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v6
-      - run: uv build
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
       - run: uv venv /tmp/wheel-venv --python 3.12
       - run: uv pip install --python /tmp/wheel-venv/bin/python dist/*.whl
       - name: Verify the installed command surface and leave the checkout clean

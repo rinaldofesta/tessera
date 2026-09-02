@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 
 import { DEV_API_TARGET } from "./src/lib/backend";
 
-// Dev: proxy /api to the FastAPI backend. Build: emit to dist/ which FastAPI serves.
+// Dev: proxy /api to the FastAPI backend. Build: emit package data which FastAPI serves.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -18,7 +18,7 @@ export default defineConfig({
       "/api": { target: DEV_API_TARGET, changeOrigin: true },
     },
   },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: { outDir: "../src/tessera/data/web", emptyOutDir: true },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],

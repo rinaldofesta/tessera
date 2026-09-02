@@ -14,7 +14,7 @@ steps; a failing test is the best report.
 ## Scope worth knowing about
 
 Tessera is a **local-first** tool: the FastAPI server (`tessera-api`) binds
-locally, serves the SPA from `web/dist`, and is not hardened for public exposure —
+locally, serves the SPA from `src/tessera/data/web`, and is not hardened for public exposure —
 do not put it on the open internet. Things we do treat as vulnerabilities:
 
 - path traversal or file access outside the repo through the API

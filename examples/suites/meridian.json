@@ -1,0 +1,939 @@
+{
+  "claims": [
+    {
+      "claim_id": "veltrix.plan.crm",
+      "subject": "Veltrix Labs",
+      "predicate": "support_plan",
+      "value": "Larkspur",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "plan.larkspur.docs",
+      "subject": "Larkspur plan",
+      "predicate": "response_window",
+      "value": "7 hours",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Larkspur plan tickets get a first response within {value}."
+      }
+    },
+    {
+      "claim_id": "bluepine.manager.crm",
+      "subject": "Bluepine Logistics",
+      "predicate": "account_manager",
+      "value": "Dana Okafor",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "bluepine.countersign.docs",
+      "subject": "Bluepine Logistics",
+      "predicate": "renewal_countersigner",
+      "value": "the account manager",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Bluepine renewal orders are countersigned by {value}."
+      }
+    },
+    {
+      "claim_id": "halcyon.terms.crm",
+      "subject": "Halcyon Foods",
+      "predicate": "payment_terms",
+      "value": "net-45",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "terms.net45.docs",
+      "subject": "net-45 terms",
+      "predicate": "late_surcharge",
+      "value": "1.8%",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Accounts on net-45 terms accrue a {value} monthly surcharge on late invoices."
+      }
+    },
+    {
+      "claim_id": "kovacs.region.crm",
+      "subject": "Kovacs Industrial",
+      "predicate": "warehouse_region",
+      "value": "Region 4-East",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "region.4east.docs",
+      "subject": "Region 4-East",
+      "predicate": "dispatch_hub",
+      "value": "Brno",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Region 4-East dispatches ship from the {value} hub."
+      }
+    },
+    {
+      "claim_id": "northgate.contractform.crm",
+      "subject": "Northgate Medical",
+      "predicate": "contract_form",
+      "value": "MSA-2024rev",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "msa2024.cap.docs",
+      "subject": "MSA-2024rev",
+      "predicate": "liability_cap",
+      "value": "$425k",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Under MSA-2024rev the liability cap is {value} per incident."
+      }
+    },
+    {
+      "claim_id": "arcadia.plan.crm",
+      "subject": "Arcadia Systems",
+      "predicate": "support_plan",
+      "value": "Juniper",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "plan.juniper.docs",
+      "subject": "Juniper plan",
+      "predicate": "triage_window",
+      "value": "110 minutes",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Juniper-plan tickets are triaged within {value}."
+      }
+    },
+    {
+      "claim_id": "orpheon.renewal.crm",
+      "subject": "Orpheon Group",
+      "predicate": "renewal_date",
+      "value": "2026-05-02",
+      "silo": "crm",
+      "asserted_at": "2026-01-12T09:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "orpheon.renewal.note",
+      "subject": "Orpheon Group",
+      "predicate": "renewal_date",
+      "value": "2026-07-19",
+      "silo": "docs",
+      "asserted_at": "2026-03-28T11:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Orpheon's renewal moved to {value} after the legal review."
+      }
+    },
+    {
+      "claim_id": "veltrix.seats.crm",
+      "subject": "Veltrix Labs",
+      "predicate": "seat_count",
+      "value": 250,
+      "silo": "crm",
+      "asserted_at": "2025-12-01T09:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "veltrix.seats.note",
+      "subject": "Veltrix Labs",
+      "predicate": "seat_count",
+      "value": 410,
+      "silo": "docs",
+      "asserted_at": "2026-02-19T16:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "The February QBR confirmed Veltrix Labs is now at {value} seats."
+      }
+    },
+    {
+      "claim_id": "halcyon.discount.crm",
+      "subject": "Halcyon Foods",
+      "predicate": "discount_rate",
+      "value": "12%",
+      "silo": "crm",
+      "asserted_at": "2026-01-05T09:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "halcyon.discount.memo",
+      "subject": "Halcyon Foods",
+      "predicate": "discount_rate",
+      "value": "9%",
+      "silo": "docs",
+      "asserted_at": "2026-03-11T10:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Pricing memo: Halcyon's discount stepped down to {value} for the new term."
+      }
+    },
+    {
+      "claim_id": "bluepine.contact.crm",
+      "subject": "Bluepine Logistics",
+      "predicate": "primary_contact",
+      "value": "Marta Villas",
+      "silo": "crm",
+      "asserted_at": "2025-10-20T09:00:00Z",
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "bluepine.contact.note",
+      "subject": "Bluepine Logistics",
+      "predicate": "primary_contact",
+      "value": "Jonas Brek",
+      "silo": "docs",
+      "asserted_at": "2026-04-02T09:30:00Z",
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Handover note: {value} is now Bluepine's primary contact."
+      }
+    },
+    {
+      "claim_id": "kovacs.value.order",
+      "subject": "Kovacs Industrial",
+      "predicate": "contract_value",
+      "value": "$2.86M",
+      "silo": "docs",
+      "asserted_at": "2026-01-15T09:00:00Z",
+      "authority": 3,
+      "render": {
+        "as": "prose",
+        "template": "The countersigned order form sets the Kovacs contract value at {value}; it supersedes any CRM estimate."
+      }
+    },
+    {
+      "claim_id": "kovacs.value.crm",
+      "subject": "Kovacs Industrial",
+      "predicate": "contract_value",
+      "value": "$2.4M",
+      "silo": "crm",
+      "asserted_at": "2026-02-20T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "northgate.region.dpa",
+      "subject": "Northgate Medical",
+      "predicate": "data_region",
+      "value": "EU-Frankfurt",
+      "silo": "docs",
+      "asserted_at": "2026-01-08T09:00:00Z",
+      "authority": 3,
+      "render": {
+        "as": "prose",
+        "template": "The signed DPA fixes Northgate's data region to {value}; the DPA overrides any CRM field."
+      }
+    },
+    {
+      "claim_id": "northgate.region.crm",
+      "subject": "Northgate Medical",
+      "predicate": "data_region",
+      "value": "US-Ohio",
+      "silo": "crm",
+      "asserted_at": "2026-03-02T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "arcadia.value.crm",
+      "subject": "Arcadia Systems",
+      "predicate": "contract_value",
+      "value": "$1.37M",
+      "silo": "crm",
+      "asserted_at": "2026-03-15T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "arcadia.value.sheet",
+      "subject": "Arcadia Systems",
+      "predicate": "contract_value",
+      "value": "$1.59M",
+      "silo": "docs",
+      "asserted_at": "2026-03-15T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "prose",
+        "template": "Finance tracker: the Arcadia contract value stands at {value}."
+      }
+    },
+    {
+      "claim_id": "orpheon.seats.crm",
+      "subject": "Orpheon Group",
+      "predicate": "seat_count",
+      "value": 96,
+      "silo": "crm",
+      "asserted_at": "2026-02-27T10:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "orpheon.seats.sheet",
+      "subject": "Orpheon Group",
+      "predicate": "seat_count",
+      "value": 130,
+      "silo": "docs",
+      "asserted_at": "2026-02-27T10:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "prose",
+        "template": "Capacity sheet: Orpheon is provisioned for {value} seats."
+      }
+    },
+    {
+      "claim_id": "quill.renewal.crm",
+      "subject": "Quill & Quarry",
+      "predicate": "renewal_date",
+      "value": "2026-09-04",
+      "silo": "crm",
+      "asserted_at": "2026-04-09T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "quill.renewal.tracker",
+      "subject": "Quill & Quarry",
+      "predicate": "renewal_date",
+      "value": "2026-11-22",
+      "silo": "docs",
+      "asserted_at": "2026-04-09T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "prose",
+        "template": "Renewal tracker: Quill & Quarry renews on {value}."
+      }
+    },
+    {
+      "claim_id": "tessitura.discount.crm",
+      "subject": "Tessitura SpA",
+      "predicate": "discount_rate",
+      "value": "7%",
+      "silo": "crm",
+      "asserted_at": "2026-01-21T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "tessitura.discount.card",
+      "subject": "Tessitura SpA",
+      "predicate": "discount_rate",
+      "value": "11%",
+      "silo": "docs",
+      "asserted_at": "2026-01-21T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "prose",
+        "template": "Rate card: Tessitura SpA's discount is {value}."
+      }
+    },
+    {
+      "claim_id": "calder.terms.crm",
+      "subject": "Calder & Sons",
+      "predicate": "payment_terms",
+      "value": "net-30",
+      "silo": "crm",
+      "asserted_at": "2026-02-14T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "calder.terms.note",
+      "subject": "Calder & Sons",
+      "predicate": "payment_terms",
+      "value": "net-60",
+      "silo": "docs",
+      "asserted_at": "2026-02-14T09:00:00Z",
+      "authority": 1,
+      "render": {
+        "as": "prose",
+        "template": "AP note: Calder & Sons pays on {value} terms."
+      }
+    },
+    {
+      "claim_id": "veltrix.industry.crm",
+      "subject": "Veltrix Labs",
+      "predicate": "industry",
+      "value": "biotech tooling",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "orpheon.industry.crm",
+      "subject": "Orpheon Group",
+      "predicate": "industry",
+      "value": "media analytics",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "bluepine.industry.crm",
+      "subject": "Bluepine Logistics",
+      "predicate": "industry",
+      "value": "cold-chain logistics",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "halcyon.industry.crm",
+      "subject": "Halcyon Foods",
+      "predicate": "industry",
+      "value": "specialty foods",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "kovacs.industry.crm",
+      "subject": "Kovacs Industrial",
+      "predicate": "industry",
+      "value": "industrial fasteners",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "northgate.industry.crm",
+      "subject": "Northgate Medical",
+      "predicate": "industry",
+      "value": "clinical devices",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "arcadia.industry.crm",
+      "subject": "Arcadia Systems",
+      "predicate": "industry",
+      "value": "workflow software",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "quill.industry.crm",
+      "subject": "Quill & Quarry",
+      "predicate": "industry",
+      "value": "publishing services",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "tessitura.industry.crm",
+      "subject": "Tessitura SpA",
+      "predicate": "industry",
+      "value": "textile machinery",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "calder.industry.crm",
+      "subject": "Calder & Sons",
+      "predicate": "industry",
+      "value": "marine fittings",
+      "silo": "crm",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "field",
+        "template": null
+      }
+    },
+    {
+      "claim_id": "ops.freeze.docs",
+      "subject": "Calder & Sons",
+      "predicate": "deployment_freeze",
+      "value": "December",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Calder & Sons observes a deployment freeze each {value}."
+      }
+    },
+    {
+      "claim_id": "ops.escalation.docs",
+      "subject": "Sev-1 escalations",
+      "predicate": "page_window",
+      "value": "30 minutes",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Sev-1 escalations page the on-call within {value}."
+      }
+    },
+    {
+      "claim_id": "pricing.signoff.docs",
+      "subject": "pricing policy",
+      "predicate": "signoff_threshold",
+      "value": "3%",
+      "silo": "docs",
+      "asserted_at": null,
+      "authority": null,
+      "render": {
+        "as": "prose",
+        "template": "Discounts below {value} require CFO sign-off."
+      }
+    }
+  ],
+  "probes": [
+    {
+      "probe_id": "q_veltrix_response",
+      "question": "What is the first-response window for Veltrix Labs support tickets?",
+      "references": [
+        "veltrix.plan.crm",
+        "plan.larkspur.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "7 hours",
+      "expected_sources": [
+        "veltrix.plan.crm",
+        "plan.larkspur.docs"
+      ]
+    },
+    {
+      "probe_id": "q_bluepine_countersign",
+      "question": "Who countersigns Bluepine Logistics' renewal orders?",
+      "references": [
+        "bluepine.manager.crm",
+        "bluepine.countersign.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "Dana Okafor",
+      "expected_sources": [
+        "bluepine.manager.crm",
+        "bluepine.countersign.docs"
+      ]
+    },
+    {
+      "probe_id": "q_halcyon_surcharge",
+      "question": "What monthly surcharge applies to Halcyon Foods' late invoices?",
+      "references": [
+        "halcyon.terms.crm",
+        "terms.net45.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "1.8%",
+      "expected_sources": [
+        "halcyon.terms.crm",
+        "terms.net45.docs"
+      ]
+    },
+    {
+      "probe_id": "q_kovacs_hub",
+      "question": "From which hub do Kovacs Industrial dispatches ship?",
+      "references": [
+        "kovacs.region.crm",
+        "region.4east.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "Brno",
+      "expected_sources": [
+        "kovacs.region.crm",
+        "region.4east.docs"
+      ]
+    },
+    {
+      "probe_id": "q_northgate_cap",
+      "question": "What is the per-incident liability cap for Northgate Medical?",
+      "references": [
+        "northgate.contractform.crm",
+        "msa2024.cap.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "$425k",
+      "expected_sources": [
+        "northgate.contractform.crm",
+        "msa2024.cap.docs"
+      ]
+    },
+    {
+      "probe_id": "q_arcadia_triage",
+      "question": "What is the triage window for Arcadia Systems' tickets?",
+      "references": [
+        "arcadia.plan.crm",
+        "plan.juniper.docs"
+      ],
+      "conflict_type": "none",
+      "resolution_rule": null,
+      "expected_behavior": "answer",
+      "expected_answer": "110 minutes",
+      "expected_sources": [
+        "arcadia.plan.crm",
+        "plan.juniper.docs"
+      ]
+    },
+    {
+      "probe_id": "q_orpheon_renewal",
+      "question": "When is Orpheon Group's renewal date?",
+      "references": [
+        "orpheon.renewal.crm",
+        "orpheon.renewal.note"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "recency_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "2026-07-19",
+      "expected_sources": [
+        "orpheon.renewal.crm",
+        "orpheon.renewal.note"
+      ]
+    },
+    {
+      "probe_id": "q_veltrix_seats",
+      "question": "How many seats does Veltrix Labs have?",
+      "references": [
+        "veltrix.seats.crm",
+        "veltrix.seats.note"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "recency_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "410",
+      "expected_sources": [
+        "veltrix.seats.crm",
+        "veltrix.seats.note"
+      ]
+    },
+    {
+      "probe_id": "q_halcyon_discount",
+      "question": "What discount rate does Halcyon Foods currently get?",
+      "references": [
+        "halcyon.discount.crm",
+        "halcyon.discount.memo"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "recency_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "9%",
+      "expected_sources": [
+        "halcyon.discount.crm",
+        "halcyon.discount.memo"
+      ]
+    },
+    {
+      "probe_id": "q_bluepine_contact",
+      "question": "Who is Bluepine Logistics' primary contact?",
+      "references": [
+        "bluepine.contact.crm",
+        "bluepine.contact.note"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "recency_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "Jonas Brek",
+      "expected_sources": [
+        "bluepine.contact.crm",
+        "bluepine.contact.note"
+      ]
+    },
+    {
+      "probe_id": "q_kovacs_value",
+      "question": "What is Kovacs Industrial's contract value?",
+      "references": [
+        "kovacs.value.order",
+        "kovacs.value.crm"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "authority_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "$2.86M",
+      "expected_sources": [
+        "kovacs.value.order",
+        "kovacs.value.crm"
+      ]
+    },
+    {
+      "probe_id": "q_northgate_region",
+      "question": "In which data region is Northgate Medical's data hosted?",
+      "references": [
+        "northgate.region.dpa",
+        "northgate.region.crm"
+      ],
+      "conflict_type": "resolvable",
+      "resolution_rule": "authority_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "EU-Frankfurt",
+      "expected_sources": [
+        "northgate.region.dpa",
+        "northgate.region.crm"
+      ]
+    },
+    {
+      "probe_id": "q_arcadia_value",
+      "question": "What is Arcadia Systems' contract value?",
+      "references": [
+        "arcadia.value.crm",
+        "arcadia.value.sheet"
+      ],
+      "conflict_type": "unresolvable",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": [
+        "arcadia.value.crm",
+        "arcadia.value.sheet"
+      ]
+    },
+    {
+      "probe_id": "q_orpheon_seats",
+      "question": "How many seats does Orpheon Group have?",
+      "references": [
+        "orpheon.seats.crm",
+        "orpheon.seats.sheet"
+      ],
+      "conflict_type": "unresolvable",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": [
+        "orpheon.seats.crm",
+        "orpheon.seats.sheet"
+      ]
+    },
+    {
+      "probe_id": "q_quill_renewal",
+      "question": "When does Quill & Quarry's contract renew?",
+      "references": [
+        "quill.renewal.crm",
+        "quill.renewal.tracker"
+      ],
+      "conflict_type": "unresolvable",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": [
+        "quill.renewal.crm",
+        "quill.renewal.tracker"
+      ]
+    },
+    {
+      "probe_id": "q_tessitura_discount",
+      "question": "What discount rate does Tessitura SpA get?",
+      "references": [
+        "tessitura.discount.crm",
+        "tessitura.discount.card"
+      ],
+      "conflict_type": "unresolvable",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": [
+        "tessitura.discount.crm",
+        "tessitura.discount.card"
+      ]
+    },
+    {
+      "probe_id": "q_calder_terms",
+      "question": "On what payment terms does Calder & Sons pay?",
+      "references": [
+        "calder.terms.crm",
+        "calder.terms.note"
+      ],
+      "conflict_type": "unresolvable",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": [
+        "calder.terms.crm",
+        "calder.terms.note"
+      ]
+    },
+    {
+      "probe_id": "q_veltrix_billing",
+      "question": "What is Veltrix Labs' billing address?",
+      "references": [],
+      "conflict_type": "void",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": []
+    },
+    {
+      "probe_id": "q_halcyon_sponsor",
+      "question": "Who is the executive sponsor for Halcyon Foods?",
+      "references": [],
+      "conflict_type": "void",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": []
+    },
+    {
+      "probe_id": "q_quill_plan",
+      "question": "What support plan is Quill & Quarry on?",
+      "references": [],
+      "conflict_type": "void",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": []
+    },
+    {
+      "probe_id": "q_bluepine_penalty",
+      "question": "What early-termination penalty applies to Bluepine Logistics?",
+      "references": [],
+      "conflict_type": "void",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": []
+    },
+    {
+      "probe_id": "q_tessitura_seats",
+      "question": "How many seats does Tessitura SpA have?",
+      "references": [],
+      "conflict_type": "void",
+      "resolution_rule": null,
+      "expected_behavior": "refuse",
+      "expected_answer": null,
+      "expected_sources": []
+    }
+  ]
+}

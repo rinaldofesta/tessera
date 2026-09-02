@@ -33,7 +33,7 @@ One contract, single-sourced from the API, enforced in both directions:
 - A shape change that isn't reflected end-to-end cannot merge: either a response
   fails validation in tests, or the generated types drift and CI fails.
 - The generation dump must run from a scratch cwd — importing the app writes
-  `runs.db`, and a local `web/dist` adds the SPA catch-all route CI lacks.
+  `runs.db`, and local built package data adds the SPA catch-all route CI lacks.
 - Pydantic never emits `default` for `default_factory` fields, so list fields arrive
   optional in the generated TS; consumers normalize at the boundary (`?? []`) —
   honest, since they are optional on authoring input.

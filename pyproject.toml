@@ -70,6 +70,9 @@ build-backend = "hatchling.build"
 # path, and a wheel built from that sdist — what `uv build` and every downstream
 # rebuild do — then cannot find the root files and fails. Package data
 # (src/tessera/data/**) rides along with the package.
+[tool.hatch.build]
+artifacts = ["src/tessera/data/web/**"]
+
 [tool.hatch.build.targets.sdist]
 include = [
     "src/tessera", "AGENTS.md", "skills", "tests", "README.md", "LICENSE*", "CITATION.cff",

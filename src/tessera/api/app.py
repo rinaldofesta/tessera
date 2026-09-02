@@ -50,12 +50,9 @@ def _package_path(*parts: str) -> Path:
 
 
 def ui_dist() -> Path | None:
-    """Return the installed UI directory, or the checkout build when developing."""
-    candidates = (
-        _package_path("web"),
-        Path(tessera.__file__).parents[2] / "web" / "dist",
-    )
-    return next((candidate for candidate in candidates if (candidate / "index.html").is_file()), None)
+    """Return the packaged UI directory when its entry point is present."""
+    packaged = _package_path("web")
+    return packaged if (packaged / "index.html").is_file() else None
 
 
 def lesson_path() -> Path:
@@ -63,6 +60,7 @@ def lesson_path() -> Path:
     packaged = _package_path("lesson.html")
     if packaged.is_file():
         return packaged
+    # With pythonpath=src, tests import the package before wheel force-includes the lesson.
     return Path(tessera.__file__).parents[2] / "docs" / "tessera-lesson.html"
 
 
@@ -151,7 +149,7 @@ def _mount_spa(app: FastAPI, dist: Path | None = None) -> None:
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
     # Not part of the API contract: whether a bundle is present must not change
-    # openapi.json (the checkout may have web/dist built; CI's contract job does not).
+    # openapi.json (the checkout may have package data built; CI's contract job does not).
     @app.api_route(
         "/{full_path:path}",
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

@@ -3,7 +3,7 @@
 # CI re-runs this and fails on `git diff` — commit both files whenever the API changes.
 #
 # The schema dump runs from a scratch cwd so nothing cwd-relative can leak into the
-# schema. (The SPA catch-all is excluded from the schema outright — a built web/dist
+# schema. (The SPA catch-all is excluded from the schema outright — built package data
 # must never change openapi.json.)
 set -euo pipefail
 
