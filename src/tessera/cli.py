@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import threading
+import webbrowser
+from contextlib import redirect_stdout
 from enum import Enum
 from functools import wraps
 from pathlib import Path
@@ -49,6 +53,13 @@ app = typer.Typer(
     rich_markup_mode=None,
     cls=_NoArgsHelpGroup,
 )
+leaderboard_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    cls=_NoArgsHelpGroup,
+)
+app.add_typer(leaderboard_app, name="leaderboard")
 
 
 class EngineOption(str, Enum):
@@ -195,6 +206,259 @@ def _root(
     ),
 ) -> None:
     pass
+
+
+@app.command()
+@_guard
+def ui(
+    port: int | None = typer.Option(None, "--port"),
+    no_open: bool = typer.Option(False, "--no-open"),
+    check: bool = typer.Option(False, "--check"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Launch the local Tessera UI or check that it is ready."""
+    from tessera.api.app import create_app, ui_dist
+    from tessera.api.run_store import RunStore as SqliteRunStore
+
+    if check:
+        home = paths.home()
+        # An in-memory run store: --check only reads app.state.env_file below and never
+        # touches the store, so building the real SqliteRunStore(Path("runs.db")) would
+        # leave a stray runs.db behind in whatever directory this "read-only" check
+        # happens to run from.
+        checked_app = create_app(home=home, run_store=SqliteRunStore(":memory:"))
+        bundle_dir = ui_dist()
+        bundle = bundle_dir / "index.html" if bundle_dir is not None else None
+        env_file = checked_app.state.env_file
+        payload = {
+            "ok": True,
+            "api": "ok",
+            "ui_bundle": str(bundle) if bundle is not None else None,
+            "home": str(home),
+            "env_file": str(env_file),
+            "env_file_present": env_file.is_file(),
+        }
+        if json_output:
+            _print_json(payload)
+        else:
+            typer.echo("api: ok")
+            typer.echo(
+                f"ui bundle: {bundle}"
+                if bundle is not None
+                else "ui bundle: not built (the API still serves /api/*)"
+            )
+            typer.echo(f"home: {home}")
+            state = "present" if payload["env_file_present"] else "missing"
+            typer.echo(f"env file: {env_file} ({state})")
+        # PR7 makes a missing bundle exit 4 once the wheel is expected to contain it.
+        return
+
+    selected_port = port if port is not None else int(os.environ.get("TESSERA_API_PORT", "8000"))
+    url = f"http://127.0.0.1:{selected_port}"
+    typer.echo(f"Tessera UI: {url}  (Ctrl-C to stop)")
+    if not no_open:
+        timer = threading.Timer(1.0, webbrowser.open, args=(url,))
+        timer.daemon = True
+        timer.start()
+
+    import uvicorn
+
+    uvicorn.run(
+        "tessera.api.app:create_app",
+        factory=True,
+        host="127.0.0.1",
+        port=selected_port,
+        log_level="warning",
+    )
+
+
+@app.command()
+@_guard
+def guide(
+    topic: str | None = typer.Argument(None, metavar="TOPIC"),
+    list_topics: bool = typer.Option(False, "--list"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Read short guidance for running and understanding Tessera."""
+    from tessera import guide as guide_module
+
+    if list_topics:
+        available = guide_module.topics()
+        if json_output:
+            _print_json({"ok": True, "topics": available})
+        else:
+            for item in available:
+                typer.echo(f"{item['name']} — {item['summary']}")
+        return
+
+    selected = topic or "start"
+    content = guide_module.text(selected)
+    if json_output:
+        _print_json({"ok": True, "topic": selected, "text": content})
+    else:
+        typer.echo(content, nl=False)
+
+
+_SUITE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+
+
+@app.command("init")
+@_guard
+def init_suite(
+    name: str = typer.Argument(..., metavar="NAME"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Create an editable suite from the starter authoring template."""
+    from tessera import orgs
+    from tessera.api import blueprint_store
+    from tessera.catalog import BUILTIN_SUITES, SUITE_ALIASES
+
+    reserved = {*BUILTIN_SUITES, *SUITE_ALIASES}
+    if not _SUITE_NAME.fullmatch(name):
+        raise SpecError("NAME must start with a letter or digit and use only letters, digits, '-' and '_'")
+    if name in reserved:
+        raise SpecError(f"suite name '{name}' is reserved for a builtin suite or alias")
+
+    context = Context()
+    try:
+        if blueprint_store.exists(context.suites_dir, name):
+            raise SpecError(f"suite '{name}' already exists")
+        # save_blueprint() would happily mkdir(parents=True) a missing ~/.tessera itself,
+        # but at the process umask (e.g. 0755) rather than the 0700 every other code path
+        # treats as this directory's invariant (see the same call in `connect`, which
+        # later becomes a no-op once the directory already exists) — `init` can be the
+        # very first command a new user runs, so it must harden the directory itself.
+        paths.ensure_home()
+        template = orgs.get_blueprint("your", store_dir=context.suites_dir)
+        blueprint_store.save_blueprint(context.suites_dir, name, template)
+    except blueprint_store.BlueprintStoreError as exc:
+        raise SpecError(str(exc)) from None
+
+    output_path = context.suites_dir / f"{name}.json"
+    if json_output:
+        _print_json({"ok": True, "path": str(output_path), "name": name})
+    else:
+        typer.echo(str(output_path))
+        typer.echo(f"next: edit it, then tessera validate {name}")
+
+
+def _suite_data(ref: str, context: Context) -> tuple[str, object, list[dict[str, str]]]:
+    from tessera import orgs
+
+    path = Path(ref)
+    if path.suffix == ".json":
+        if not path.is_file():
+            raise SpecError(f"suite file not found: {path}")
+        try:
+            return path.stem, json.loads(path.read_text(encoding="utf-8")), []
+        except json.JSONDecodeError as exc:
+            return path.stem, None, [
+                {
+                    "location": f"line {exc.lineno} column {exc.colno}",
+                    "message": exc.msg,
+                }
+            ]
+        except OSError as exc:
+            raise SpecError(f"cannot read suite file: {path} ({exc})") from None
+
+    try:
+        suite, _ = catalog_module.resolve_suite(ref, suites_dir=context.suites_dir)
+    except SpecError:
+        # An invalid saved suite is deliberately absent from the catalog; still surface
+        # its located validation issues when the user validates it by name.
+        saved = context.suites_dir / f"{ref}.json"
+        if saved.is_file():
+            return _suite_data(str(saved), context)
+        raise
+    blueprint = orgs.get_blueprint(suite["org"], store_dir=context.suites_dir)
+    return suite["name"], blueprint.model_dump(by_alias=True), []
+
+
+@app.command()
+@_guard
+def validate(
+    ref: str = typer.Argument(..., metavar="REF"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Validate a builtin, saved, or file-based suite without model calls."""
+    from tessera.api import blueprint_store
+
+    name, data, read_issues = _suite_data(ref, Context())
+    issues = read_issues or blueprint_store.validate_blueprint(data)
+    claims = data.get("claims", []) if isinstance(data, dict) else []
+    probes = data.get("probes", []) if isinstance(data, dict) else []
+    claim_count = len(claims) if isinstance(claims, list) else 0
+    question_count = len(probes) if isinstance(probes, list) else 0
+    payload = {
+        "ok": not issues,
+        "issues": issues,
+        "questions": question_count,
+        "claims": claim_count,
+    }
+
+    if json_output:
+        _print_json(payload)
+        if issues:
+            raise typer.Exit(code=int(ExitCode.SPEC_ERROR))
+        return
+    if issues:
+        for issue in issues:
+            typer.echo(f"{issue['location'] or '<root>'}: {issue['message']}")
+        raise SpecError("suite is not valid")
+    typer.echo(f"ok: {name} ({question_count} questions, {claim_count} claims)")
+
+
+def _leaderboard_exit(argv: list[str]) -> None:
+    from tessera.report.cli import leaderboard_main
+
+    result = leaderboard_main(argv)
+    if result:
+        raise typer.Exit(code=result)
+
+
+@leaderboard_app.command("render")
+@_guard
+def leaderboard_render(
+    manifest: Path = typer.Option(Path("docs/leaderboard.rows.json"), "--manifest"),
+    out: Path | None = typer.Option(None, "--out", "-o"),
+    title: str | None = typer.Option(None, "--title"),
+) -> None:
+    """Render the committed leaderboard manifest as Markdown."""
+    argv = ["--manifest", str(manifest)]
+    if out is not None:
+        argv.extend(["--out", str(out)])
+    if title is not None:
+        argv.extend(["--title", title])
+    _leaderboard_exit(argv)
+
+
+@leaderboard_app.command("extract")
+@_guard
+def leaderboard_extract(
+    logs: list[Path] = typer.Argument(..., metavar="LOGS..."),
+    label: list[str] | None = typer.Option(None, "--label"),
+    note: list[str] | None = typer.Option(None, "--note"),
+    out: Path | None = typer.Option(None, "--out", "-o"),
+) -> None:
+    """Extract manifest rows from one or more committed evaluation logs (prints JSON
+    rows to paste into docs/leaderboard.rows.json; stamps are repo-relative to cwd)."""
+    argv = ["--extract", *(str(log) for log in logs)]
+    for value in label or []:
+        argv.extend(["--label", value])
+    for value in note or []:
+        argv.extend(["--note", value])
+    if out is not None:
+        argv.extend(["--out", str(out)])
+    _leaderboard_exit(argv)
+
+
+@leaderboard_app.command("verify")
+@_guard
+def leaderboard_verify(
+    manifest: Path = typer.Option(..., "--manifest"),
+) -> None:
+    """Verify every log-backed row in a leaderboard manifest."""
+    _leaderboard_exit(["--manifest", str(manifest), "--verify"])
 
 
 @app.command()
@@ -575,6 +839,83 @@ def compare(
     if require_comparable and not result["compatible"]:
         detail = ", ".join(result["unexpected_dimensions"])
         _raise_gate_failed(json_output, f"the two runs are not comparable: {detail}")
+
+
+def _invoke_app(argv: list[str]) -> int | None:
+    """Run the canonical command tree in-process for one-release aliases. Under
+    standalone_mode=False, Click intercepts the typer.Exit that _guard raises on every
+    handled failure and returns its code instead of exiting — so every caller must
+    check this return value and re-raise, or a failed delegated command silently
+    exits 0."""
+    return typer.main.get_command(app).main(
+        args=argv,
+        prog_name="tessera",
+        standalone_mode=False,
+    )
+
+
+report_alias = typer.Typer(add_completion=False)
+
+
+@report_alias.command()
+def _report_alias(
+    log: str = typer.Argument(...),
+    out: Path | None = typer.Option(None, "--out", "-o"),
+) -> None:
+    """Deprecated tessera-report entry point."""
+    click.echo("tessera-report is deprecated — use: tessera report …", err=True)
+    if out is None:
+        result = _invoke_app(["report", log])
+    else:
+        with out.open("w", encoding="utf-8") as output:
+            with redirect_stdout(output):
+                result = _invoke_app(["report", log])
+    if result:
+        raise typer.Exit(code=result)
+
+
+leaderboard_alias = typer.Typer(
+    add_completion=False,
+)
+
+
+@leaderboard_alias.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+)
+def _leaderboard_alias(context: typer.Context) -> None:
+    """Deprecated tessera-leaderboard entry point."""
+    from tessera.report.cli import leaderboard_main
+
+    click.echo(
+        "tessera-leaderboard is deprecated — use: tessera leaderboard …",
+        err=True,
+    )
+    # Delegate straight to the legacy argparse entry point instead of re-detecting
+    # --extract/--verify and re-dispatching to a `tessera leaderboard <subcommand>`:
+    # that translation only forwards each subcommand's own flags (e.g. `render` has no
+    # positional LOGS/--label/--note), so a still-valid legacy invocation like
+    # `tessera-leaderboard logs/a.eval logs/b.eval --label X --label Y` (docs/delegation.md)
+    # broke with a Click UsageError. leaderboard_main already parses the full legacy
+    # surface and returns the right exit code.
+    result = leaderboard_main(list(context.args))
+    if result:
+        raise typer.Exit(code=result)
+
+
+api_alias = typer.Typer(
+    add_completion=False,
+)
+
+
+@api_alias.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+)
+def _api_alias(context: typer.Context) -> None:
+    """Deprecated tessera-api entry point."""
+    click.echo("tessera-api is deprecated — use: tessera ui --no-open", err=True)
+    result = _invoke_app(["ui", "--no-open", *context.args])
+    if result:
+        raise typer.Exit(code=result)
 
 
 def main() -> None:

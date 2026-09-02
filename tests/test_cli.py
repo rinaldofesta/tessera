@@ -11,7 +11,7 @@ from inspect_ai.scorer import Score
 from typer.testing import CliRunner
 
 from tessera.api.providers import PROVIDERS
-from tessera.cli import app
+from tessera.cli import api_alias, app, leaderboard_alias, report_alias
 from tessera.store import RunStore
 
 RUNNER = CliRunner()
@@ -122,6 +122,286 @@ def test_no_args_shows_successful_help_and_version():
     assert "run" in result.stdout and "report" in result.stdout
     version = RUNNER.invoke(app, ["--version"])
     assert version.exit_code == 0 and version.stdout.startswith("tessera ")
+
+
+def test_ui_check_reports_checkout_bundle(tmp_path, monkeypatch):
+    checkout = tmp_path / "checkout"
+    bundle = checkout / "web" / "dist" / "index.html"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_text("<main>Tessera</main>")
+    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
+    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: tmp_path / "package")
+
+    result = RUNNER.invoke(app, ["ui", "--check"])
+
+    assert result.exit_code == 0
+    assert f"ui bundle: {bundle}" in result.stdout
+    assert "api: ok" in result.stdout
+
+
+def test_ui_check_missing_bundle_json_shape(tmp_path, monkeypatch):
+    checkout = tmp_path / "checkout"
+    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
+    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: tmp_path / "package")
+
+    result = RUNNER.invoke(app, ["ui", "--check", "--json"])
+
+    payload = _json(result)
+    assert result.exit_code == 0
+    assert payload == {
+        "ok": True,
+        "api": "ok",
+        "ui_bundle": None,
+        "home": os.environ["TESSERA_HOME"],
+        "env_file": str(Path(os.environ["TESSERA_HOME"]) / ".env"),
+        "env_file_present": False,
+    }
+
+
+def test_ui_launch_uses_env_port_and_schedules_browser(monkeypatch):
+    uvicorn_calls = []
+    timers = []
+
+    class FakeTimer:
+        def __init__(self, interval, function, args):
+            self.interval = interval
+            self.function = function
+            self.args = args
+            self.daemon = False
+            self.started = False
+            timers.append(self)
+
+        def start(self):
+            self.started = True
+
+    monkeypatch.setenv("TESSERA_API_PORT", "8124")
+    monkeypatch.setattr("uvicorn.run", lambda *args, **kwargs: uvicorn_calls.append((args, kwargs)))
+    monkeypatch.setattr("tessera.cli.threading.Timer", FakeTimer)
+
+    result = RUNNER.invoke(app, ["ui"])
+
+    assert result.exit_code == 0 and "http://127.0.0.1:8124" in result.stdout
+    assert uvicorn_calls[0][1] == {
+        "factory": True,
+        "host": "127.0.0.1",
+        "port": 8124,
+        "log_level": "warning",
+    }
+    assert timers[0].interval == 1.0 and timers[0].args == ("http://127.0.0.1:8124",)
+    assert timers[0].daemon is True and timers[0].started is True
+
+
+def test_guide_every_topic_loads_and_agents_is_real():
+    from tessera.guide import text, topics
+
+    assert [topic["name"] for topic in topics()] == [
+        "start",
+        "conflicts",
+        "suites",
+        "reading",
+        "agents",
+    ]
+    assert all(text(topic["name"]).strip() for topic in topics())
+    agents = RUNNER.invoke(app, ["guide", "agents"])
+    assert agents.exit_code == 0 and "tessera run" in agents.stdout
+
+
+def test_guide_list_json_and_unknown_topic():
+    listed = RUNNER.invoke(app, ["guide", "--list", "--json"])
+    payload = _json(listed)
+    unknown = RUNNER.invoke(app, ["guide", "unknown"])
+
+    assert listed.exit_code == 0
+    assert [topic["name"] for topic in payload["topics"]] == [
+        "start",
+        "conflicts",
+        "suites",
+        "reading",
+        "agents",
+    ]
+    assert unknown.exit_code == 3
+
+
+def test_guide_defaults_to_start_in_json():
+    result = RUNNER.invoke(app, ["guide", "--json"])
+
+    payload = _json(result)
+    assert result.exit_code == 0 and payload["topic"] == "start"
+    assert "tessera report first-contact" in payload["text"]
+
+
+def test_guide_human_list_has_exactly_five_topic_lines():
+    result = RUNNER.invoke(app, ["guide", "--list"])
+
+    assert result.exit_code == 0
+    assert [line.split(" — ", 1)[0] for line in result.stdout.splitlines()] == [
+        "start",
+        "conflicts",
+        "suites",
+        "reading",
+        "agents",
+    ]
+
+
+def test_init_validate_and_custom_suite_dry_run():
+    initialized = RUNNER.invoke(app, ["init", "demo", "--json"])
+    init_payload = _json(initialized)
+    path = Path(init_payload["path"])
+    validated = RUNNER.invoke(app, ["validate", "demo"])
+    builtin = RUNNER.invoke(app, ["validate", "starter"])
+    planned = RUNNER.invoke(
+        app,
+        ["run", "--model", "ollama/test", "--suite", "demo", "--dry-run", "--json"],
+    )
+
+    assert initialized.exit_code == 0 and path.is_file()
+    assert path.read_text().endswith("\n") and '\n  "claims": [' in path.read_text()
+    assert validated.exit_code == 0 and "ok: demo" in validated.stdout
+    assert builtin.exit_code == 0 and "ok: starter" in builtin.stdout
+    assert _json(planned)["suite"]["name"] == "demo"
+
+
+def test_init_refuses_overwrite_builtin_and_bad_name():
+    first = RUNNER.invoke(app, ["init", "demo"])
+    overwrite = RUNNER.invoke(app, ["init", "demo"])
+    builtin = RUNNER.invoke(app, ["init", "starter"])
+    bad_name = RUNNER.invoke(app, ["init", "../demo"])
+
+    assert first.exit_code == 0
+    assert overwrite.exit_code == builtin.exit_code == bad_name.exit_code == 3
+
+
+@pytest.mark.parametrize("reserved", ["starter", "meridian", "toy"])
+def test_init_refuses_every_builtin_name_and_alias(reserved):
+    result = RUNNER.invoke(app, ["init", reserved])
+
+    assert result.exit_code == 3 and "reserved" in result.stderr
+
+
+def test_validate_broken_file_has_located_issue_and_one_json_envelope(tmp_path):
+    initialized = RUNNER.invoke(app, ["init", "demo", "--json"])
+    data = json.loads(Path(_json(initialized)["path"]).read_text())
+    del data["claims"][0]["subject"]
+    broken = tmp_path / "broken.json"
+    broken.write_text(json.dumps(data))
+
+    human = RUNNER.invoke(app, ["validate", str(broken)])
+    encoded = RUNNER.invoke(app, ["validate", str(broken), "--json"])
+    payload = _json(encoded)
+
+    assert human.exit_code == encoded.exit_code == 3
+    assert "claims.0.subject:" in human.stdout
+    assert payload["ok"] is False
+    assert payload["issues"][0]["location"] == "claims.0.subject"
+
+
+def test_validate_malformed_json_prints_validation_envelope(tmp_path):
+    broken = tmp_path / "broken.json"
+    broken.write_text('{"claims": [')
+
+    result = RUNNER.invoke(app, ["validate", str(broken), "--json"])
+
+    payload = _json(result)
+    assert result.exit_code == 3 and payload["ok"] is False
+    assert payload["issues"][0]["location"].startswith("line 1 column")
+
+
+def test_validate_invalid_saved_suite_by_name_reports_its_issue():
+    initialized = RUNNER.invoke(app, ["init", "demo", "--json"])
+    path = Path(_json(initialized)["path"])
+    data = json.loads(path.read_text())
+    del data["probes"][0]["question"]
+    path.write_text(json.dumps(data))
+
+    result = RUNNER.invoke(app, ["validate", "demo"])
+
+    assert result.exit_code == 3 and "probes.0.question:" in result.stdout
+
+
+def test_leaderboard_render_matches_committed_markdown_and_verify_passes():
+    repo = Path(__file__).parents[1]
+    manifest = repo / "docs" / "leaderboard.rows.json"
+
+    rendered = RUNNER.invoke(app, ["leaderboard", "render", "--manifest", str(manifest)])
+    verified = RUNNER.invoke(app, ["leaderboard", "verify", "--manifest", str(manifest)])
+
+    assert rendered.exit_code == 0
+    assert rendered.stdout == (repo / "docs" / "leaderboard.md").read_text()
+    assert verified.exit_code == 0 and verified.stdout.startswith("verified ")
+
+
+def test_leaderboard_render_title_override():
+    repo = Path(__file__).parents[1]
+    result = RUNNER.invoke(
+        app,
+        [
+            "leaderboard",
+            "render",
+            "--manifest",
+            str(repo / "docs" / "leaderboard.rows.json"),
+            "--title",
+            "# Custom leaderboard",
+        ],
+    )
+
+    assert result.exit_code == 0 and result.stdout.startswith("# Custom leaderboard\n")
+
+
+def test_leaderboard_extract_wraps_existing_log_machinery():
+    result = RUNNER.invoke(
+        app, ["leaderboard", "extract", str(BUNDLED_LOG), "--label", "first-contact"],
+    )
+
+    (row,) = json.loads(result.stdout)
+    assert result.exit_code == 0 and row["label"] == "first-contact"
+    assert row["log"]["path"] == "src/tessera/data/examples/first-contact/log.eval"
+
+
+def test_leaderboard_verify_missing_manifest_preserves_legacy_exit(tmp_path):
+    result = RUNNER.invoke(
+        app,
+        ["leaderboard", "verify", "--manifest", str(tmp_path / "missing.json")],
+    )
+
+    assert result.exit_code == 2 and "cannot read manifest:" in result.stderr
+
+
+def test_report_alias_deprecates_and_delegates(tmp_path):
+    out = tmp_path / "scorecard.md"
+    result = RUNNER.invoke(report_alias, ["first-contact", "-o", str(out)])
+
+    assert result.exit_code == 0 and "75%" in out.read_text()
+    assert result.stderr == "tessera-report is deprecated — use: tessera report …\n"
+
+
+def test_report_alias_delegates_to_stdout_without_out():
+    result = RUNNER.invoke(report_alias, ["first-contact"])
+
+    assert result.exit_code == 0 and "75%" in result.stdout
+    assert result.stderr == "tessera-report is deprecated — use: tessera report …\n"
+
+
+def test_leaderboard_alias_deprecates_and_delegates():
+    repo = Path(__file__).parents[1]
+    result = RUNNER.invoke(
+        leaderboard_alias,
+        ["--manifest", str(repo / "docs" / "leaderboard.rows.json")],
+    )
+
+    assert result.exit_code == 0
+    assert result.stdout == (repo / "docs" / "leaderboard.md").read_text()
+    assert result.stderr.startswith("tessera-leaderboard is deprecated — use:")
+
+
+def test_api_alias_deprecates_and_delegates(monkeypatch):
+    called = {}
+    monkeypatch.setattr("uvicorn.run", lambda *args, **kwargs: called.update(kwargs))
+
+    result = RUNNER.invoke(api_alias, ["--port", "8123"])
+
+    assert result.exit_code == 0 and called["port"] == 8123
+    assert called["host"] == "127.0.0.1"
+    assert result.stderr == "tessera-api is deprecated — use: tessera ui --no-open\n"
 
 
 def test_report_bundled_human_and_json():

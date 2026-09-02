@@ -29,6 +29,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+import tessera
 from tessera import paths
 from tessera.api import (
     routes_blueprints,
@@ -95,7 +96,25 @@ async def _background_schedule(coro) -> None:
     asyncio.create_task(coro)
 
 
-_LESSON = Path("docs/tessera-lesson.html")
+def _package_path(*parts: str) -> Path:
+    return Path(str(resources.files("tessera.data").joinpath(*parts)))
+
+
+def ui_dist() -> Path | None:
+    """Return the installed UI directory, or the checkout build when developing."""
+    candidates = (
+        _package_path("web"),
+        Path(tessera.__file__).parents[2] / "web" / "dist",
+    )
+    return next((candidate for candidate in candidates if (candidate / "index.html").is_file()), None)
+
+
+def lesson_path() -> Path:
+    """Prefer the installed lesson while retaining the source-checkout fallback."""
+    packaged = _package_path("lesson.html")
+    if packaged.is_file():
+        return packaged
+    return Path(tessera.__file__).parents[2] / "docs" / "tessera-lesson.html"
 
 
 def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None = None,
@@ -198,10 +217,12 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
     return app
 
 
-def _mount_learn(app: FastAPI, lesson: Path = _LESSON) -> None:
+def _mount_learn(app: FastAPI, lesson: Path | None = None) -> None:
     """Serve the plain-language guide at /learn. Excluded from the OpenAPI schema on
     purpose: it is a static page for humans, not part of the typed contract."""
     from fastapi.responses import FileResponse
+
+    lesson = lesson or lesson_path()
 
     @app.get("/learn", include_in_schema=False)
     def learn():
@@ -210,11 +231,12 @@ def _mount_learn(app: FastAPI, lesson: Path = _LESSON) -> None:
         return FileResponse(lesson, media_type="text/html")
 
 
-def _mount_spa(app: FastAPI, dist: Path = Path("web/dist")) -> None:
+def _mount_spa(app: FastAPI, dist: Path | None = None) -> None:
     """If the built React SPA exists, serve it: hashed assets at /assets and an
     index.html fallback for client-side routes. Registered AFTER the /api routes (and
     after FastAPI's /docs, /openapi.json), so they always take precedence."""
-    if not dist.exists():
+    dist = dist or ui_dist()
+    if dist is None or not (dist / "index.html").is_file():
         return
     from fastapi.responses import FileResponse
     from fastapi.staticfiles import StaticFiles

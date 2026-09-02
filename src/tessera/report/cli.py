@@ -155,6 +155,8 @@ def leaderboard_main(argv: list[str] | None = None) -> int:
         if args.out:
             with open(args.out, "w", encoding="utf-8") as fh:
                 fh.write(text)
+        elif text.endswith("\n"):
+            sys.stdout.write(text)
         else:
             print(text)
 
@@ -169,7 +171,10 @@ def leaderboard_main(argv: list[str] | None = None) -> int:
         if args.verify:
             return _verify_leaderboard(manifest, args.manifest)
         try:
-            _emit(render_manifest(manifest))
+            rendered_manifest = (
+                {**manifest, "title": args.title} if args.title is not None else manifest
+            )
+            _emit(render_manifest(rendered_manifest))
         except (ValueError, KeyError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
