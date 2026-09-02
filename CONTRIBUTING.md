@@ -32,14 +32,15 @@ In order:
    actually scatters and contradicts itself across CRMs, wikis, tickets).
 4. **Leaderboard rows**: a meridian run on a model we have not measured, under the
    exact protocol (`det`, `k=3`, full 22 probes, the **baseline scaffold** —
-   `-T scaffold=baseline`, the default; the refusal-aware arm of ADR-0009 is an
+   `--scaffold baseline`, the default; the refusal-aware arm of ADR-0009 is an
    intervention study, never a leaderboard row — see
    [docs/adr/0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md)).
    Every 0/3 probe gets adjudicated from its transcript before the row ships. The table
    itself is generated — never hand-edit `docs/leaderboard.md`: commit the run's `.eval`
-   under `logs/leaderboard/`, run `tessera-leaderboard --extract logs/leaderboard/<run>.eval`
+   under `logs/leaderboard/`, run `tessera leaderboard extract logs/leaderboard/<run>.eval`
    to get the row's JSON (its `log` stamped `{path, sha256}`), merge it into
-   `docs/leaderboard.rows.json`, regenerate with `--manifest`, and confirm with `--verify`.
+   `docs/leaderboard.rows.json`, regenerate with `tessera leaderboard render --manifest`,
+   and confirm with `tessera leaderboard verify --manifest`.
    CI fails on drift (ADR-0010) and re-derives every log-backed row from its committed log
    (ADR-0012). A row with `log: null` is allowed but unbacked — attach the log to make it
    verifiable.
@@ -50,11 +51,10 @@ In order:
 - `pip install -e ".[dev]"` gives you the eval; `tessera` is the command, alongside the
   FastAPI/SPA product (`tessera ui`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.
-- A live eval run is the only thing that needs keys: the API reads `~/.tessera/.env`
-  (or `$TESSERA_HOME/.env`, or the file named by `TESSERA_ENV_FILE`); for a checkout,
-  `TESSERA_ENV_FILE=.env` keeps the old behavior. Put `ANTHROPIC_API_KEY` /
-  `OPENAI_API_KEY` there (gitignored), then
-  `inspect eval src/tessera/evals/task.py@tessera_probes -T org=toy -T judge=deterministic -T k=2`.
+- A live eval run is the only thing that needs keys. `tessera connect anthropic` writes
+  `ANTHROPIC_API_KEY` to `~/.tessera/.env` (or `$TESSERA_HOME/.env`, or the file named by
+  `TESSERA_ENV_FILE`; for a checkout, `TESSERA_ENV_FILE=.env` keeps the old behavior).
+  Then `tessera run --model anthropic/claude-sonnet-4-6 --k 2`.
 
 ## House rules (the ones that will bite you if skipped)
 
@@ -82,7 +82,7 @@ Read the index before changing anything load-bearing.
 - **The benchmark protocol is frozen per row** (ADR-0006): deterministic engine,
   k=3, full probe set, the baseline scaffold, the authored org (seed 0), no
   model-specific prompt tuning. Comparability guards are executable —
-  `tessera-leaderboard` refuses mixed scorer_version/org/k/scaffold/seed.
+  `tessera leaderboard render` refuses mixed scorer_version/org/k/scaffold/seed.
 - **`harness` is a displayed axis, not a guard** (ADR-0011): it labels how a row's
   model calls were dispatched. Canonical values are **`single`** (a lone model — the
   default, and what every `tessera_probes` run is) and **`ensemble`** (a multi-agent

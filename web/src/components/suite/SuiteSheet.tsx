@@ -66,6 +66,7 @@ export function SuiteSheet({ onSaved, onDeleted = () => {} }: {
   const [preview, setPreview] = useState<Artifacts | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
   const [pendingNav, setPendingNav] = useState<{ next: string | null } | null>(null);
   const duplicateSeed = useRef<Blueprint | null>(null);
   const loadGeneration = useRef(0);
@@ -106,6 +107,7 @@ export function SuiteSheet({ onSaved, onDeleted = () => {} }: {
     setValidation(null);
     setPreview(null);
     setDirty(false);
+    setNameTouched(false);
     if (isNew) {
       setName("");
       setBlueprint(duplicateSeed.current ?? EMPTY_BLUEPRINT);
@@ -282,7 +284,8 @@ export function SuiteSheet({ onSaved, onDeleted = () => {} }: {
                     disabled={!isNew}
                     value={name}
                     placeholder={SUITE_COPY.namePlaceholder}
-                    onChange={(event) => { setName(event.target.value); setDirty(true); }}
+                    onBlur={() => setNameTouched(true)}
+                    onChange={(event) => { setName(event.target.value); setDirty(true); setNameTouched(true); }}
                   />
                 </label>
                 {builtin ? (
@@ -313,7 +316,7 @@ export function SuiteSheet({ onSaved, onDeleted = () => {} }: {
                 )}
               </div>
 
-              {isNew && nameError && <p role="alert" className="mb-4 text-xs text-verdict-unreliable">{nameError}</p>}
+              {isNew && nameTouched && nameError && <p role="alert" className="mb-4 text-xs text-verdict-unreliable">{nameError}</p>}
               {error && <p role="alert" className="mb-4 text-sm text-verdict-unreliable">{error}</p>}
 
               {loading ? (

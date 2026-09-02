@@ -12,7 +12,10 @@ import Run from "./Run";
 const catalog: Catalog = {
   defaults: { engine: "deterministic", suite: "starter", k: 3, scaffold: "baseline", seed: 0 },
   suites: [{ name: "starter", label: "Starter", org: "starter", kind: "builtin", questions: 2, claims: 4, editable: false }],
-  models: [{ id: "x/model", label: "Model", provider: "x", connected: true }],
+  models: [
+    { id: "x/model", label: "Model", provider: "x", connected: true },
+    { id: "grader/model", label: "Grader", provider: "x", connected: true },
+  ],
   providers: [{ id: "x", label: "Provider X", connected: true, fields: [{ id: "api_key", env_var: "X_KEY" }] }],
   scorers: [{ engine: "deterministic", version: "det-4" }], scaffolds: ["baseline"],
 };
@@ -32,6 +35,17 @@ describe("Run readiness", () => {
     expect(await screen.findByRole("combobox", { name: "times each" })).toHaveValue("2");
     await waitFor(() => expect(api.dryRun).toHaveBeenCalledWith(expect.objectContaining({ model: "x/model", k: 2, seed: 4 })));
     expect(await screen.findByRole("button", { name: "Run" })).toBeEnabled();
+  });
+
+  it("opens Advanced for a rerun whose grading settings differ from the defaults", async () => {
+    render(<MemoryRouter initialEntries={["/?model=x%2Fmodel&engine=llm&grader=grader%2Fmodel"]}><Run /></MemoryRouter>);
+    expect(await screen.findByLabelText("grader model")).toHaveValue("grader/model");
+  });
+
+  it("keeps Advanced closed when the initial grading settings match the defaults", async () => {
+    render(<MemoryRouter><Run /></MemoryRouter>);
+    await screen.findByRole("button", { name: /Advanced/ });
+    expect(screen.queryByLabelText("scaffold")).not.toBeInTheDocument();
   });
 
   it("renders blockers and a connect card from the dry-run response", async () => {

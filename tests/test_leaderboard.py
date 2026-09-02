@@ -89,7 +89,14 @@ def test_pre_scaffold_report_dicts_default_to_baseline_seed_zero():
 
 def test_repro_block_pins_the_scaffold_arm_and_seed():
     md = render_leaderboard([_report()])
-    assert "-T seed=0 -T scaffold=baseline" in md
+    assert "--k 3 --seed 0" in md
+    assert "--scaffold baseline" in md
+
+
+def test_repro_block_names_the_suite_not_the_protocol_org():
+    # The CLI vocabulary is suites; the protocol id `toy` stays in the rows (ADR-0014).
+    assert "--suite starter " in render_leaderboard([_report(org="toy")])
+    assert "--suite meridian " in render_leaderboard([_report()])
 
 
 def test_non_baseline_scaffold_is_disclosed():

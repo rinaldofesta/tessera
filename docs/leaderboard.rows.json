@@ -51,7 +51,7 @@
     },
     {
       "label": "moa/max (gpt-5.5+deepseek-v4-pro+glm-5.2 to opus-4.8)",
-      "model": "moa/max",
+      "model": "openai-api/moa/max",
       "date": "2026-07-06",
       "pass_k_rate": 0.818,
       "mean_rate": 0.894,

@@ -20,7 +20,7 @@ The Inspect logs now live in package data as complete, read-only run folders:
 Reproduce the report from the log with no API key:
 
 ```bash
-uv run tessera-report src/tessera/data/examples/first-contact/log.eval
+uv run tessera report first-contact
 ```
 
 The built-in `toy` and `meridian` builders live in `src/tessera/examples/`; their tracked
