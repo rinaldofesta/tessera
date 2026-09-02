@@ -48,7 +48,7 @@ work, and writes an Inspect log:
   -T org=meridian -T seed=42 -T k=3 -T judge=llm
 
 quickstart_log=$(find logs/quickstart -name '*.eval' -type f | sort | tail -n 1)
-.venv/bin/tessera-report "$quickstart_log"
+.venv/bin/tessera report "$quickstart_log"
 ```
 
 This live example needs provider keys for the selected model and independent grader. The
@@ -221,7 +221,7 @@ static assets by the **FastAPI** backend (one process, no Node at runtime):
 ```bash
 uv pip install -e .   # fastapi, uvicorn and friends are base dependencies
 cd web && npm install && npm run build && cd ..   # build the SPA once
-.venv/bin/tessera-api   # = uvicorn tessera.api.app:create_app --factory --port 8000; serves the app + API
+.venv/bin/tessera ui   # serves the app + API on 127.0.0.1:8000
 ```
 
 Open **http://localhost:8000**. Four views:

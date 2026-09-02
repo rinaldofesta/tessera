@@ -15,22 +15,10 @@ from tessera.models import Blueprint
 router = APIRouter()
 
 
-def _validate_blueprint(data: dict):
-    """(blueprint, errors). errors is a structured [{location, message}] from pydantic
-    validation AND a dry compile (cross-silo collision) — reusing 100% of existing rules."""
-    from pydantic import ValidationError
-
-    from tessera.compiler import build_artifacts
-    try:
-        bp = Blueprint.model_validate(data)
-    except ValidationError as exc:
-        return None, [{"location": ".".join(str(p) for p in e["loc"]), "message": e["msg"]}
-                      for e in exc.errors()]
-    try:
-        build_artifacts(bp)
-    except ValueError as exc:
-        return None, [{"location": "compile", "message": str(exc)}]
-    return bp, []
+def _validated_blueprint(data: dict):
+    """Return a model plus the store's shared shape-and-compile issues (one pydantic
+    parse, not two — validate_and_build already keeps the model it built)."""
+    return blueprint_store.validate_and_build(data)
 
 
 @router.get("/api/blueprints", response_model=list[R.BlueprintMeta])
@@ -52,7 +40,7 @@ def get_blueprint(blueprint_id: str, request: Request):
 
 @router.post("/api/blueprints/validate", response_model=R.ValidationResult)
 def validate_blueprint(blueprint: dict = Body(...)):
-    _, errors = _validate_blueprint(blueprint)
+    errors = blueprint_store.validate_blueprint(blueprint)
     return {"ok": not errors, "errors": errors}
 
 
@@ -61,7 +49,7 @@ def preview_blueprint(blueprint: dict = Body(...)):
     """Compile in memory and return the resulting org (CRM db.json, docs, manifest) —
     no disk write, no eval. Powers the editor's live preview."""
     from tessera.compiler import build_artifacts
-    bp, errors = _validate_blueprint(blueprint)
+    bp, errors = _validated_blueprint(blueprint)
     if errors:
         raise HTTPException(400, detail=errors)
     return build_artifacts(bp)
@@ -70,7 +58,7 @@ def preview_blueprint(blueprint: dict = Body(...)):
 @router.post("/api/blueprints", status_code=201, response_model=R.BlueprintId)
 def create_blueprint(request: Request, payload: dict = Body(...)):
     blueprint_id = payload.get("id")
-    bp, errors = _validate_blueprint(payload.get("blueprint", {}))
+    bp, errors = _validated_blueprint(payload.get("blueprint", {}))
     if not blueprint_id:
         raise HTTPException(400, "missing 'id'")
     if errors:
@@ -86,7 +74,7 @@ def create_blueprint(request: Request, payload: dict = Body(...)):
 
 @router.put("/api/blueprints/{blueprint_id}", response_model=R.BlueprintId)
 def upsert_blueprint(blueprint_id: str, request: Request, blueprint: dict = Body(...)):
-    bp, errors = _validate_blueprint(blueprint)
+    bp, errors = _validated_blueprint(blueprint)
     if errors:
         raise HTTPException(400, detail=errors)
     try:

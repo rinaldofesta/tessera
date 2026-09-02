@@ -82,3 +82,33 @@ def delete_blueprint(store_dir: str | Path, blueprint_id: str) -> bool:
 
 def exists(store_dir: str | Path, blueprint_id: str) -> bool:
     return _safe_path(store_dir, blueprint_id).exists()
+
+
+def validate_and_build(data: dict) -> tuple[Blueprint | None, list[dict[str, str]]]:
+    """(blueprint, errors): validate the Pydantic shape and compile it without writing
+    artifacts, keeping the built model for callers that need it — so a caller that wants
+    both the validated model and the errors doesn't have to re-parse the same payload."""
+    from pydantic import ValidationError
+
+    from tessera.compiler import build_artifacts
+
+    try:
+        blueprint = Blueprint.model_validate(data)
+    except ValidationError as exc:
+        return None, [
+            {
+                "location": ".".join(str(part) for part in error["loc"]),
+                "message": error["msg"],
+            }
+            for error in exc.errors()
+        ]
+    try:
+        build_artifacts(blueprint)
+    except ValueError as exc:
+        return None, [{"location": "compile", "message": str(exc)}]
+    return blueprint, []
+
+
+def validate_blueprint(data: dict) -> list[dict[str, str]]:
+    """Validate the Pydantic shape and compile it without writing artifacts."""
+    return validate_and_build(data)[1]

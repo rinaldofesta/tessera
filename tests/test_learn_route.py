@@ -1,8 +1,9 @@
 """/learn serves the plain-language guide; excluded from the OpenAPI contract."""
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tessera.api.app import create_app
+from tessera.api.app import _mount_spa, create_app, lesson_path
 from tessera.api.run_store import RunStore
 
 
@@ -24,3 +25,39 @@ def test_learn_serves_the_plain_language_guide(tmp_path):
 def test_learn_is_not_in_the_openapi_contract(tmp_path):
     paths = _client(tmp_path).get("/openapi.json").json()["paths"]
     assert "/learn" not in paths
+
+
+def test_mount_spa_prefers_package_data(tmp_path, monkeypatch):
+    package = tmp_path / "package"
+    packaged_index = package / "web" / "index.html"
+    packaged_index.parent.mkdir(parents=True)
+    packaged_index.write_text("packaged UI")
+    checkout = tmp_path / "checkout"
+    checkout_index = checkout / "web" / "dist" / "index.html"
+    checkout_index.parent.mkdir(parents=True)
+    checkout_index.write_text("checkout UI")
+    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
+    monkeypatch.setattr("tessera.__file__", str(checkout / "src" / "tessera" / "__init__.py"))
+    app = FastAPI()
+
+    _mount_spa(app)
+
+    assert TestClient(app).get("/").text == "packaged UI"
+
+
+def test_lesson_path_prefers_package_data(tmp_path, monkeypatch):
+    package = tmp_path / "package"
+    packaged_lesson = package / "lesson.html"
+    packaged_lesson.parent.mkdir(parents=True)
+    packaged_lesson.write_text("packaged lesson")
+    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
+
+    assert lesson_path() == packaged_lesson
+
+
+def test_mount_spa_skips_directory_without_index(tmp_path):
+    app = FastAPI()
+
+    _mount_spa(app, tmp_path)
+
+    assert TestClient(app).get("/").status_code == 404
