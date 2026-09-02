@@ -63,3 +63,16 @@ def _sdks_present(monkeypatch):
     be pip-installed on the machine running it. Tests for the missing-SDK path
     override this explicitly."""
     monkeypatch.setattr("tessera.api.discovery.cloud.missing_sdk", lambda provider_id: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_eval(monkeypatch):
+    """The suite is network-free by construction: no test may reach inspect_ai.eval.
+    A test that forgets to inject `eval_fn` / `folder_eval_runner` fails here at once
+    instead of starting a real eval in a background thread (which once held the
+    process-wide eval lock for ten minutes while inspect retried an absent Ollama)."""
+    def refuse(**_kwargs):
+        raise AssertionError(
+            "a test reached tessera.runner._default_eval — inject eval_fn or folder_eval_runner"
+        )
+    monkeypatch.setattr("tessera.runner._default_eval", refuse)

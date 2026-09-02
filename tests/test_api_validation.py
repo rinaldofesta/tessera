@@ -10,10 +10,20 @@ from tessera.credential_scan import find_credential_like_values
 SENTINEL = "sk-" + "S3NT1NEL" * 4
 
 
+async def _inline_schedule(coro):
+    await coro
+
+
+def _no_eval(**_kwargs):
+    raise AssertionError("validation tests never execute a run")
+
+
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
         home=tmp_path / "home",
         eval_runner=lambda req: None,
+        folder_eval_runner=_no_eval,
+        schedule=_inline_schedule,
         log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
         run_store=RunStore(tmp_path / "runs.db"),
