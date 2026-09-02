@@ -44,12 +44,32 @@ def _write(dir_path: Path, name: str, log) -> None:
     write_eval_log(log, str(dir_path / name))
 
 
-def _client(tmp_path, *, eval_runner=None, discovery_cache=None):
+def _folder_eval(**kwargs):
+    location = str(Path(kwargs["log_dir"]) / "inspect-output.eval")
+    task_args = kwargs["task_args"]
+    roles = kwargs.get("model_roles") or {}
+    log = _eval_log(
+        [_answer("q1", 1)],
+        judge=task_args["judge"],
+        epochs=task_args["k"],
+        grader=roles.get("grader"),
+        model=kwargs["model"],
+        location=location,
+    )
+    log.eval.task_args.update(task_args)
+    from inspect_ai.log import write_eval_log
+    write_eval_log(log, location)
+    return log
+
+
+def _client(tmp_path, *, eval_runner=None, folder_eval_runner=None, discovery_cache=None):
     examples = tmp_path / "examples"
     logs = tmp_path / "logs"
     _write(examples, "first-contact.eval", _eval_log([_answer("q1", 1)]))
     app = create_app(
+        home=tmp_path / "home",
         eval_runner=eval_runner or (lambda req: _eval_log([_answer("q1", 1)])),
+        folder_eval_runner=folder_eval_runner or _folder_eval,
         log_dirs={"examples": examples, "logs": logs},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
@@ -120,6 +140,7 @@ def test_logs_in_prefers_the_folder_layout_when_a_stem_has_both(tmp_path):
 
 def test_default_api_log_source_lists_package_examples(tmp_path):
     app = create_app(
+        home=tmp_path / "home",
         eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
@@ -134,6 +155,32 @@ def test_default_api_log_source_lists_package_examples(tmp_path):
     assert {row["id"] for row in response.json()} >= {
         "examples:first-contact", "examples:gpt-4o",
     }
+
+
+def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
+    from tessera.store import RunStore as FolderRunStore
+
+    home = tmp_path / "home"
+    store = FolderRunStore(home, examples=tmp_path / "examples")
+    record = store.create({
+        "suite": "starter", "model": "ollama/test", "engine": "deterministic",
+        "grader": None, "k": 1, "scaffold": "baseline", "seed": 0,
+    })
+    state_path = Path(record.dir) / "run.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state.update({"status": "running", "owner": None})
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    app = create_app(
+        home=home, run_store=RunStore(tmp_path / "runs.db"),
+        blueprint_dir=tmp_path / "blueprints", env_file=tmp_path / ".env",
+        discovery_cache=_stub_cache(),
+    )
+
+    with caplog.at_level("INFO"), TestClient(app):
+        pass
+
+    assert app.state.runs.get(record.id).data["status"] == "interrupted"
+    assert record.id in caplog.text
 
 
 def test_upload_report(tmp_path):
@@ -324,9 +371,9 @@ def test_every_api_route_declares_a_response_model(tmp_path):
             elif (inner := getattr(route, "original_router", None)) is not None:
                 yield from api_routes(inner)
 
-    app = create_app(run_store=RunStore(tmp_path / "runs.db"),
+    app = create_app(home=tmp_path / "home", run_store=RunStore(tmp_path / "runs.db"),
                      blueprint_dir=tmp_path / "bp")
-    exempt = {"/api/runs/{job_id}/events"}        # SSE stream, not JSON
+    exempt = {"/api/runs/{run_id}/events"}        # SSE stream, not JSON
     checked = [r for r in api_routes(app) if r.path.startswith("/api/") and r.path not in exempt]
     assert checked, "found no /api/ routes to check — the guard is inert, not passing"
     for route in checked:
@@ -334,63 +381,73 @@ def test_every_api_route_declares_a_response_model(tmp_path):
 
 
 def test_run_rejects_unknown_judge(tmp_path):
-    r = _client(tmp_path).post("/api/runs", json={"model": "m", "judge": "vibes"})
-    assert r.status_code == 422   # judge is a closed enum: 'llm' | 'deterministic'
+    r = _client(tmp_path).post("/api/runs", json={"model": "ollama/test", "engine": "vibes"})
+    assert r.status_code == 422   # engine is a closed enum: 'llm' | 'deterministic'
 
 
-def test_run_passes_org_through(tmp_path):
+def test_run_passes_resolved_suite_org_through(tmp_path):
     captured = {}
 
-    def _runner(req):
-        captured["org"] = req.org
-        return _eval_log([_answer("q1", 1)])
+    def _runner(**kwargs):
+        captured["org"] = kwargs["task_args"]["org"]
+        return _folder_eval(**kwargs)
 
-    client = _client(tmp_path, eval_runner=_runner)
-    r = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
-                                       "grader": "openai/gpt-4o", "judge": "llm", "org": "your"})
+    client = _client(tmp_path, folder_eval_runner=_runner)
+    r = client.post("/api/runs", json={"model": "ollama/test", "suite": "starter"})
     assert r.status_code == 200
-    assert captured["org"] == "your"
+    assert captured["org"] == "toy"
 
 
 def test_run_completes_with_fake_runner(tmp_path):
-    client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
-    r = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
-                                       "grader": "openai/gpt-4o", "judge": "llm"})
+    client = _client(tmp_path)
+    r = client.post("/api/runs", json={"model": "ollama/test"})
     assert r.status_code == 200
-    job_id = r.json()["job_id"]
-    poll = client.get(f"/api/runs/{job_id}").json()
-    assert poll["status"] == "done"
+    assert r.json()["status"] == "queued"
+    run_id = r.json()["id"]
+    poll = client.get(f"/api/runs/{run_id}").json()
+    assert poll["status"] == "completed"
     assert poll["report"]["overall"]["pass_k_rate"] == 1.0
 
 
-def test_run_self_grading_guard_400(tmp_path):
-    r = _client(tmp_path).post("/api/runs", json={"model": "openai/gpt-4o",
-                                                  "grader": "openai/gpt-4o", "judge": "llm"})
-    assert r.status_code == 400 and "self-grading" in r.json()["detail"]
+def test_run_self_grading_is_a_machine_readable_blocker(tmp_path):
+    r = _client(tmp_path).post("/api/runs", json={
+        "model": "ollama/test", "grader": "ollama/test", "engine": "llm",
+    })
+    assert r.status_code == 422
+    assert {blocker["code"] for blocker in r.json()["detail"]} == {"self_grading"}
 
 
 def test_run_llm_without_grader_422(tmp_path):
-    r = _client(tmp_path).post("/api/runs", json={"model": "openai/gpt-4o", "judge": "llm"})
-    assert r.status_code == 422
+    r = _client(tmp_path).post("/api/runs", json={"model": "ollama/test", "engine": "llm"})
+    assert r.status_code == 422 and r.json()["detail"][0]["code"] == "grader_required"
 
 
-def test_run_rejects_out_of_range_epochs(tmp_path):
-    # epochs=0 used to sail straight into inspect_ai and die there; bounds match the UI (1..10)
+def test_run_missing_key_and_unknown_suite_are_blockers(tmp_path, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    missing_key = _client(tmp_path).post("/api/runs", json={"model": "openai/gpt-4o"})
+    unknown_suite = _client(tmp_path).post("/api/runs", json={
+        "model": "ollama/test", "suite": "unknown",
+    })
+    assert missing_key.status_code == 422
+    assert missing_key.json()["detail"][0]["code"] == "not_connected"
+    assert unknown_suite.status_code == 422
+    assert unknown_suite.json()["detail"][0]["code"] == "unknown_suite"
+
+
+def test_run_rejects_out_of_range_k(tmp_path):
     client = _client(tmp_path)
-    base = {"model": "openai/gpt-4o", "judge": "deterministic"}
-    assert client.post("/api/runs", json={**base, "epochs": 0}).status_code == 422
-    assert client.post("/api/runs", json={**base, "epochs": 11}).status_code == 422
+    base = {"model": "ollama/test", "engine": "deterministic"}
+    assert client.post("/api/runs", json={**base, "k": 0}).status_code == 422
+    assert client.post("/api/runs", json={**base, "k": 11}).status_code == 422
 
 
 def test_run_surfaces_runner_valueerror_as_error_status(tmp_path):
-    def _bad(req):
+    def _bad(**_kwargs):
         raise ValueError("grader must differ from the model under test")
-    client = _client(tmp_path, eval_runner=_bad)
-    r = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
-                                       "grader": "openai/gpt-4o", "judge": "llm"})
-    job_id = r.json()["job_id"]
-    poll = client.get(f"/api/runs/{job_id}").json()
-    assert poll["status"] == "error" and "differ" in poll["error"]
+    client = _client(tmp_path, folder_eval_runner=_bad)
+    r = client.post("/api/runs", json={"model": "ollama/test"})
+    poll = client.get(f"/api/runs/{r.json()['id']}").json()
+    assert poll["status"] == "failed" and "differ" in poll["error"]
 
 
 def test_unknown_job_404(tmp_path):
@@ -398,47 +455,88 @@ def test_unknown_job_404(tmp_path):
 
 
 def test_runs_history_and_trends_after_a_run(tmp_path):
-    client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
-    client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
-                                   "grader": "openai/gpt-4o", "judge": "llm", "org": "toy"})
+    client = _client(tmp_path)
+    created = client.post("/api/runs", json={"model": "ollama/test"}).json()
     hist = client.get("/api/runs").json()
-    assert len(hist) == 1 and hist[0]["status"] == "done" and hist[0]["pass_k_rate"] == 1.0
-    assert hist[0]["org"] == "toy" and hist[0]["model"] == "anthropic/claude-sonnet-4-6"
-    trends = client.get("/api/trends").json()
-    assert len(trends) == 1 and trends[0]["pass_k_rate"] == 1.0 and "none" in trends[0]["categories"]
-    # filter that excludes it -> empty
-    assert client.get("/api/trends", params={"org": "nope"}).json() == []
+    run = next(row for row in hist if row["id"] == created["id"])
+    assert run["status"] == "completed" and run["verdict"]["pass_k_rate"] == 1.0
+    assert run["request"]["suite"] == "starter" and run["request"]["model"] == "ollama/test"
+    assert all(row["report"] is None and row["receipt"] is None for row in hist)
+    assert client.get("/api/trends").json() == []  # legacy sqlite trends are untouched
 
 
-def test_run_persists_across_restart_same_db(tmp_path):
-    from tessera.api.schemas import RunRequest
-    db = tmp_path / "runs.db"
-    store = RunStore(db)
-    jid = store.create(RunRequest(model="m", judge="deterministic", org="toy"))
-    # a complete report shape — the response contract (RunStatus.report) rejects partials
-    store.complete(jid, {
-        "header": {"model": "m", "engine": "deterministic", "grader": None, "org": "toy",
-                   "k": 1, "created": "2026-06-03", "location": "x.eval"},
-        "overall": {"pass_k_rate": 1.0, "mean_rate": 1.0},
-        "categories": [],
-        "axes": {"accuracy_rate": None, "provenance_rate": 1.0, "refusal_rate": None,
-                 "n_answer_epochs": 0, "n_refuse_epochs": 0, "n_total_epochs": 1},
-        "probes": [],
-    })
-    # a brand-new app on the SAME db file still sees the finished run (durable)
-    fresh = create_app(run_store=RunStore(db), blueprint_dir=tmp_path / "bp2",
-                       log_dirs={}, schedule=_inline_schedule)
-    got = TestClient(fresh).get(f"/api/runs/{jid}").json()
-    assert got["status"] == "done" and got["report"]["overall"]["pass_k_rate"] == 1.0
+def test_run_persists_across_restart_same_home(tmp_path):
+    run_id = _client(tmp_path).post("/api/runs", json={"model": "ollama/test"}).json()["id"]
+    fresh = create_app(
+        home=tmp_path / "home", run_store=RunStore(tmp_path / "fresh.db"),
+        blueprint_dir=tmp_path / "bp2", log_dirs={}, schedule=_inline_schedule,
+    )
+    got = TestClient(fresh).get(f"/api/runs/{run_id}").json()
+    assert got["status"] == "completed" and got["report"]["overall"]["pass_k_rate"] == 1.0
 
 
 def test_run_events_sse_terminal(tmp_path):
-    client = _client(tmp_path, eval_runner=lambda req: _eval_log([_answer("q1", 1)]))
-    jid = client.post("/api/runs", json={"model": "anthropic/claude-sonnet-4-6",
-                                         "grader": "openai/gpt-4o", "judge": "llm", "org": "toy"}).json()["job_id"]
-    r = client.get(f"/api/runs/{jid}/events")
+    client = _client(tmp_path)
+    run_id = client.post("/api/runs", json={"model": "ollama/test"}).json()["id"]
+    r = client.get(f"/api/runs/{run_id}/events")
     assert r.status_code == 200 and "text/event-stream" in r.headers["content-type"]
-    assert "data:" in r.text and "done" in r.text
+    assert "data:" in r.text and "completed" in r.text
+
+
+def test_run_archive_round_trip_and_bundled_conflict(tmp_path):
+    client = _client(tmp_path)
+    run_id = client.post("/api/runs", json={"model": "ollama/test"}).json()["id"]
+    archived = client.post(f"/api/runs/{run_id}/archive")
+    assert archived.status_code == 200 and archived.json()["archived"] is True
+    assert run_id not in {row["id"] for row in client.get("/api/runs").json()}
+    included = client.get("/api/runs?include_archived=true").json()
+    assert run_id in {row["id"] for row in included}
+    restored = client.post(f"/api/runs/{run_id}/archive", json={"archived": False})
+    assert restored.json()["archived"] is False
+    assert client.post("/api/runs/first-contact/archive").status_code == 409
+
+
+def test_run_import_returns_completed_payload(tmp_path):
+    client = _client(tmp_path)
+    source = Path("src/tessera/data/examples/first-contact/log.eval")
+    with source.open("rb") as handle:
+        response = client.post(
+            "/api/runs/import",
+            files={"file": ("first-contact.eval", handle, "application/octet-stream")},
+        )
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+    assert response.json()["verdict"]["pass_k_rate"] == 0.75
+
+
+def test_run_import_rejects_an_unreadable_log(tmp_path):
+    response = _client(tmp_path).post(
+        "/api/runs/import",
+        files={"file": ("broken.eval", b"not an inspect log", "application/octet-stream")},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"].startswith("cannot read log:")
+
+
+def test_folder_and_sqlite_report_serialization_parity(tmp_path):
+    from tessera.api.schemas import RunRequest
+    from tessera.report.serialize import report_to_dict
+
+    captured = {}
+
+    def runner(**kwargs):
+        captured["log"] = _folder_eval(**kwargs)
+        return captured["log"]
+
+    client = _client(tmp_path, folder_eval_runner=runner)
+    run_id = client.post("/api/runs", json={"model": "ollama/test"}).json()["id"]
+    folder_report = client.get(f"/api/runs/{run_id}").json()["report"]
+    expected = report_to_dict(captured["log"])
+
+    sqlite = RunStore(tmp_path / "parity.db")
+    job_id = sqlite.create(RunRequest(model="ollama/test", judge="deterministic"))
+    sqlite.complete(job_id, expected)
+    assert folder_report == expected == sqlite.get(job_id)["report"]
 
 
 # ----- Datasets (blueprints) -----
@@ -561,6 +659,7 @@ def _stub_cache(models=(), statuses=None):
 
 def _client_with_cache(tmp_path, cache):
     return TestClient(create_app(
+        home=tmp_path / "home",
         eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
         log_dirs={"logs": tmp_path / "logs"},
         schedule=_inline_schedule,

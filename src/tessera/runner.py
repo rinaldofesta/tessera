@@ -1,18 +1,27 @@
-"""Pure planning for Tessera runs; no model calls or filesystem writes."""
+"""Planning and folder-backed execution for Tessera runs."""
 
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+import threading
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from pydantic import ValidationError
 
+from tessera.api.receipts import file_sha256, receipt_from_log
+from tessera.api.scrub import scrub_error
 from tessera.catalog import resolve_suite
 from tessera.contract import Plan, Run, RunSpec
 from tessera.errors import SpecError
 from tessera.report.compare import diagnose_report
-from tessera.store import RunRecord
+from tessera.report.log_adapter import read_log
+from tessera.report.render import render_markdown
+from tessera.report.serialize import report_to_dict
+from tessera.store import RunRecord, RunStore
+
+_EVAL_LOCK = threading.Lock()
+_MISSING = object()
 
 
 def _absolute(path) -> str:
@@ -24,12 +33,15 @@ def _artifact_path(record: RunRecord, name: str) -> str | None:
     return _absolute(path) if path.is_file() else None
 
 
-def run_result_payload(record: RunRecord, *, min_pass_k: float | None = None) -> dict:
+def run_result_payload(
+    record: RunRecord, *, min_pass_k: float | None = None,
+    include_report: bool = True,
+) -> dict:
     """Build the ADR-0002 payload; ``ok`` is operational status, not reliability."""
     data = record.data
     status = data["status"]
     report = record.report()
-    receipt = record.receipt()
+    receipt = record.receipt() if include_report else None
     verdict = None
     gate = None
     diagnostics: list[dict] = []
@@ -50,7 +62,8 @@ def run_result_payload(record: RunRecord, *, min_pass_k: float | None = None) ->
         }
         if min_pass_k is not None:
             gate = {"min_pass_k": min_pass_k, "passed": pass_k_rate >= min_pass_k}
-        diagnostics = diagnose_report(report)
+        if include_report:  # list rows carry the verdict only; details come with the report
+            diagnostics = diagnose_report(report)
 
     payload = Run(
         ok=status in ("queued", "running", "completed"),
@@ -65,8 +78,8 @@ def run_result_payload(record: RunRecord, *, min_pass_k: float | None = None) ->
         request=data["request"],
         verdict=verdict,
         gate=gate,
-        report=report,
-        receipt=receipt,
+        report=report if include_report else None,
+        receipt=receipt if include_report else None,
         diagnostics=diagnostics,
         paths={
             "dir": _absolute(record.dir),
@@ -77,6 +90,102 @@ def run_result_payload(record: RunRecord, *, min_pass_k: float | None = None) ->
         error=data["error"],
     )
     return payload.model_dump()
+
+
+def _default_eval(**kwargs):
+    """Run Inspect with the task function, then re-read its persisted log."""
+    import inspect_ai
+
+    from tessera.evals.task import tessera_probes
+
+    logs = inspect_ai.eval(tessera_probes, **kwargs)
+    return read_log(Path(logs[0].location))
+
+
+def _restore_env(env, name: str, previous) -> None:
+    if previous is _MISSING:
+        env.pop(name, None)
+    else:
+        env[name] = previous
+
+
+def execute(
+    record: RunRecord,
+    spec: dict,
+    *,
+    store: RunStore,
+    suites_dir: Path,
+    eval_fn: Callable[..., object] | None = None,
+    env=os.environ,
+) -> dict:
+    """Execute one run into its folder and always return its final ADR-0002 payload.
+
+    Inspect constructs the task after reading process-global ``TESSERA_OUT`` and
+    ``TESSERA_BLUEPRINT_DIR``. A module lock therefore serializes evals in this process;
+    runs waiting for it deliberately remain ``queued`` until their eval actually starts.
+    """
+    try:
+        planned = plan(spec, env=env, suites_dir=suites_dir)
+        if not planned["ready"]:
+            message = "; ".join(blocker["message"] for blocker in planned["blockers"])
+            store.mark_failed(record.id, message)
+            return run_result_payload(store.get(record.id))
+
+        request = planned["request"]
+        suite = planned["suite"]
+        run_dir = Path(record.dir)
+        runner = eval_fn or _default_eval
+
+        with _EVAL_LOCK:
+            store.mark_running(record.id)
+            previous_out = env.get("TESSERA_OUT", _MISSING)
+            previous_blueprints = env.get("TESSERA_BLUEPRINT_DIR", _MISSING)
+            try:
+                env["TESSERA_OUT"] = str(run_dir / "org")
+                env["TESSERA_BLUEPRINT_DIR"] = str(suites_dir)
+                log = runner(
+                    model=request["model"],
+                    task_args={
+                        "judge": request["engine"],
+                        "org": suite["org"],
+                        "k": request["k"],
+                        "scaffold": request["scaffold"],
+                        "seed": request["seed"],
+                    },
+                    log_dir=str(run_dir),
+                    display="none",
+                    model_roles=(
+                        {"grader": request["grader"]} if request["grader"] else None
+                    ),
+                )
+            finally:
+                _restore_env(env, "TESSERA_OUT", previous_out)
+                _restore_env(env, "TESSERA_BLUEPRINT_DIR", previous_blueprints)
+
+            location = Path(log.location)
+            report = report_to_dict(log)
+            receipt = receipt_from_log(
+                log, report, artifact_sha256=file_sha256(location),
+            )
+            store.mark_completed(
+                record.id,
+                report=report,
+                receipt=receipt,
+                markdown=render_markdown(report),
+                log_path=location,
+            )
+            try:
+                if (
+                    location.name != "log.eval"
+                    and location.resolve().is_relative_to(run_dir.resolve())
+                ):
+                    location.unlink(missing_ok=True)
+            except OSError:
+                pass
+    except Exception as exc:  # noqa: BLE001 — execution failures are durable run state
+        store.mark_failed(record.id, scrub_error(f"{type(exc).__name__}: {exc}"))
+
+    return run_result_payload(store.get(record.id))
 
 
 def _validated_spec(spec: dict | RunSpec) -> RunSpec:

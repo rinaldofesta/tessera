@@ -69,6 +69,7 @@ def _client(tmp_path: Path, *, eval_runner=None, preflight_runner=None) -> TestC
                     location=str(tmp_path / f"{req.model.replace('/', '-')}.eval"))
 
     app = create_app(
+        home=tmp_path / "home",
         eval_runner=eval_runner or runner,
         run_store=RunStore(tmp_path / "runs.db"),
         log_dirs={"examples": examples, "logs": tmp_path / "logs"},
@@ -79,10 +80,30 @@ def _client(tmp_path: Path, *, eval_runner=None, preflight_runner=None) -> TestC
     return TestClient(app)
 
 
+def _legacy_run(client: TestClient, model: str, *, seed: int = 0) -> str:
+    """Drive the preserved sqlite runner directly; /api/runs now owns folder runs."""
+    import anyio
+
+    from tessera.api.runner import run_eval_job
+    from tessera.api.schemas import RunRequest
+
+    request = RunRequest(model=model, judge="deterministic", seed=seed)
+    store = client.app.state.run_store
+    job_id = store.create(request)
+    anyio.run(
+        run_eval_job,
+        job_id,
+        request,
+        store,
+        client.app.state.eval_runner,
+        client.app.state.workbench_store,
+    )
+    return job_id
+
+
 def test_library_indexes_files_and_api_runs_with_receipts(tmp_path):
     client = _client(tmp_path)
-    started = client.post("/api/runs", json={"model": "provider/b", "judge": "deterministic"})
-    assert started.status_code == 200
+    _legacy_run(client, "provider/b")
     rows = client.get("/api/evaluations").json()
     assert {row["kind"] for row in rows} == {"pinned", "run"}
     run = next(row for row in rows if row["kind"] == "run")
@@ -103,28 +124,26 @@ def test_library_never_returns_a_configured_credential(tmp_path, monkeypatch):
 
 def test_comparison_pairs_probe_epochs_and_rejects_hidden_protocol_drift(tmp_path):
     client = _client(tmp_path)
-    first = client.post("/api/runs", json={"model": "provider/a", "judge": "deterministic"}).json()
-    second = client.post("/api/runs", json={"model": "provider/b", "judge": "deterministic"}).json()
+    first = _legacy_run(client, "provider/a")
+    second = _legacy_run(client, "provider/b")
     comparison = client.post("/api/comparisons", json={
-        "evaluation_a": f"run:{first['job_id']}",
-        "evaluation_b": f"run:{second['job_id']}", "intervention": "model",
+        "evaluation_a": f"run:{first}",
+        "evaluation_b": f"run:{second}", "intervention": "model",
     }).json()
     assert comparison["compatible"] is True
     assert comparison["overall"] == {
         "matched": 2, "a_wins": 0, "b_wins": 1, "both_pass": 1,
         "both_fail": 0, "discordant": 1, "p_value": 1.0, "dropped": [],
     }
-    diagnostics = client.get(f"/api/evaluations/run:{first['job_id']}/diagnostics").json()
+    diagnostics = client.get(f"/api/evaluations/run:{first}/diagnostics").json()
     assert {item["kind"] for item in diagnostics} >= {
         "accuracy", "provenance", "answer_format", "missing_source", "flaky_probe",
     }
 
-    changed_seed = client.post("/api/runs", json={
-        "model": "provider/b", "judge": "deterministic", "seed": 9,
-    }).json()
+    changed_seed = _legacy_run(client, "provider/b", seed=9)
     drift = client.post("/api/comparisons", json={
-        "evaluation_a": f"run:{first['job_id']}",
-        "evaluation_b": f"run:{changed_seed['job_id']}", "intervention": "model",
+        "evaluation_a": f"run:{first}",
+        "evaluation_b": f"run:{changed_seed}", "intervention": "model",
     }).json()
     assert drift["compatible"] is False and "seed" in drift["unexpected_dimensions"]
 

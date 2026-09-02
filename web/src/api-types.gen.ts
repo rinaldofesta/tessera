@@ -460,7 +460,7 @@ export interface paths {
         };
         /**
          * List Runs
-         * @description Run history (newest first) with headline rates — for the monitor + dashboard.
+         * @description Run history with verdicts but without heavyweight reports and receipts.
          */
         get: operations["list_runs_api_runs_get"];
         put?: never;
@@ -489,7 +489,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs/{job_id}": {
+    "/api/runs/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Run */
+        post: operations["import_run_api_runs_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -497,7 +514,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Run */
-        get: operations["get_run_api_runs__job_id__get"];
+        get: operations["get_run_api_runs__run_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -506,7 +523,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs/{job_id}/archive": {
+    "/api/runs/{run_id}/archive": {
         parameters: {
             query?: never;
             header?: never;
@@ -516,14 +533,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Archive Run */
-        post: operations["archive_run_api_runs__job_id__archive_post"];
+        post: operations["archive_run_api_runs__run_id__archive_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/runs/{job_id}/events": {
+    "/api/runs/{run_id}/events": {
         parameters: {
             query?: never;
             header?: never;
@@ -535,7 +552,7 @@ export interface paths {
          * @description Server-Sent Events stream of run status until terminal. SSE (not WebSocket) is
          *     simpler and more air-gap-friendly; the FE shows live status off this.
          */
-        get: operations["run_events_api_runs__job_id__events_get"];
+        get: operations["run_events_api_runs__run_id__events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -637,6 +654,11 @@ export interface components {
         };
         /** Body_import_evaluation_api_evaluations_import_post */
         Body_import_evaluation_api_evaluations_import_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_import_run_api_runs_import_post */
+        Body_import_run_api_runs_import_post: {
             /** File */
             file: string;
         };
@@ -1094,6 +1116,13 @@ export interface components {
              */
             seed: number;
         };
+        /** Gate */
+        Gate: {
+            /** Min Pass K */
+            min_pass_k: number;
+            /** Passed */
+            passed: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1523,6 +1552,54 @@ export interface components {
          * @enum {string}
          */
         ResolutionRule: "recency_wins" | "authority_wins";
+        /** Run */
+        Run: {
+            /** Archived */
+            archived: boolean;
+            /** Created At */
+            created_at: string;
+            /** Diagnostics */
+            diagnostics: components["schemas"]["Diagnostic"][];
+            /** Error */
+            error: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            gate: components["schemas"]["Gate"] | null;
+            /** Id */
+            id: string;
+            /** Ok */
+            ok: boolean;
+            paths: components["schemas"]["RunPaths"];
+            receipt: components["schemas"]["RunReceipt"] | null;
+            report: components["schemas"]["Report"] | null;
+            request: components["schemas"]["RunRequestSpec"];
+            /** Schema Version */
+            schema_version: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "run" | "import" | "bundled";
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "completed" | "failed" | "interrupted";
+            verdict: components["schemas"]["Verdict"] | null;
+        };
+        /** RunPaths */
+        RunPaths: {
+            /** Dir */
+            dir: string;
+            /** Log */
+            log: string | null;
+            /** Report Json */
+            report_json: string | null;
+            /** Report Md */
+            report_md: string | null;
+        };
         /** RunReceipt */
         RunReceipt: {
             artifact: components["schemas"]["ReceiptArtifact"];
@@ -1535,39 +1612,25 @@ export interface components {
             timing: components["schemas"]["ReceiptTiming"];
             usage: components["schemas"]["ReceiptUsage"];
         };
-        /** RunRequest */
-        RunRequest: {
+        /** RunRequestSpec */
+        RunRequestSpec: {
             /**
-             * Epochs
-             * @default 3
-             */
-            epochs: number;
-            /** Grader */
-            grader?: string | null;
-            /**
-             * Judge
-             * @default deterministic
+             * Engine
              * @enum {string}
              */
-            judge: "llm" | "deterministic";
+            engine: "deterministic" | "llm";
+            /** Grader */
+            grader: string | null;
+            /** K */
+            k: number;
             /** Model */
             model: string;
-            /**
-             * Org
-             * @default toy
-             */
-            org: string;
-            /**
-             * Scaffold
-             * @default baseline
-             * @enum {string}
-             */
-            scaffold: "baseline" | "refusal_aware";
-            /**
-             * Seed
-             * @default 0
-             */
+            /** Scaffold */
+            scaffold: string;
+            /** Seed */
             seed: number;
+            /** Suite */
+            suite: string;
         };
         /**
          * RunSpec
@@ -1606,52 +1669,6 @@ export interface components {
              */
             suite: string;
         };
-        /** RunStatus */
-        RunStatus: {
-            /** Error */
-            error: string | null;
-            report: components["schemas"]["Report"] | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "running" | "done" | "error";
-        };
-        /** RunSummary */
-        RunSummary: {
-            /**
-             * Archived
-             * @default false
-             */
-            archived: boolean;
-            /** Created At */
-            created_at: string;
-            /** Epochs */
-            epochs: number;
-            /** Error */
-            error: string | null;
-            /** Finished At */
-            finished_at: string | null;
-            /** Grader */
-            grader: string | null;
-            /** Id */
-            id: string;
-            /** Judge */
-            judge: string;
-            /** Mean Rate */
-            mean_rate: number | null;
-            /** Model */
-            model: string;
-            /** Org */
-            org: string;
-            /** Pass K Rate */
-            pass_k_rate: number | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "running" | "done" | "error";
-        };
         /** SiloField */
         SiloField: {
             /** Asserted At */
@@ -1670,16 +1687,6 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "offline" | "skipped";
-        };
-        /** StartRunResult */
-        StartRunResult: {
-            /** Job Id */
-            job_id: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "running" | "done" | "error";
         };
         /** TrendPoint */
         TrendPoint: {
@@ -1729,6 +1736,18 @@ export interface components {
             errors: components["schemas"]["ValidationIssue"][];
             /** Ok */
             ok: boolean;
+        };
+        /** Verdict */
+        Verdict: {
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "reliable" | "inconsistent" | "unreliable";
+            /** Mean Rate */
+            mean_rate: number;
+            /** Pass K Rate */
+            pass_k_rate: number;
         };
     };
     responses: never;
@@ -2569,7 +2588,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunSummary"][];
+                    "application/json": components["schemas"]["Run"][];
                 };
             };
             /** @description Validation Error */
@@ -2592,7 +2611,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RunRequest"];
+                "application/json": components["schemas"]["RunSpec"];
             };
         };
         responses: {
@@ -2602,7 +2621,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StartRunResult"];
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Validation Error */
@@ -2649,16 +2668,18 @@ export interface operations {
             };
         };
     };
-    get_run_api_runs__job_id__get: {
+    import_run_api_runs_import_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                job_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_run_api_runs_import_post"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2666,7 +2687,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunStatus"];
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Validation Error */
@@ -2680,12 +2701,43 @@ export interface operations {
             };
         };
     };
-    archive_run_api_runs__job_id__archive_post: {
+    get_run_api_runs__run_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_run_api_runs__run_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
             };
             cookie?: never;
         };
@@ -2701,7 +2753,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunSummary"];
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Validation Error */
@@ -2715,12 +2767,12 @@ export interface operations {
             };
         };
     };
-    run_events_api_runs__job_id__events_get: {
+    run_events_api_runs__run_id__events_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                run_id: string;
             };
             cookie?: never;
         };

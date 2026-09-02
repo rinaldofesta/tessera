@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import get_args
 
 from fastapi.testclient import TestClient
 
@@ -13,6 +12,7 @@ SENTINEL = "sk-" + "S3NT1NEL" * 4
 
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
+        home=tmp_path / "home",
         eval_runner=lambda req: None,
         log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
@@ -47,29 +47,32 @@ def test_existing_closed_enum_validation_still_returns_422(tmp_path):
 
 
 def test_llm_judge_requires_a_grader(tmp_path):
-    r = _client(tmp_path).post("/api/runs", json={"model": "m", "judge": "llm"})
+    r = _client(tmp_path).post("/api/runs", json={"model": "ollama/test", "engine": "llm"})
     assert r.status_code == 422
-    assert r.json()["detail"][0]["msg"] == "Value error, grader is required when judge is 'llm'"
+    assert r.json()["detail"][0]["message"] == "grader is required when engine is 'llm'"
 
 
 def test_deterministic_judge_rejects_a_grader(tmp_path):
     r = _client(tmp_path).post(
-        "/api/runs", json={"model": "m", "judge": "deterministic", "grader": "g"},
+        "/api/runs", json={
+            "model": "ollama/test", "engine": "deterministic", "grader": "ollama/grader",
+        },
     )
     assert r.status_code == 422
-    assert r.json()["detail"][0]["msg"] == "Value error, grader only applies to judge 'llm'"
+    assert r.json()["detail"][0]["message"] == "grader only applies to engine 'llm'"
 
 
 def test_a_model_only_request_uses_deterministic_defaults(tmp_path):
-    assert _client(tmp_path).post("/api/runs", json={"model": "m"}).status_code == 200
-    request = RunRequest(model="m")
-    assert (request.judge, request.org, request.epochs, request.scaffold, request.seed) == (
-        "deterministic", "toy", 3, "baseline", 0,
+    from tessera.contract import RunSpec
+
+    assert _client(tmp_path).post("/api/runs", json={"model": "ollama/test"}).status_code == 200
+    request = RunSpec(model="ollama/test")
+    assert (request.engine, request.suite, request.k, request.scaffold, request.seed) == (
+        "deterministic", "starter", 3, "baseline", 0,
     )
 
 
 def test_run_request_scaffolds_are_supported_by_the_task():
     from tessera.evals.task import _SCAFFOLDS
 
-    annotation = RunRequest.model_fields["scaffold"].annotation
-    assert set(get_args(annotation)) <= set(_SCAFFOLDS)
+    assert RunRequest.model_fields["scaffold"].default in _SCAFFOLDS

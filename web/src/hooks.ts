@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
-import type { Report, RunStatus } from "./types";
+import { toLegacyStatus } from "./lib/runStatus";
+import type { Report, Run, RunStatus } from "./types";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -89,7 +90,8 @@ export function useRunStatus(id: string): RunStatusState {
 
     const source = api.watchRun(id);
     source.onmessage = (event) => {
-      const next = JSON.parse(event.data) as { status: RunStatus["status"]; error: string | null };
+      const eventData = JSON.parse(event.data) as { status: Run["status"]; error: string | null };
+      const next = { ...eventData, status: toLegacyStatus(eventData.status) };
       if (!active) return;
       setState((current) => ({ ...current, status: next.status, error: next.error ?? current.error }));
       if (next.status !== "running") {

@@ -1,16 +1,28 @@
+import { toLegacyStatus } from "@/lib/runStatus";
 import type {
   Artifacts, Blueprint, BlueprintMeta, EvalSetup, LogMeta, Provider, ProviderUpdate,
   ComparisonIntervention, ComparisonResult, Diagnostic, EvaluationSummary, Experiment,
   ExperimentComparison, ExperimentRequest, ExperimentStarted, PreflightResult,
-  LeaderboardManifest, RescanResult, Report, RunConfig, RunStatus, RunSummary, StartRunResult, TrendPoint,
+  LeaderboardManifest, RescanResult, Report, Run, RunConfig, RunSpec, RunStatus, RunSummary,
+  StartRunResult, TrendPoint,
   ValidationResult,
 } from "./types";
+
+function messageForDetail(detail: unknown): string {
+  if (Array.isArray(detail) && detail.every(
+    (blocker) => typeof blocker === "object" && blocker !== null &&
+      typeof (blocker as { message?: unknown }).message === "string",
+  )) {
+    return detail.map((blocker) => (blocker as { message: string }).message).join("; ");
+  }
+  return typeof detail === "string" ? detail : JSON.stringify(detail);
+}
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail: unknown = res.statusText;
     try { detail = (await res.json()).detail ?? detail; } catch { /* ignore */ }
-    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status, detail);
+    throw new ApiError(messageForDetail(detail), res.status, detail);
   }
   return res.json() as Promise<T>;
 }
@@ -19,6 +31,44 @@ export class ApiError extends Error {
   constructor(message: string, public status: number, public detail: unknown) {
     super(message);
   }
+}
+
+export function toSummary(run: Run): RunSummary {
+  return {
+    id: run.id,
+    status: toLegacyStatus(run.status),
+    error: run.error,
+    model: run.request.model,
+    org: run.request.suite,
+    judge: run.request.engine,
+    grader: run.request.grader,
+    epochs: run.request.k,
+    created_at: run.created_at,
+    finished_at: run.finished_at,
+    pass_k_rate: run.verdict?.pass_k_rate ?? null,
+    mean_rate: run.verdict?.mean_rate ?? null,
+    archived: run.archived,
+  };
+}
+
+export function toStatus(run: Run): RunStatus {
+  return {
+    status: toLegacyStatus(run.status),
+    report: run.report,
+    error: run.error,
+  };
+}
+
+export function toSpec(cfg: RunConfig): RunSpec {
+  return {
+    model: cfg.model,
+    engine: cfg.judge,
+    grader: cfg.grader,
+    suite: cfg.org,
+    k: cfg.epochs,
+    scaffold: cfg.scaffold,
+    seed: cfg.seed,
+  };
 }
 
 export const api = {
@@ -62,18 +112,24 @@ export const api = {
   rescan: () =>
     fetch("/api/model-discovery/rescan", { method: "POST" }).then(j<RescanResult>),
   startRun: (cfg: RunConfig) =>
-    fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) })
-      .then(j<StartRunResult>),
-  getRun: (id: string) => fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<RunStatus>),
+    fetch("/api/runs", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(toSpec(cfg)),
+    }).then(j<Run>).then((run): StartRunResult => ({
+      job_id: run.id, status: toSummary(run).status,
+    })),
+  getRun: (id: string) =>
+    fetch(`/api/runs/${encodeURIComponent(id)}`).then(j<Run>).then(toStatus),
   // EventSource isn't fetch-shaped, but network access still routes through this module.
   watchRun: (id: string) => new EventSource(`/api/runs/${id}/events`),
   listRuns: (includeArchived = false) =>
-    fetch(`/api/runs${includeArchived ? "?include_archived=true" : ""}`).then(j<RunSummary[]>),
+    fetch(`/api/runs${includeArchived ? "?include_archived=true" : ""}`)
+      .then(j<Run[]>).then((runs) => runs.map(toSummary)),
   setRunArchived: (id: string, archived: boolean) =>
     fetch(`/api/runs/${encodeURIComponent(id)}/archive`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ archived }),
-    }).then(j<RunSummary>),
+    }).then(j<Run>).then(toSummary),
   leaderboard: () => fetch("/api/leaderboard").then(j<LeaderboardManifest>),
   trends: (q: { org?: string; model?: string; engine?: string } = {}) => {
     const p = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);

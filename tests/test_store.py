@@ -410,3 +410,22 @@ def test_reconcile_skips_a_run_that_becomes_unreadable_mid_sweep(tmp_path, monke
 
     assert store.reconcile() == []
     assert any(running.id in d for d in store.diagnostics)
+
+
+def test_failed_completion_leaves_no_partial_artifacts(tmp_path, monkeypatch):
+    store = RunStore(tmp_path)
+    run_id = store.create(_request()).id
+    store.mark_running(run_id)
+    real_write = store_module._write_atomic
+    def fail_on_receipt(path, payload):
+        if path.name == "receipt.json":
+            raise OSError("disk full")
+        real_write(path, payload)
+    monkeypatch.setattr(store_module, "_write_atomic", fail_on_receipt)
+
+    with pytest.raises(OSError, match="disk full"):
+        store.mark_completed(run_id, report={"overall": {}}, receipt={}, markdown="# r", log_path=None)
+
+    directory = Path(store.get(run_id).dir)
+    assert not (directory / "report.json").exists() and not (directory / "report.md").exists()
+    assert store.get(run_id).data["status"] == "running"

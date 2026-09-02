@@ -8,6 +8,7 @@ from pathlib import Path
 from inspect_ai.log import read_eval_log
 
 from tessera.api.receipts import file_sha256, receipt_from_log
+from tessera.catalog import suite_name_for_org
 from tessera.report.render import render_markdown
 from tessera.report.serialize import report_to_dict
 from tessera.store import _json_bytes, _write_atomic
@@ -47,7 +48,7 @@ def derive_example(example_dir: Path) -> dict[str, bytes]:
         "started_at": receipt["timing"]["started_at"],
         "finished_at": receipt["timing"]["completed_at"],
         "request": {
-            "suite": header.get("org") or "",
+            "suite": suite_name_for_org(header.get("org")),
             "model": header["model"],
             "engine": header["engine"],
             "grader": header.get("grader"),

@@ -11,6 +11,8 @@ create_app(discovery_cache=...); this only changes the default.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from tessera.api.discovery.types import SourceResult
@@ -32,6 +34,19 @@ class _QuietCache:
 
     def invalidate(self):
         pass
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolated_tessera_home(tmp_path_factory):
+    """No test may read or write the user's real ~/.tessera tree."""
+    test_home = tmp_path_factory.mktemp("tessera-home")
+    previous = os.environ.get("TESSERA_HOME")
+    os.environ["TESSERA_HOME"] = str(test_home)
+    yield test_home
+    if previous is None:
+        os.environ.pop("TESSERA_HOME", None)
+    else:
+        os.environ["TESSERA_HOME"] = previous
 
 
 @pytest.fixture(autouse=True)
