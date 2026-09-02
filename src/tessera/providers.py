@@ -51,8 +51,8 @@ def connect(
     """Validate and persist supported provider fields, returning status only.
 
     `invalidate` runs after the write lands, exactly like routes_providers.py's
-    save_provider(): a caller sitting on stale discovery/preflight caches (an app,
-    a long-lived process) must pass its own callback or those caches keep reporting
+    save_provider(): a caller sitting on a stale discovery cache (an app or another
+    long-lived process) must pass its own callback or the cache keeps reporting
     the provider as unconfigured until they expire on their own."""
     spec = PROVIDERS.get(provider_id)
     if spec is None or not spec.needs_credentials:
@@ -96,8 +96,7 @@ def _generate_once(model: str, prompt: str) -> object:
 
     async def generate():
         # cache=False: this call exists to prove the provider is reachable RIGHT NOW,
-        # same as api/preflight.py's default_preflight_runner — a cached hit would
-        # report "ok" for a provider that just went unreachable.
+        # A cached hit could report "ok" for a provider that just went unreachable.
         return await get_model(model).generate(prompt, cache=False)
 
     return asyncio.run(generate())
@@ -106,7 +105,7 @@ def _generate_once(model: str, prompt: str) -> object:
 def probe(model: str, *, generate: Callable[[str], str] | None = None) -> dict:
     """Run one uncached model call and report only reachability and elapsed time.
 
-    Sync on purpose, like inspect_ai.eval() (see api/runner.py): it owns its own
+    Sync on purpose, like inspect_ai.eval(): it owns its own
     asyncio runtime via asyncio.run(), so a caller already on an event loop thread
     must offload it — e.g. `await anyio.to_thread.run_sync(probe, model)` — never
     await/call it directly from an async def route."""

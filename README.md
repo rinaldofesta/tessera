@@ -29,7 +29,7 @@ uv pip install -e .
 .venv/bin/tessera report first-contact
 
 tessera_demo_dir=$(mktemp -d)
-.venv/bin/tessera-variant export --seed 42 --out "$tessera_demo_dir"
+.venv/bin/python -m tessera.factory.export --seed 42 --out "$tessera_demo_dir"
 ```
 
 The report ends at `pass^3 75%`: all answerable probes were accurate, every source was
@@ -131,7 +131,7 @@ src/tessera/
   models.py             [STANDARD] declarative blueprint: Claims + Probes (the eval's source of truth)
   examples/toy_org.py   [STANDARD] four probes spanning the full conflict taxonomy (teaching artifact)
   examples/meridian_org.py [STANDARD] the public reference org: 22 probes, the benchmark (ADR-0006)
-  examples/your_org.py  [STANDARD] commented bring-your-own-data starter (one probe per conflict type)
+  data/templates/suite.json [STANDARD] bring-your-own-data starter (one probe per conflict type)
   compiler.py           [RENEWABLE] blueprint -> a synthetic org on disk (CRM db.json, Docs, manifest.json)
   silos/                pure data-access functions over the compiled org
   mcp/                  FastMCP stdio servers that serve the org to the agent (crm, docs)
@@ -141,10 +141,10 @@ src/tessera/
     judges.py           model-graded accuracy + refusal judges (the LLM engine)
     task.py             the runnable Inspect task (a react agent over MCP, pass^k epochs)
   factory/              the scenario factory (ADR-0008): generate_variant(seed) re-deals meridian's
-                        conflict graph per seed; salted-commitment holdout (CLI tessera-variant)
-  report/               tessera-report: a pure scorecard over an .eval log (no model)
-  api/                  FastAPI backend: logs / reports / blueprints / runs + SSE / trends (SQLite run store)
-web/                    the product UI: React + Vite + TypeScript SPA (Dashboard, Datasets, Run, Results)
+                        conflict graph per seed; salted-commitment holdout (module CLI)
+  report/               pure scorecards, comparisons, and leaderboard rendering
+  api/                  FastAPI backend: blueprints / folder-backed runs + SSE / providers / comparisons
+web/                    the product UI: React + Vite + TypeScript SPA
 blueprints/             datasets authored in the UI (JSON, gitignored, runnable by name)
 docs/                   interactive lessons (EN/IT), the scorecard field guide, ADRs (docs/adr/)
 tests/                  the whole suite — key-free, runs offline
@@ -243,21 +243,16 @@ immediately runnable — it appears in the Run picker and via `-T org=<name>`.
 
 > `TESSERA_MODELS` (comma-separated) overrides the model choices; "custom model…" in the form accepts any inspect_ai model string.
 
-**Bring your own data.** Copy `src/tessera/examples/your_org.py` (a commented starter
-with one probe of each conflict type), describe your facts as **Claims** and your
-questions as **Probes**, and register the builder in `src/tessera/examples/__init__.py`.
-Select it by name — `-T org=your`, `TESSERA_ORG=your`, or the dataset picker on the Run page:
+**Bring your own data.** Create an editable suite from the bundled starter, describe your
+facts as **Claims** and your questions as **Probes**, then validate and select it by name:
 
 ```bash
-inspect eval src/tessera/evals/task.py -T org=your \
-    -T judge=llm --model anthropic/claude-sonnet-4-6 \
-    --model-role grader=openai/gpt-4o
+tessera init acme
+tessera validate acme
+tessera run --suite acme --model anthropic/claude-sonnet-4-6
 ```
 
 ```text
-GET    /api/logs                  list pinned + run logs
-GET    /api/logs/{id}/report      full scorecard as JSON
-POST   /api/reports               upload an .eval -> JSON
 GET    /api/orgs                  runnable orgs: built-ins + saved datasets
 GET    /api/blueprints            list datasets        (POST to create;
 POST   /api/blueprints/validate   validation as JSON    GET|PUT|DELETE /{id})
@@ -265,7 +260,7 @@ POST   /api/blueprints/preview    compiled preview, in memory (key-free)
 POST   /api/runs                  start a gated live run
 GET    /api/runs                  run history           (GET /api/runs/{id} to poll)
 GET    /api/runs/{id}/events      SSE live status — what the Run view watches
-GET    /api/trends                pass^k/mean series for the Dashboard
+POST   /api/comparisons           paired comparison for two completed runs
 ```
 
 ## Development
@@ -326,7 +321,7 @@ through your `consulted` function.
 - [x] **Scorer hardening:** parametric `k` (`-T k=N`, any k ≥ 1), committed-answer accuracy (`det-2`), committed-answer refusal (`det-3`), per-field response-based provenance (`det-4`) — decisions on record in [docs/adr/](docs/adr/).
 - [x] **The public reference org + leaderboard:** **meridian** (`-T org=meridian`): 22 probes, ≥5 per conflict type, both resolution rules, anti-prior values, gated by adversarial review + live baselines (ADR-0006) — and the first **[leaderboard](docs/leaderboard.md)** run against it: deterministic engine, k=3, every 0/3 probe adjudicated from transcripts. Headline of that first five-model run: Sonnet 4.6 **86.4%**, GPT-4o **45.5%** (it skips the CRM leg of cross-silo joins), and *every* model in the run fabricated tie-breaks on the unresolvable column — a finding the 2026-07-06 rows overturned: **claude-fable-5** and **claude-opus-4-8** are the first to hold that column at 100%. The table carries eight single-model rows plus a MoA ensemble, ranked together with a `harness` column disclosing how each row was run (ADR-0011); the ensemble lands at #4 — below opus-4.8 alone, so the advisory sub-models added noise, not reliability.
 - [x] **Companion write-up:** the technical report on measuring enterprise-agent reliability ([docs/report.md](docs/report.md)) — the benchmark and the protocol as the contribution, the leaderboard, delegation, and scaffold-intervention measurements as the evidence.
-- [x] **The scenario factory + holdout protocol** (ADR-0008): `tessera.factory.generate_variant(seed)` (CLI `tessera-variant`) deterministically re-deals `meridian`'s conflict graph per seed and synthesizes fresh anti-prior values, holding the category counts fixed — `seed = 0` equals the authored meridian object-for-object, so the published baseline stays valid. A leaderboard's headline numbers run on a **withheld** seed, fixed in advance by a salted SHA-256 commitment and revealed afterward as `{seed, salt, factory_version}` so anyone can recompute the digest and reproduce the exact org. The family — not one fixed key — is what's published; this is the answer to the "public blueprint is the answer key" problem. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
+- [x] **The scenario factory + holdout protocol** (ADR-0008): `tessera.factory.generate_variant(seed)` (`python -m tessera.factory.export`) deterministically re-deals `meridian`'s conflict graph per seed and synthesizes fresh anti-prior values, holding the category counts fixed — `seed = 0` equals the authored meridian object-for-object, so the published baseline stays valid. A leaderboard's headline numbers run on a **withheld** seed, fixed in advance by a salted SHA-256 commitment and revealed afterward as `{seed, salt, factory_version}` so anyone can recompute the digest and reproduce the exact org. The family — not one fixed key — is what's published; this is the answer to the "public blueprint is the answer key" problem. The factory automates case *production* — never the standard, the adversarial design, or the risk calibration. Those stay human.
 - [ ] **Live holdout leaderboard + your-own-data generation:** a published row produced on a withheld seed with `factory_version` stamped on it and the seed exposed on the API/UI (the ADR-0008 non-goals), and pointing the generator at arbitrary user knowledge beyond the `meridian` family.
 - [x] **Reliability under delegation:** the MVP is measured — a producer researches, a tool-less consumer commits ([docs/delegation.md](docs/delegation.md), ADR-0007). Finding: the hop is a *faithful conduit* — it never dropped a correct refusal (0/27 producer refusals, including all 12 on the unresolvable ties) and never challenged a fabrication (3/3 laundered, one explicitly rationalized). Next: weaker consumers, tool-using consumers, deeper chains.
 - [x] **The refusal-aware scaffold intervention** (ADR-0009): two prompts differing in exactly one block — a generic refusal nudge (`-T scaffold=baseline`) vs an explicit detect→classify→escalate procedure (`-T scaffold=refusal_aware`) — run across five factory instances with a paired McNemar design ([docs/scaffold.md](docs/scaffold.md)). Finding: a *capability amplifier, not a substitute* — it converts tie-detection into refusal, significantly and without an answering loss, for models that can already detect the conflict (Sonnet 4.6 20→88% on the unresolvable column, GPT-4o 16→48%; refusal-subset McNemar p = 0.0001 and p = 0.004), while it can't manufacture the detection a weaker model lacks (haiku pays for the gain in over-refusal; gpt-4o-mini never reaches the tie). Confirmed on a withheld holdout seed.

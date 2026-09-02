@@ -1,4 +1,4 @@
-from tessera.credential_scan import find_credential_like_values
+from tests.helpers.credential_scan import find_credential_like_values
 
 
 def test_ordinary_security_prose_does_not_match_credentials():

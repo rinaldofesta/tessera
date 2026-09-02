@@ -4,12 +4,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from tessera.api.app import _mount_spa, create_app, lesson_path
-from tessera.api.run_store import RunStore
 
 
 def _client(tmp_path) -> TestClient:
     return TestClient(create_app(home=tmp_path / "home",
-                                 run_store=RunStore(tmp_path / "runs.db"),
                                  blueprint_dir=tmp_path / "blueprints"))
 
 

@@ -83,9 +83,7 @@ jobs:
           "$T" ui --check
           "$T" guide agents | grep -q 'tessera run'
           cd "$checkout"
-          /tmp/wheel-venv/bin/tessera-variant export --seed 42 --out /tmp/tessera-demo
-          /tmp/wheel-venv/bin/tessera-validate-transfer examples/validation-study.example.json -o /tmp/transfer-validation.md
-          test -s /tmp/transfer-validation.md
+          /tmp/wheel-venv/bin/python -m tessera.factory.export --seed 42 --out /tmp/tessera-demo
           test -s /tmp/tessera-demo/meridian-seed42.blueprint.json
           test -s /tmp/tessera-demo/meridian-seed42.answers.json
           git diff --exit-code

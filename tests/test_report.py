@@ -321,7 +321,7 @@ def test_inspect_only_imported_by_adapter_and_cli():
     pkg = pathlib.Path(__file__).resolve().parents[1] / "src" / "tessera" / "report"
     offenders = []
     for f in sorted(pkg.glob("*.py")):
-        if f.name in ("log_adapter.py", "cli.py"):
+        if f.name == "log_adapter.py":
             continue
         for node in ast.walk(ast.parse(f.read_text())):
             if isinstance(node, ast.Import) and any(
@@ -331,41 +331,6 @@ def test_inspect_only_imported_by_adapter_and_cli():
                     (node.module or "").split(".")[0] == "inspect_ai"):
                 offenders.append(f.name)
     assert offenders == [], f"inspect_ai imported by pure modules: {sorted(set(offenders))}"
-
-
-def test_cli_main_prints_report_to_stdout(tmp_path, capsys):
-    from inspect_ai.log import write_eval_log
-
-    from tessera.report.cli import main
-    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
-                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
-                     expected_sources=["crm"], answer="4 hours")
-    p = tmp_path / "run.eval"
-    write_eval_log(_eval_log([s]), str(p))
-    rc = main([str(p)])
-    out = capsys.readouterr().out
-    assert rc == 0 and "Tessera Reliability Report" in out
-
-
-def test_cli_main_writes_to_out_file(tmp_path):
-    from inspect_ai.log import write_eval_log
-
-    from tessera.report.cli import main
-    s = _eval_sample("q1", 1, conflict_type="none", expected_behavior="answer", passed=True,
-                     accuracy_ok=True, provenance_ok=True, refusal_ok=True, consulted=["crm"],
-                     expected_sources=["crm"], answer="4 hours")
-    p = tmp_path / "run.eval"
-    write_eval_log(_eval_log([s]), str(p))
-    out_md = tmp_path / "report.md"
-    rc = main([str(p), "-o", str(out_md)])
-    assert rc == 0 and out_md.read_text().startswith("# Tessera Reliability Report")
-
-
-def test_cli_main_missing_file_exits_2(capsys):
-    from tessera.report.cli import main
-    rc = main(["/nonexistent/path.eval"])
-    err = capsys.readouterr().err
-    assert rc == 2 and "cannot read log" in err
 
 
 def _scorecard_log(task_args=None):
@@ -396,42 +361,17 @@ def test_scorecard_single_render_is_byte_identical_to_golden():
     # must not perturb a single-model scorecard (ADR-0011). Literal diff, fixed-location log.
     from pathlib import Path
 
-    from tessera.report.cli import _build_report
+    from tessera.report.render import render_markdown
+    from tessera.report.serialize import report_to_dict
     golden = (Path(__file__).resolve().parents[1]
               / "tests/fixtures/scorecard_single.golden.txt").read_text()
-    assert _build_report(_scorecard_log()) == golden
+    assert render_markdown(report_to_dict(_scorecard_log())) == golden
     assert "Harness" not in golden          # no annotation when the run is a lone model
 
 
 def test_scorecard_discloses_harness_when_not_single():
     # An ensemble scorecard must say so — the same disclosure rule as the leaderboard.
-    from tessera.report.cli import _build_report
+    from tessera.report.render import render_markdown
+    from tessera.report.serialize import report_to_dict
     log = _scorecard_log(task_args={"judge": "deterministic", "harness": "ensemble"})
-    assert "**Harness:** ensemble" in _build_report(log)
-
-
-def test_render_markdown_matches_cli_for_golden_scorecard():
-    from tessera.report.cli import _build_report
-    from tessera.report.render import render_markdown
-    from tessera.report.serialize import report_to_dict
-
-    log = _scorecard_log()
-    assert render_markdown(report_to_dict(log)) == _build_report(log)
-
-
-@pytest.mark.parametrize("name", ["first-contact", "gpt-4o"])
-def test_render_markdown_matches_cli_for_bundled_logs(name):
-    from pathlib import Path
-
-    from inspect_ai.log import read_eval_log
-
-    from tessera.report.cli import _build_report
-    from tessera.report.render import render_markdown
-    from tessera.report.serialize import report_to_dict
-
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / name / "log.eval"
-    )
-    log = read_eval_log(str(path), resolve_attachments=True)
-    assert render_markdown(report_to_dict(log)) == _build_report(log)
+    assert "**Harness:** ensemble" in render_markdown(report_to_dict(log))

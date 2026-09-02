@@ -20,7 +20,7 @@ def _object_without_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str,
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="tessera-validate-transfer",
+        prog="python -m research.transfer.cli",
         description="Analyze a pre-registered synthetic-to-real rank-transfer study.",
     )
     parser.add_argument("study", help="JSON file containing task-level scores")
@@ -56,3 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cannot write output: {exc}", file=sys.stderr)
         return 1
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

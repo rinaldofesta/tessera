@@ -48,7 +48,7 @@ seeded value-rotation variants as the planned mitigation; this ADR specifies the
 ## Scope (v1)
 
 Machinery + this ADR: the generator, the property-test validator, seed addressing
-(`-T org=meridian -T seed=K`), the `tessera-variant` export CLI, and the
+(`-T org=meridian -T seed=K`), the `python -m tessera.factory.export` command, and the
 `commit`/`verify` helpers — all key-free and tested. **Out of scope:** the live
 holdout leaderboard run; wiring `factory_version` into `Score.metadata ->
 RunHeader -> leaderboard row` and extending `leaderboard._require_uniform` to

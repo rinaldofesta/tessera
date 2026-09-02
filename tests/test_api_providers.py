@@ -1,10 +1,9 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from tests.helpers.credential_scan import find_credential_like_values
 
 from tessera.api.app import create_app
-from tessera.api.run_store import RunStore
-from tessera.credential_scan import find_credential_like_values
 
 SENTINEL = "sk-" + "S3NT1NEL" * 4
 
@@ -12,10 +11,7 @@ SENTINEL = "sk-" + "S3NT1NEL" * 4
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: None,
-        log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=tmp_path / ".env",
     ))
 
@@ -93,7 +89,6 @@ def test_the_credential_scanner_finds_nothing_in_any_response(tmp_path):
     client.put("/api/providers/openai", json={"api_key": SENTINEL})
     for path in (
         "/api/providers", "/api/eval-setup", "/api/runs", "/api/models",
-        "/api/evaluations", "/api/experiments",
     ):
         response = client.get(path)
         assert SENTINEL not in response.text, path
@@ -126,15 +121,11 @@ def test_a_runner_error_cannot_persist_or_return_a_configured_credential(tmp_pat
     async def _inline_schedule(coro):
         await coro
 
-    store = RunStore(tmp_path / "runs.db")
     client = TestClient(create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: None,
         folder_eval_runner=_raise_with_credential,
-        log_dirs={"logs": tmp_path / "logs"},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "bp",
-        run_store=store,
         env_file=tmp_path / ".env",
     ))
     started = client.post(

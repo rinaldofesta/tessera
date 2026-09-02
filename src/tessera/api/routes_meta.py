@@ -2,20 +2,13 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 
 from tessera.api import blueprint_store
 from tessera.api import responses as R
 from tessera.catalog import published_models  # re-exported: existing importers use this path
 
 router = APIRouter()
-
-# Models with published single-model leaderboard rows. This provenance set is the
-# ONE source the UI reads via GET /api/models, so it cannot drift within the app.
-_LEADERBOARD = Path("docs/leaderboard.rows.json")
 
 
 @router.get("/api/orgs", response_model=list[str])
@@ -40,19 +33,6 @@ def list_models():
     # published set shown at the top of the picker. Set it in .env or the shell;
     # credentials for each provider live in .env too.
     return published_models()
-
-
-@router.get("/api/leaderboard", response_model=R.LeaderboardManifest, response_model_exclude_unset=True)
-def leaderboard():
-    """The committed public-leaderboard manifest served verbatim to the SPA."""
-    if not _LEADERBOARD.exists():
-        raise HTTPException(404, "leaderboard manifest not found (docs/leaderboard.rows.json)")
-    try:
-        return json.loads(_LEADERBOARD.read_text())
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            500, "leaderboard manifest is not valid JSON (docs/leaderboard.rows.json)",
-        ) from exc
 
 
 @router.get("/api/eval-setup", response_model=R.EvalSetup)

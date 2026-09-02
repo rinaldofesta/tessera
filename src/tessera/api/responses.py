@@ -16,78 +16,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from tessera.api.schemas import ExperimentRequest
-from tessera.contract import Diagnostic, ReportAxes, RunReceipt
-from tessera.contract import Report as Report  # re-export: routes still spell it R.Report
-
-# ----- logs -----
-
-class LogMeta(BaseModel):
-    id: str                          # "source:stem"
-    source: str
-    path: str
-    model: str
-    engine: str
-    grader: str | None
-    org: str | None
-    created: str
-    k: int
-
-
-class LeaderboardRow(BaseModel):
-    label: str
-    model: str
-    date: str | None = None
-    pass_k_rate: float
-    mean_rate: float
-    categories: dict[str, float]
-    answer_format_rate: float | None = None
-    scorer_version: str | None = None
-    org: str | None = None
-    k: int
-    scaffold: str | None = None
-    seed: int | None = None
-    harness: str | None = None
-    notes: str | None = None
-    log: str | None = None
-
-
-class LeaderboardManifest(BaseModel):
-    title: str | None = None
-    rows: list[LeaderboardRow]
-    exhibitions: list[dict] = []
-
-
-class TrendPoint(BaseModel):
-    id: str
-    created_at: str
-    model: str
-    org: str
-    engine: str
-    pass_k_rate: float
-    mean_rate: float
-    categories: dict[str, float]     # conflict-type key -> pass^k
-    axes: ReportAxes
-
-
-class EvaluationSummary(BaseModel):
-    id: str
-    kind: Literal["run", "log", "pinned", "import"]
-    source: str
-    status: Literal["done", "error"]
-    created_at: str
-    model: str
-    org: str | None
-    engine: str
-    grader: str | None
-    epochs: int
-    pass_k_rate: float | None
-    mean_rate: float | None
-    artifact_path: str | None
-    artifact_sha256: str | None
-    protocol_hash: str
-    execution_hash: str
-    receipt: RunReceipt
+from tessera.contract import Diagnostic
 
 
 class PairCounts(BaseModel):
@@ -120,67 +49,8 @@ class ComparisonResult(BaseModel):
     diagnostics: ComparisonDiagnostics
 
 
-# ----- paid capability preflight -----
-
-class PreflightUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-    billed_cost: float | None
-
-
-class PreflightResult(BaseModel):
-    model: str
-    effective_model: str | None
-    tool_call: bool
-    ok: bool
-    error: str | None
-    latency_seconds: float
-    checked_at: str
-    cached: bool
-    usage: PreflightUsage
-
-
-# ----- experiments -----
-
-ExperimentState = Literal["running", "done", "error", "stopped"]
-CellState = Literal["pending", "running", "done", "error", "skipped"]
-
-
-class ExperimentCell(BaseModel):
-    id: str
-    experiment_id: str
-    variant_id: str
-    repeat_index: int
-    status: CellState
-    run_id: str | None
-    error: str | None
-
-
-class Experiment(BaseModel):
-    id: str
-    name: str
-    status: ExperimentState
-    created_at: str
-    updated_at: str
-    baseline_variant: str
-    request: ExperimentRequest
-    error: str | None
-    total_cost: float | None
-    cells: list[ExperimentCell]
-
-
-class ExperimentStarted(BaseModel):
-    experiment_id: str
-    status: ExperimentState
-
-
-class ExperimentComparison(ComparisonResult):
-    paired_repeats: list[int]
-    dropped_repeats: list[int]
-
-
 # ----- blueprints (datasets) -----
+
 
 class BlueprintMeta(BaseModel):
     id: str

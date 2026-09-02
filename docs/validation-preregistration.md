@@ -110,7 +110,7 @@ The public claim is bound before the run:
   and pair list are always reported, including a denominator of zero.
 - Per-axis and alternative-weight correlations, labeled exploratory.
 
-The raw-data-free analyzer is `tessera-validate-transfer`. Its input contract and output are
+The raw-data-free analyzer is `python -m research.transfer.cli`. Its input contract and output are
 documented in [`validation.md`](validation.md).
 
 ## Registration receipt

@@ -18,8 +18,7 @@ export type FailureEpoch = S["ReportFailure"];
 export type Probe = S["ReportProbe"];
 export type Report = S["Report"];
 
-// ----- logs + runs -----
-export type LogMeta = S["LogMeta"];
+// ----- runs -----
 export interface RunSummary {
   id: string;
   status: "running" | "done" | "error";
@@ -35,9 +34,6 @@ export interface RunSummary {
   mean_rate: number | null;
   archived: boolean;
 }
-export type LeaderboardManifest = S["LeaderboardManifest"];
-export type LeaderboardRow = S["LeaderboardRow"];
-export type TrendPoint = S["TrendPoint"];
 export interface StartRunResult {
   job_id: string;
   status: "running" | "done" | "error";
@@ -58,16 +54,8 @@ export interface RunConfig {
 }
 export type Run = S["Run"];
 export type RunSpec = S["RunSpec"];
-export type RunReceipt = S["RunReceipt"];
-export type EvaluationSummary = S["EvaluationSummary"];
 export type ComparisonResult = S["ComparisonResult"];
-export type Diagnostic = S["Diagnostic"];
 export type ComparisonIntervention = NonNullable<S["ComparisonRequest"]["intervention"]>;
-export type PreflightResult = S["PreflightResult"];
-export type Experiment = S["Experiment"];
-export type ExperimentRequest = S["ExperimentRequest"];
-export type ExperimentStarted = S["ExperimentStarted"];
-export type ExperimentComparison = S["ExperimentComparison"];
 
 // ----- blueprints (datasets) -----
 export type Render = S["Render"];

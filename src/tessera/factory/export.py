@@ -42,23 +42,23 @@ def export_variant(seed: int, out_dir: str | Path) -> tuple[Path, Path]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="tessera-variant")
-    sub = parser.add_subparsers(dest="command", required=True)
-    exp = sub.add_parser("export", help="freeze a variant + answer key to JSON")
-    exp.add_argument("--seed", type=int, required=True)
+    parser = argparse.ArgumentParser(
+        prog="python -m tessera.factory.export",
+        description="Freeze a variant and answer key to JSON",
+    )
+    parser.add_argument("--seed", type=int, required=True)
     # No static default: the API-served store moved to paths.suites_dir() (or
     # $TESSERA_BLUEPRINT_DIR, same override tessera.orgs._store_dir() honors) — a
     # baked-in "blueprints/" default would reveal into a directory the server no
     # longer reads.
-    exp.add_argument("--out", default=None,
-                     help="output dir (default: the API-served suites store — "
-                          "note: this REVEALS the seed)")
+    parser.add_argument("--out", default=None,
+                        help="output dir (default: the API-served suites store — "
+                             "note: this REVEALS the seed)")
     args = parser.parse_args()
-    if args.command == "export":
-        out = args.out or os.environ.get("TESSERA_BLUEPRINT_DIR") or str(paths.suites_dir())
-        bp_path, ans_path = export_variant(args.seed, out)
-        print(f"wrote {bp_path}\nwrote {ans_path}")
+    out = args.out or os.environ.get("TESSERA_BLUEPRINT_DIR") or str(paths.suites_dir())
+    bp_path, ans_path = export_variant(args.seed, out)
+    print(f"wrote {bp_path}\nwrote {ans_path}")
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -393,6 +393,29 @@ def test_leaderboard_alias_deprecates_and_delegates():
     assert result.stderr.startswith("tessera-leaderboard is deprecated — use:")
 
 
+def test_leaderboard_alias_translates_extract_and_forwards_options():
+    result = RUNNER.invoke(
+        leaderboard_alias,
+        ["--extract", str(BUNDLED_LOG), "--label", "first-contact"],
+    )
+
+    (row,) = json.loads(result.stdout)
+    assert result.exit_code == 0 and row["label"] == "first-contact"
+
+
+def test_leaderboard_alias_renders_logs_and_forwards_positional_options():
+    result = RUNNER.invoke(
+        leaderboard_alias,
+        [str(BUNDLED_LOG), "--label", "first-contact"],
+    )
+
+    # This bundled log predates the required scorer-version field, so the renderer's
+    # comparability guard rejects it. Reaching that guard proves the positional log and
+    # label survived alias translation (a Click routing failure would print usage).
+    assert result.exit_code == 2
+    assert "rows are not comparable" in result.stderr
+
+
 def test_api_alias_deprecates_and_delegates(monkeypatch):
     called = {}
     monkeypatch.setattr("uvicorn.run", lambda *args, **kwargs: called.update(kwargs))

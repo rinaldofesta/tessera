@@ -56,8 +56,6 @@ tessera = "tessera.cli:main"
 tessera-report = "tessera.cli:report_alias"
 tessera-leaderboard = "tessera.cli:leaderboard_alias"
 tessera-api = "tessera.cli:api_alias"
-tessera-variant = "tessera.factory.export:main"
-tessera-validate-transfer = "tessera.validation.cli:main"
 
 [project.entry-points.inspect_ai]
 tessera = "tessera.evals.task"
@@ -87,7 +85,7 @@ packages = ["src/tessera"]
 "docs/tessera-lesson.html" = "tessera/data/lesson.html"
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 addopts = "-q"
 

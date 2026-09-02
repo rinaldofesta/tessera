@@ -24,7 +24,6 @@ export default function RunHistory() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [suite, setSuite] = useState<string>("all");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const rows = runs.data ?? [];
   const suites = useMemo(() => [...new Set(rows.map((r) => r.org))].sort(), [rows]);
@@ -40,18 +39,6 @@ export default function RunHistory() {
     });
   }, [rows, query, status, effectiveSuite]);
 
-  const toggle = (id: string, on: boolean) =>
-    setSelected((current) => {
-      const next = new Set(current);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-
-  const compareHref = `/compare?evals=${encodeURIComponent(
-    [...selected].map((id) => `run:${id}`).join(","),
-  )}`;
-
   const exportRun = async (id: string, format: "html" | "json") => {
     try {
       const run = await api.getRun(id);
@@ -65,11 +52,6 @@ export default function RunHistory() {
   const setArchived = async (id: string, archived: boolean) => {
     try {
       await api.setRunArchived(id, archived);
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
       runs.reload();
     } catch {
       toast.error(RUN_HISTORY_COPY.archiveFailed);
@@ -128,25 +110,13 @@ export default function RunHistory() {
               <input
                 type="checkbox"
                 checked={showArchived}
-                onChange={(e) => {
-                  setShowArchived(e.target.checked);
-                  setSelected(new Set());
-                }}
+                onChange={(e) => setShowArchived(e.target.checked)}
               />
               {RUN_HISTORY_COPY.showArchived}
             </label>
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
               {RUN_HISTORY_COPY.showing(shown.length, rows.length)}
             </span>
-            {selected.size >= 2 && (
-              <Button
-                size="sm"
-                nativeButton={false}
-                render={<Link role="link" to={compareHref} />}
-              >
-                {RUN_HISTORY_COPY.compareSelected}
-              </Button>
-            )}
           </div>
 
           {rows.length === 0 ? (
@@ -164,8 +134,6 @@ export default function RunHistory() {
               <RunRow
                 key={r.id}
                 run={r}
-                selected={selected.has(r.id)}
-                onSelect={toggle}
                 extraActions={
                   r.status !== "running" ? (
                     <>

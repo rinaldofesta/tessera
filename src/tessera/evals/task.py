@@ -148,9 +148,9 @@ def _compiled_org(org: str | None, seed: int = 0):
     """Compile the named org (optionally a factory seed) and stand up one MCP server per
     silo type its blueprint references.
 
-    Org selection: explicit -T org=… wins, else $TESSERA_ORG, else "toy". A non-zero seed
+    Org selection defaults directly to "toy". A non-zero seed
     selects a scenario-factory variant of meridian (holdout)."""
-    org_name = org or os.environ.get("TESSERA_ORG", "toy")
+    org_name = org or "toy"
     blueprint = get_blueprint(org_name, seed=seed)
     out = Path(os.environ.get("TESSERA_OUT", "/tmp/tessera/run")).resolve()
     manifest = compile_blueprint(blueprint, out)

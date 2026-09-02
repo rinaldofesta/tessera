@@ -1,0 +1,95 @@
+{
+  "claims": [
+    {
+      "claim_id": "acme.plan.crm",
+      "subject": "Acme Corp",
+      "predicate": "plan",
+      "value": "Enterprise",
+      "silo": "crm",
+      "render": {"as": "field"}
+    },
+    {
+      "claim_id": "plan.enterprise.support",
+      "subject": "Enterprise plan",
+      "predicate": "support_channel",
+      "value": "dedicated Slack + 24/7 phone",
+      "silo": "docs",
+      "render": {"as": "prose", "template": "Enterprise plan support: {value}."}
+    },
+    {
+      "claim_id": "acme.seats.crm",
+      "subject": "Acme Corp",
+      "predicate": "seats",
+      "value": "250",
+      "silo": "crm",
+      "asserted_at": "2025-12-01T00:00:00Z",
+      "render": {"as": "field"}
+    },
+    {
+      "claim_id": "acme.seats.note",
+      "subject": "Acme Corp",
+      "predicate": "seats",
+      "value": "400",
+      "silo": "docs",
+      "asserted_at": "2026-03-01T00:00:00Z",
+      "render": {"as": "prose", "template": "Seat count raised to {value} after the Q1 expansion."}
+    },
+    {
+      "claim_id": "acme.mrr.crm",
+      "subject": "Acme Corp",
+      "predicate": "mrr",
+      "value": "$80k",
+      "silo": "crm",
+      "asserted_at": "2026-02-01T09:00:00Z",
+      "authority": 1,
+      "render": {"as": "field"}
+    },
+    {
+      "claim_id": "acme.mrr.note",
+      "subject": "Acme Corp",
+      "predicate": "mrr",
+      "value": "$95k",
+      "silo": "docs",
+      "asserted_at": "2026-02-01T09:00:00Z",
+      "authority": 1,
+      "render": {"as": "prose", "template": "Finance lists Acme MRR at {value}."}
+    }
+  ],
+  "probes": [
+    {
+      "probe_id": "q_acme_support",
+      "question": "What support channel does Acme Corp get?",
+      "references": ["acme.plan.crm", "plan.enterprise.support"],
+      "conflict_type": "none",
+      "expected_behavior": "answer",
+      "expected_answer": "dedicated Slack + 24/7 phone",
+      "expected_sources": ["acme.plan.crm", "plan.enterprise.support"]
+    },
+    {
+      "probe_id": "q_acme_seats",
+      "question": "How many seats does Acme Corp have?",
+      "references": ["acme.seats.crm", "acme.seats.note"],
+      "conflict_type": "resolvable",
+      "resolution_rule": "recency_wins",
+      "expected_behavior": "answer",
+      "expected_answer": "400",
+      "expected_sources": ["acme.seats.crm", "acme.seats.note"]
+    },
+    {
+      "probe_id": "q_acme_mrr",
+      "question": "What is Acme Corp's MRR?",
+      "references": ["acme.mrr.crm", "acme.mrr.note"],
+      "conflict_type": "unresolvable",
+      "expected_behavior": "refuse",
+      "expected_sources": ["acme.mrr.crm", "acme.mrr.note"]
+    },
+    {
+      "probe_id": "q_zenith_owner",
+      "question": "Who is the account owner for Zenith LLC?",
+      "references": [],
+      "conflict_type": "void",
+      "expected_behavior": "refuse",
+      "expected_sources": []
+    }
+  ]
+}

@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-
-from tessera.validation.analysis import (
+from research.transfer.analysis import (
     StudyError,
     _claim_language,
     _decisive_pairs,
@@ -12,7 +11,7 @@ from tessera.validation.analysis import (
     kendall_tau_b,
     render_markdown,
 )
-from tessera.validation.cli import main
+from research.transfer.cli import main
 
 
 def _study(*, draws=10_000):
@@ -272,7 +271,7 @@ def test_cli_rejects_duplicate_json_keys_before_analysis(tmp_path, capsys):
 
 
 def test_documented_validation_study_example_is_executable():
-    path = Path(__file__).resolve().parents[1] / "examples" / "validation-study.example.json"
+    path = Path(__file__).resolve().parents[2] / "examples" / "validation-study.example.json"
     result = analyze_study(json.loads(path.read_text()))
     assert len(result["configurations"]) == 7
     assert result["bootstrap"] == {"draws": 10_000, "valid_tau_draws": 10_000, "seed": 42}
