@@ -76,6 +76,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
   --color-faint: var(--faint);
   --color-verdict-reliable: var(--verdict-reliable);
   --color-verdict-inconsistent: var(--verdict-inconsistent);

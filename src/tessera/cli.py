@@ -802,7 +802,7 @@ def _catalog_human(catalog: dict, section: str | None) -> None:
         elif name == "providers":
             for row in catalog["providers"]:
                 state = "connected" if row["connected"] else "not connected"
-                fields = ",".join(row["fields"])
+                fields = ",".join(field["id"] for field in row["fields"])
                 typer.echo(f"{row['id']}  {row['label']}  {state}  {fields}")
         elif name == "scorers":
             for row in catalog["scorers"]:

@@ -20,7 +20,7 @@ def test_connect_writes_key_securely_and_returns_only_state(tmp_path, monkeypatc
     assert stat.S_IMODE(env_file.stat().st_mode) == 0o600
     assert result == {
         "id": "anthropic", "label": "Anthropic", "connected": True,
-        "fields": ["api_key"],
+        "fields": [{"id": "api_key", "env_var": "ANTHROPIC_API_KEY"}],
     }
     assert secret not in json.dumps(result)
 
@@ -37,7 +37,7 @@ def test_mlx_accepts_base_url_only(tmp_path, monkeypatch):
     result = connect("mlx", base_url="http://127.0.0.1:8080/v1", env_file=env_file)
 
     assert result["connected"] is True
-    assert result["fields"] == ["base_url"]
+    assert result["fields"] == [{"id": "base_url", "env_var": "MLX_BASE_URL"}]
     assert "MLX_BASE_URL=" in env_file.read_text()
     with pytest.raises(SpecError, match="does not accept: api_key"):
         connect("mlx", api_key="not-supported", env_file=env_file)

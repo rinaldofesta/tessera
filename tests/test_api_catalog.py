@@ -63,8 +63,9 @@ def test_dry_run_surfaces_missing_grader_as_a_blocker(tmp_path, monkeypatch):
     ]
 
 
-def test_old_vocabulary_routes_remain_available(tmp_path):
+def test_old_vocabulary_routes_are_gone(tmp_path):
     client = _client(tmp_path)
 
-    assert client.get("/api/eval-setup").status_code == 200
-    assert client.get("/api/orgs").status_code == 200
+    for path in ("/api/eval-setup", "/api/orgs", "/api/models"):
+        assert client.get(path).status_code == 404
+    assert client.post("/api/model-discovery/rescan").status_code == 404

@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/viz/StatusBadge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LIVE_COPY, conflictLabel } from "@/copy";
+import { LIVE_COPY } from "@/copy";
 import { useRunStatus } from "@/hooks";
 import { elapsed, pct, shortModel } from "@/lib/format";
 
@@ -32,7 +32,6 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
   }, [run.status]);
 
   const tiles = useMemo(() => (run.report ? tilesFrom(run.report) : undefined), [run.report]);
-  const failedCats = run.report?.categories.filter((category) => category.pass_k_rate < 1) ?? [];
   // Once the report loads, its own dimensions are the honest source of truth — questions/repeats
   // are only a pre-launch estimate, and the wizard on the left stays editable after launch, so
   // they can drift from what the running job actually used.
@@ -60,16 +59,12 @@ export function LiveRunPanel({ jobId, questions, repeats, model, suite }: LiveRu
 
       {run.status === "done" && run.report && (
         <>
-          <p className="text-[13px] font-medium">
-            {failedCats.length === 0
-              ? LIVE_COPY.reliable(run.report.header.k)
-              : LIVE_COPY.notReliable(failedCats.map((category) => conflictLabel(category.key)).join(", "))}
-          </p>
+          {run.verdict?.sentence && <p className="text-[13px] font-medium">{run.verdict.sentence}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StatTile label={LIVE_COPY.reliability} value={pct(run.report.overall.pass_k_rate)} sub={LIVE_COPY.reliabilitySub(run.report.header.k)} />
             <StatTile label={LIVE_COPY.average} value={pct(run.report.overall.mean_rate)} sub={LIVE_COPY.averageSub} />
           </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link role="link" to={`/runs/${jobId}`} />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link role="link" to={`/reports/${jobId}`} />}>
             {LIVE_COPY.openDetail}
           </Button>
         </>

@@ -171,11 +171,16 @@ class CatalogModel(BaseModel):
     connected: bool
 
 
+class CatalogProviderField(BaseModel):
+    id: str        # "api_key" | "base_url"
+    env_var: str   # the variable connect writes — a name, never a value
+
+
 class CatalogProvider(BaseModel):
     id: str
     label: str
     connected: bool
-    fields: list[str]
+    fields: list[CatalogProviderField]
 
 
 class CatalogScorer(BaseModel):

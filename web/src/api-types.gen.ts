@@ -113,85 +113,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/eval-setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Eval Setup
-         * @description Return the typed, credential-safe vocabulary and defaults for the eval launcher.
-         */
-        get: operations["eval_setup_api_eval_setup_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/model-discovery/rescan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rescan */
-        post: operations["rescan_api_model_discovery_rescan_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Models
-         * @description The published model set displayed by the Run form.
-         */
-        get: operations["list_models_api_models_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/orgs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Orgs
-         * @description Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
-         *     dataset authored on the Datasets page is immediately runnable here. Raises (500)
-         *     if a custom org module fails to import — surfaced by the frontend as a warning.
-         */
-        get: operations["list_orgs_api_orgs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/providers": {
         parameters: {
             query?: never;
@@ -441,11 +362,18 @@ export interface components {
             /** Connected */
             connected: boolean;
             /** Fields */
-            fields: string[];
+            fields: components["schemas"]["CatalogProviderField"][];
             /** Id */
             id: string;
             /** Label */
             label: string;
+        };
+        /** CatalogProviderField */
+        CatalogProviderField: {
+            /** Env Var */
+            env_var: string;
+            /** Id */
+            id: string;
         };
         /** CatalogScorer */
         CatalogScorer: {
@@ -610,68 +538,6 @@ export interface components {
             content: string;
             /** Path */
             path: string;
-        };
-        /** EvalSetup */
-        EvalSetup: {
-            defaults: components["schemas"]["EvalSetupDefaults"];
-            /** Models */
-            models: components["schemas"]["EvalSetupModel"][];
-            /** Sources */
-            sources: components["schemas"]["SourceStatus"][];
-            /** Suites */
-            suites: components["schemas"]["EvalSetupSuite"][];
-        };
-        /** EvalSetupDefaults */
-        EvalSetupDefaults: {
-            /**
-             * Engine
-             * @constant
-             */
-            engine: "deterministic";
-            /** Grader */
-            grader: string | null;
-            /** Repeats */
-            repeats: number;
-        };
-        /** EvalSetupModel */
-        EvalSetupModel: {
-            /** Detail */
-            detail?: string | null;
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Provider */
-            provider: string;
-            /** Published */
-            published: boolean;
-            /**
-             * Readiness
-             * @enum {string}
-             */
-            readiness: "ready" | "needs_config" | "needs_server" | "offline" | "unverified";
-            /** Released */
-            released: string | null;
-            /** Retired */
-            retired: boolean;
-            /** Source */
-            source: string;
-        };
-        /** EvalSetupSuite */
-        EvalSetupSuite: {
-            /** Claims */
-            claims: number;
-            /** Editable */
-            editable: boolean;
-            /** Id */
-            id: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "builtin" | "custom";
-            /** Questions */
-            questions: number;
         };
         /**
          * ExpectedBehavior
@@ -985,13 +851,6 @@ export interface components {
             /** Probe Id */
             probe_id: string;
         };
-        /** RescanResult */
-        RescanResult: {
-            /** Model Count */
-            model_count: number;
-            /** Sources */
-            sources: components["schemas"]["SourceStatus"][];
-        };
         /**
          * ResolutionRule
          * @description How a `resolvable` conflict is decided. Note authority can outrank recency: a
@@ -1122,18 +981,6 @@ export interface components {
             asserted_at: string | null;
             /** Value */
             value: unknown;
-        };
-        /** SourceStatus */
-        SourceStatus: {
-            /** Detail */
-            detail: string | null;
-            /** Source */
-            source: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "offline" | "skipped";
         };
         /** ValidationError */
         ValidationError: {
@@ -1458,86 +1305,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    eval_setup_api_eval_setup_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EvalSetup"];
-                };
-            };
-        };
-    };
-    rescan_api_model_discovery_rescan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RescanResult"];
-                };
-            };
-        };
-    };
-    list_models_api_models_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-        };
-    };
-    list_orgs_api_orgs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
                 };
             };
         };

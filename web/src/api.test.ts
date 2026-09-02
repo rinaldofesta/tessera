@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api, toSpec, toStatus, toSummary } from "./api";
-import type { Run, RunConfig } from "./types";
+import { api, toStatus, toSummary } from "./api";
+import type { Run } from "./types";
 
 function run(overrides: Partial<Run> = {}): Run {
   return {
@@ -51,18 +51,7 @@ describe("run API adapter", () => {
     });
   });
 
-  it("maps the old launcher configuration into RunSpec", () => {
-    const config: RunConfig = {
-      model: "ollama/test", judge: "llm", grader: "ollama/grader",
-      org: "starter", epochs: 3, scaffold: "baseline", seed: 2,
-    };
-    expect(toSpec(config)).toEqual({
-      model: "ollama/test", engine: "llm", grader: "ollama/grader",
-      suite: "starter", k: 3, scaffold: "baseline", seed: 2,
-    });
-  });
-
-  it("surfaces blocker messages as the existing view error text", async () => {
+  it("surfaces blocker messages from a RunSpec", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       detail: [
         { code: "not_connected", message: "provider is not connected", fix: "connect" },
@@ -71,8 +60,8 @@ describe("run API adapter", () => {
     }), { status: 422, headers: { "content-type": "application/json" } })));
 
     await expect(api.startRun({
-      model: "openai/test", judge: "deterministic", grader: null,
-      org: "missing", epochs: 3, scaffold: "baseline", seed: 0,
+      model: "openai/test", engine: "deterministic", grader: null,
+      suite: "missing", k: 3, scaffold: "baseline", seed: 0,
     })).rejects.toMatchObject({
       message: "provider is not connected; suite is unknown", status: 422,
     });

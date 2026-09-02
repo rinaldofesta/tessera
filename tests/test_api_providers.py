@@ -88,16 +88,11 @@ def test_the_credential_scanner_finds_nothing_in_any_response(tmp_path):
     client = _client(tmp_path)
     client.put("/api/providers/openai", json={"api_key": SENTINEL})
     for path in (
-        "/api/providers", "/api/eval-setup", "/api/runs", "/api/models",
+        "/api/providers", "/api/catalog", "/api/runs",
     ):
         response = client.get(path)
         assert SENTINEL not in response.text, path
         assert find_credential_like_values(response.json()) == [], path
-
-
-def test_rescan_reports_each_source_status(tmp_path):
-    body = _client(tmp_path).post("/api/model-discovery/rescan").json()
-    assert {s["source"] for s in body["sources"]} == {"cloud", "ollama", "mlx"}
 
 
 def test_a_typo_in_a_field_name_is_rejected_rather_than_silently_ignored(tmp_path):

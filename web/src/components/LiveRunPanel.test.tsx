@@ -50,18 +50,21 @@ describe("LiveRunPanel", () => {
 
   it("fills atomically and shows the compact outcome with a detail link when done", async () => {
     const source = new FakeSource();
-    vi.mocked(api.getRun).mockResolvedValue({ status: "done", report, error: null });
+    vi.mocked(api.getRun).mockResolvedValue({
+      status: "done", report, error: null,
+      verdict: { pass_k_rate: 0.5, mean_rate: 0.75, label: "inconsistent", sentence: "Not reliable on disagreement." },
+    });
     view(source);
     act(() => source.onmessage!({ data: JSON.stringify({ status: "done", error: null }) }));
-    expect(await screen.findByText(/Not reliable on genuine disagreement/)).toBeInTheDocument();
+    expect(await screen.findByText("Not reliable on disagreement.")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open run detail →" })).toHaveAttribute("href", "/runs/abc");
+    expect(screen.getByRole("link", { name: "Open run detail →" })).toHaveAttribute("href", "/reports/abc");
   });
 
   it("surfaces failure with the error text", async () => {
     const source = new FakeSource();
-    vi.mocked(api.getRun).mockResolvedValue({ status: "error", report: null, error: "provider timeout" });
+    vi.mocked(api.getRun).mockResolvedValue({ status: "error", report: null, verdict: null, error: "provider timeout" });
     view(source);
     act(() => source.onmessage!({ data: JSON.stringify({ status: "error", error: "provider timeout" }) }));
     expect(await screen.findByText("failed")).toBeInTheDocument();
