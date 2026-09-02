@@ -13,7 +13,7 @@ const manifest = (overrides: Partial<LeaderboardManifest> = {}): LeaderboardMani
   exhibitions: [],
   rows: [
     { label: "Lower", model: "openai/lower", date: "2026-08-20", pass_k_rate: 0.5, mean_rate: 0.9, categories: { none: 0.8 }, k: 5, scaffold: "baseline", seed: 0 },
-    { label: "Higher", model: "anthropic/higher", date: "2026-08-21", pass_k_rate: 0.8, mean_rate: 0.85, categories: { resolvable: 0.75, void: 1 }, k: 3, scaffold: "refuse-aware", seed: 42 },
+    { label: "Higher", model: "anthropic/higher", date: "2026-08-21", pass_k_rate: 0.8, mean_rate: 0.85, categories: { resolvable: 0.75, void: 1 }, k: 3, scaffold: "refusal_aware", seed: 42 },
   ],
   ...overrides,
 });

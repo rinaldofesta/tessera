@@ -158,7 +158,7 @@ export default function ExperimentsTab() {
             grader: null,
             org,
             epochs: 3,
-            scaffold: intervention === "scaffold" ? "refuse-aware" : "baseline",
+            scaffold: intervention === "scaffold" ? "refusal_aware" : "baseline",
             seed: 0,
           },
         ],

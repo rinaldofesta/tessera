@@ -901,7 +901,7 @@ const IMP_PROD = [
 /* ===================== test-next checklist ===================== */
 const NEXT = [
   {tt:"Compare the two models you already measured", why:"Zero cost — both runs are pinned in examples/. Open the Results view's Compare mode: Sonnet 4.6 vs GPT-4o, graded by each other. Did GPT-4o fail the unresolvable probe the same way?",
-   cmd:".venv/bin/uvicorn tessera.api.app:app --port 8000   # → Results → Compare"},
+   cmd:".venv/bin/uvicorn tessera.api.app:create_app --factory --port 8000   # → Results → Compare"},
   {tt:"Run evals from the UI until the Dashboard tells a story", why:"Every run from the Run view writes a durable row into the run store and feeds the Dashboard's history and trend lines. A handful of runs across models/engines turns those views from empty panels into an actual reliability record.",
    cmd:"# Run view → dataset: toy · engine: llm · grader ≠ model · epochs: 3"},
   {tt:"Sweep k on the toy org", why:"The flakiness experiment: mean stays flat while pass^k decays. Run the same eval at increasing k and find where each probe starts failing — that's its real reliability, and it makes the module-8 curve real. Unblocked: the task now takes <code>-T k=N</code> (count and reducer follow together), so the sweep runs as-is.",

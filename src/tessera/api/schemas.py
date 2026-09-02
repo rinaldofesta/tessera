@@ -5,17 +5,25 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RunRequest(BaseModel):
     model: str
-    grader: str | None = None        # required only for the llm engine
-    judge: Literal["llm", "deterministic"] = "llm"
+    grader: str | None = None        # required for llm; must be omitted for deterministic
+    judge: Literal["llm", "deterministic"] = "deterministic"
     org: str = "toy"                 # which blueprint to evaluate (see /api/orgs)
     epochs: int = Field(3, ge=1, le=10)   # k for pass^k; bounds match the UI selector
-    scaffold: Literal["baseline", "refuse-aware"] = "baseline"
+    scaffold: Literal["baseline", "refusal_aware"] = "baseline"
     seed: int = Field(0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_grader_for_judge(self):
+        if self.judge == "llm" and not self.grader:
+            raise ValueError("grader is required when judge is 'llm'")
+        if self.judge == "deterministic" and self.grader is not None:
+            raise ValueError("grader only applies to judge 'llm'")
+        return self
 
 
 class ArchiveRequest(BaseModel):
@@ -47,7 +55,7 @@ class ExperimentVariant(BaseModel):
     judge: Literal["llm", "deterministic"] = "deterministic"
     org: str = "toy"
     epochs: int = Field(3, ge=1, le=10)
-    scaffold: Literal["baseline", "refuse-aware"] = "baseline"
+    scaffold: Literal["baseline", "refusal_aware"] = "baseline"
     seed: int = Field(0, ge=0)
 
     def as_run_request(self) -> RunRequest:

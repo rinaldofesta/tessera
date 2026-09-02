@@ -51,8 +51,10 @@ In order:
   (`tessera-report`, `tessera-leaderboard`, `tessera-validate-transfer`) and the FastAPI/SPA product
   (`tessera-api`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.
-- A live eval run is the only thing that needs keys: put `ANTHROPIC_API_KEY` /
-  `OPENAI_API_KEY` in `.env` (gitignored), then
+- A live eval run is the only thing that needs keys: the API reads `~/.tessera/.env`
+  (or `$TESSERA_HOME/.env`, or the file named by `TESSERA_ENV_FILE`); for a checkout,
+  `TESSERA_ENV_FILE=.env` keeps the old behavior. Put `ANTHROPIC_API_KEY` /
+  `OPENAI_API_KEY` there (gitignored), then
   `inspect eval src/tessera/evals/task.py@tessera_probes -T org=toy -T judge=deterministic -T k=2`.
 
 ## House rules (the ones that will bite you if skipped)

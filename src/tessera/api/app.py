@@ -28,6 +28,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from tessera import paths
 from tessera.api import (
     routes_blueprints,
     routes_experiments,
@@ -47,13 +48,11 @@ _DEFAULT_LOG_DIRS = {"examples": Path("examples"), "logs": Path("logs")}
 _DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
 _DEFAULT_IMPORT_DIR = Path("imports")
-_DEFAULT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
 def _resolve_env_file(env_file: Path | None) -> Path:
     """One authoritative absolute path. Resolved, never read, at construction time."""
-    override = os.environ.get("TESSERA_ENV_FILE")
-    chosen = env_file or (Path(override) if override else _DEFAULT_ENV_FILE)
+    chosen = env_file if env_file is not None else paths.env_file()
     return Path(chosen).resolve()
 
 
@@ -210,13 +209,10 @@ def _mount_spa(app: FastAPI, dist: Path = Path("web/dist")) -> None:
         return FileResponse(dist / "index.html")
 
 
-app = create_app()
-
-
 def main() -> None:
     import uvicorn
 
-    uvicorn.run("tessera.api.app:app", host="127.0.0.1",
+    uvicorn.run("tessera.api.app:create_app", factory=True, host="127.0.0.1",
                 port=int(os.environ.get("TESSERA_API_PORT", "8000")))
 
 

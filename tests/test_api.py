@@ -323,9 +323,9 @@ def test_run_self_grading_guard_400(tmp_path):
     assert r.status_code == 400 and "self-grading" in r.json()["detail"]
 
 
-def test_run_llm_without_grader_400(tmp_path):
+def test_run_llm_without_grader_422(tmp_path):
     r = _client(tmp_path).post("/api/runs", json={"model": "openai/gpt-4o", "judge": "llm"})
-    assert r.status_code == 400
+    assert r.status_code == 422
 
 
 def test_run_rejects_out_of_range_epochs(tmp_path):
