@@ -292,7 +292,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unknown_suite" | "not_connected" | "grader_required" | "grader_not_allowed" | "self_grading" | "unknown_scaffold" | "unknown_provider";
+            code: "unknown_suite" | "not_connected" | "grader_required" | "grader_not_allowed" | "self_grading" | "unknown_scaffold" | "unknown_provider" | "empty_suite";
             /** Fix */
             fix: string | null;
             /** Message */

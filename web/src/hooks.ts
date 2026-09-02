@@ -2,6 +2,43 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "./api";
 import type { Catalog, Run } from "./types";
 
+export type ThemeMode = "system" | "light" | "dark";
+
+const THEME_KEY = "tessera.theme";
+const THEME_ORDER: ThemeMode[] = ["system", "light", "dark"];
+
+function storedTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
+  } catch {
+    return "system";
+  }
+}
+
+export function useTheme() {
+  const [theme, setTheme] = useState<ThemeMode>(storedTheme);
+
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const apply = () => {
+      document.documentElement.dataset.theme = theme === "system"
+        ? media?.matches ? "dark" : "light"
+        : theme;
+    };
+    apply();
+    if (theme === "system") media?.addEventListener("change", apply);
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage can be unavailable */ }
+    return () => media?.removeEventListener("change", apply);
+  }, [theme]);
+
+  const cycleTheme = useCallback(() => {
+    setTheme((current) => THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length]);
+  }, []);
+
+  return { theme, setTheme, cycleTheme };
+}
+
 export interface AsyncState<T> {
   data: T | null;
   loading: boolean;

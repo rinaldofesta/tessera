@@ -1,5 +1,5 @@
 import type {
-  Artifacts, Blueprint, BlueprintMeta, Catalog, ComparisonIntervention, ComparisonResult,
+  Artifacts, Blueprint, Catalog, ComparisonIntervention, ComparisonResult,
   Plan, Provider, ProviderUpdate, Run, RunSpec, ValidationResult,
 } from "./types";
 
@@ -66,7 +66,6 @@ export const api = {
       body: JSON.stringify({ archived }),
     }).then(j<Run>),
   // blueprints (datasets)
-  listBlueprints: () => fetch("/api/blueprints").then(j<BlueprintMeta[]>),
   getBlueprint: (id: string) => fetch(`/api/blueprints/${encodeURIComponent(id)}`).then(j<Blueprint>),
   validateBlueprint: (bp: Blueprint) =>
     fetch("/api/blueprints/validate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(bp) }).then(j<ValidationResult>),

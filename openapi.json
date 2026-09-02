@@ -60,7 +60,8 @@
               "grader_not_allowed",
               "self_grading",
               "unknown_scaffold",
-              "unknown_provider"
+              "unknown_provider",
+              "empty_suite"
             ],
             "title": "Code",
             "type": "string"

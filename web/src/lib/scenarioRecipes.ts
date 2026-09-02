@@ -4,7 +4,7 @@
 // endpoint as the actual coherence gate (this file only has to be *plausible*, not
 // authoritative). Worked examples mirror `src/tessera/examples/toy_org.py`.
 
-import { RECIPE_CONFLICT, type RecipeKey } from "@/copy";
+import { SUITE_COPY, type RecipeKey } from "@/copy";
 import type { Blueprint, Claim, ProbeDef } from "@/types";
 
 export type FieldSpec = {
@@ -71,6 +71,22 @@ export const isoDaysAgo = (days: number) => `${isoDate(-days)}T09:00:00Z`;
 /** fresher-value timestamp: today, fixed at 14:30Z */
 export const isoNow = () => `${isoDate(0)}T14:30:00Z`;
 
+/** Build one complete scenario without mutating the existing blueprint. */
+export function buildRecipe(
+  key: RecipeKey,
+  fields: Record<string, string>,
+  existing: Blueprint,
+): { claims: Claim[]; probes: ProbeDef[] } {
+  const spec = RECIPE_SPECS[key];
+  const populated = spec.defaults(fields);
+  const existingIds = new Set([
+    ...existing.claims.map((claim) => claim.claim_id),
+    ...(existing.probes ?? []).map((probe) => probe.probe_id),
+  ]);
+  const built = spec.generate(populated, existingIds);
+  return { claims: built.claims, probes: [built.probe] };
+}
+
 const NEUTRALITY_RISK = /official|supersedes|binding|authoritative|final|signed|master agreement|latest/i;
 
 export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
@@ -109,7 +125,7 @@ export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
         probe_id: uniqueId(probeId(f.subject, f.predicateB), existingIds),
         question: f.question,
         references: [claimA.claim_id, claimB.claim_id],
-        conflict_type: RECIPE_CONFLICT.agree,
+        conflict_type: SUITE_COPY.RECIPE_CONFLICT.agree,
         expected_behavior: "answer",
         expected_answer: f.expected_answer,
         expected_sources: [claimA.claim_id, claimB.claim_id],
@@ -150,7 +166,7 @@ export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
         probe_id: uniqueId(probeId(f.subject, f.predicate), existingIds),
         question: f.question,
         references: [claimA.claim_id, claimB.claim_id],
-        conflict_type: RECIPE_CONFLICT.recency,
+        conflict_type: SUITE_COPY.RECIPE_CONFLICT.recency,
         resolution_rule: "recency_wins",
         expected_behavior: "answer",
         expected_answer: f.expected_answer,
@@ -196,7 +212,7 @@ export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
         probe_id: uniqueId(probeId(f.subject, f.predicate), existingIds),
         question: f.question,
         references: [claimA.claim_id, claimB.claim_id],
-        conflict_type: RECIPE_CONFLICT.authority,
+        conflict_type: SUITE_COPY.RECIPE_CONFLICT.authority,
         resolution_rule: "authority_wins",
         expected_behavior: "answer",
         expected_answer: f.expected_answer,
@@ -237,7 +253,7 @@ export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
         probe_id: uniqueId(probeId(f.subject, f.predicate), existingIds),
         question: f.question,
         references: [claimA.claim_id, claimB.claim_id],
-        conflict_type: RECIPE_CONFLICT.disagreement,
+        conflict_type: SUITE_COPY.RECIPE_CONFLICT.disagreement,
         resolution_rule: null,
         expected_behavior: "refuse",
         expected_answer: null,
@@ -268,7 +284,7 @@ export const RECIPE_SPECS: Record<RecipeKey, RecipeSpec> = {
         probe_id: uniqueId(probeId(f.subject, f.predicate), existingIds),
         question: f.question,
         references: [],
-        conflict_type: RECIPE_CONFLICT.void,
+        conflict_type: SUITE_COPY.RECIPE_CONFLICT.void,
         expected_behavior: "refuse",
         expected_answer: null,
         expected_sources: [],

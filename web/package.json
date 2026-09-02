@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:bundle": "node scripts/check-bundle.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,7 +16,6 @@
     "@base-ui/react": "^1.5.0",
     "@fontsource/ibm-plex-mono": "^5.2.8",
     "@fontsource/ibm-plex-sans": "^5.2.8",
-    "@fontsource/space-grotesk": "^5.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.17.0",

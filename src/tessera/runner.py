@@ -245,6 +245,13 @@ def plan(
             "fix": None,
         })
 
+    if suite is not None and suite["questions"] == 0:
+        blockers.append({
+            "code": "empty_suite",
+            "message": f"suite '{suite['name']}' has no questions yet",
+            "fix": f"tessera validate {suite['name']}",
+        })
+
     if request.scaffold not in _SCAFFOLDS:
         blockers.append({
             "code": "unknown_scaffold",

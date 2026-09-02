@@ -51,6 +51,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run build
+      - run: npm run check:bundle
 
   # Public proof path: the installed wheel must work away from the checkout with no real key.
   quickstart:
