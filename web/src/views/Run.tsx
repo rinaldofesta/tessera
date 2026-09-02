@@ -7,10 +7,11 @@ import { Advanced } from "@/components/run/Advanced";
 import { ConnectCard } from "@/components/run/ConnectCard";
 import { ModelSelect } from "@/components/run/ModelSelect";
 import { SuiteSelect } from "@/components/run/SuiteSelect";
+import { SuiteSheet, withSuiteEdit } from "@/components/suite/SuiteSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RUN_COPY } from "@/copy";
+import { RUN_COPY, SUITE_COPY } from "@/copy";
 import { useCatalog } from "@/hooks";
 import { messageOf } from "@/lib/format";
 import type { Plan, RunSpec } from "@/types";
@@ -31,7 +32,7 @@ export default function Run() {
     k: number;
     questions: number;
   } | null>(null);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
 
   useEffect(() => {
     if (!catalog) return;
@@ -47,7 +48,9 @@ export default function Run() {
       const engine = params.get("engine");
       return {
         model: params.get("model") ?? catalog.models[0]?.id ?? "",
-        suite: params.get("suite") ?? catalog.defaults.suite,
+        suite: catalog.suites.some((suite) => suite.name === params.get("suite"))
+          ? params.get("suite") as string
+          : catalog.defaults.suite,
         engine: engine === "llm" || engine === "deterministic" ? engine : catalog.defaults.engine,
         grader: params.has("grader") ? params.get("grader") || null : null,
         k: numeric("k", catalog.defaults.k),
@@ -104,6 +107,10 @@ export default function Run() {
     setPlanNonce((nonce) => nonce + 1);
   }
 
+  function manageSuites() {
+    setParams((current) => withSuiteEdit(current, "new"));
+  }
+
   if (!catalog || !spec) {
     return catalogError ? (
       <p className="text-sm text-verdict-unreliable">{catalogError}</p>
@@ -121,7 +128,11 @@ export default function Run() {
             onChange={(model) => setSpec((current) => current && ({ ...current, model }))} />
           <span>{RUN_COPY.the}</span>
           <SuiteSelect suites={catalog.suites} value={spec.suite}
-            onChange={(suite) => setSpec((current) => current && ({ ...current, suite }))} />
+            onChange={(suite) => setSpec((current) => current && ({ ...current, suite }))}
+            onManage={manageSuites} />
+          <button className="text-xs font-sans font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={manageSuites}>
+            {SUITE_COPY.manage}
+          </button>
           <span>{RUN_COPY.questions}</span>
           <select
             aria-label={RUN_COPY.repeatsLabel}
@@ -173,6 +184,12 @@ export default function Run() {
           </Card>
         )}
       </aside>
+      <SuiteSheet
+        onSaved={(suiteName) => setSpec((current) => current && ({ ...current, suite: suiteName }))}
+        onDeleted={(deletedName) => setSpec((current) => current && current.suite === deletedName
+          ? { ...current, suite: catalog.defaults.suite }
+          : current)}
+      />
     </div>
   );
 }

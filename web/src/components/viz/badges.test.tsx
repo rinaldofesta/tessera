@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { StatusBadge } from "./StatusBadge";
 import { VerdictBadge, verdictOf } from "./VerdictBadge";
 
@@ -40,5 +40,15 @@ describe("VerdictBadge", () => {
   it("renders the verdict label", () => {
     render(<VerdictBadge verdict="inconsistent" />);
     expect(screen.getByText("inconsistent")).toBeInTheDocument();
+  });
+});
+
+describe("VerdictBadge in light mode", () => {
+  afterEach(() => { delete document.documentElement.dataset.theme; });
+
+  it("keeps verdict styling token-based", () => {
+    document.documentElement.dataset.theme = "light";
+    render(<VerdictBadge verdict="unreliable" />);
+    expect(screen.getByText("unreliable")).toHaveClass("border-verdict-unreliable/55", "text-verdict-unreliable");
   });
 });

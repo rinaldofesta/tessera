@@ -226,6 +226,7 @@ class Blocker(BaseModel):
         "self_grading",
         "unknown_scaffold",
         "unknown_provider",
+        "empty_suite",
     ]
     message: str
     fix: str | None

@@ -2,11 +2,10 @@ import { Suspense, lazy } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { NAV_COPY } from "@/copy";
-import { useApiHealth } from "@/hooks";
+import { useApiHealth, useTheme } from "@/hooks";
 import { cn } from "@/lib/utils";
 
 const Connect = lazy(() => import("@/views/Connect"));
-const Datasets = lazy(() => import("@/views/Datasets"));
 const Run = lazy(() => import("@/views/Run"));
 const Reports = lazy(() => import("@/views/Reports"));
 const Report = lazy(() => import("@/views/Report"));
@@ -15,7 +14,6 @@ const NAV = [
   { to: "/", label: NAV_COPY.run, end: true },
   { to: "/reports", label: NAV_COPY.reports, end: false },
   { to: "/connect", label: NAV_COPY.connect, end: false },
-  { to: "/suites", label: NAV_COPY.suites, end: false },
 ] as const;
 
 function RootRedirect() {
@@ -30,6 +28,7 @@ function ReportRedirect() {
 
 export default function App() {
   const healthy = useApiHealth();
+  const { theme, cycleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,6 +56,15 @@ export default function App() {
             <a href="/learn" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               {NAV_COPY.howItWorks}
             </a>
+            <button
+              type="button"
+              className="rounded-lg px-2 py-1 text-base text-muted-foreground hover:bg-raised hover:text-foreground"
+              title={NAV_COPY.themeTitle(theme)}
+              aria-label={NAV_COPY.themeTitle(theme)}
+              onClick={cycleTheme}
+            >
+              ◐
+            </button>
             <span
               role="status"
               aria-label={healthy ? NAV_COPY.apiConnected : NAV_COPY.apiDisconnected}
@@ -77,7 +85,7 @@ export default function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/:id" element={<Report />} />
             <Route path="/connect" element={<Connect />} />
-            <Route path="/suites" element={<Datasets />} />
+            <Route path="/suites" element={<Navigate to="/?edit=new" replace />} />
             <Route path="/new" element={<RootRedirect />} />
             <Route path="/runs" element={<Navigate to="/reports" replace />} />
             <Route path="/runs/:id" element={<ReportRedirect />} />
@@ -86,7 +94,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster position="bottom-right" richColors closeButton theme={theme} />
     </div>
   );
 }

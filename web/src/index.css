@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/space-grotesk/500.css";
-@import "@fontsource/space-grotesk/700.css";
 @import "@fontsource/ibm-plex-sans/400.css";
 @import "@fontsource/ibm-plex-sans/500.css";
 @import "@fontsource/ibm-plex-sans/600.css";
@@ -16,6 +14,7 @@
   --panel: #1c1f26;
   --raised: #232732;
   --line: #2e3340;
+  --sunken: #111318;
   --faint: #6b7280;
   --verdict-reliable: #4ade80;
   --verdict-inconsistent: #fbbf24;
@@ -50,8 +49,46 @@
   --radius: 0.875rem;
 }
 
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f7f7f8;
+  --panel: #ffffff;
+  --raised: #f0f1f4;
+  --line: #e2e4ea;
+  --sunken: #e9eaee;
+  --foreground: #14161a;
+  --muted-foreground: #4b5563;
+  --faint: #6b7280;
+  --primary: #5b63d6;
+  --primary-foreground: #ffffff;
+  --ring: #5b63d6;
+  --verdict-reliable: #15803d;
+  --verdict-inconsistent: #b45309;
+  --verdict-unreliable: #b91c1c;
+  --series-a: var(--primary);
+  --series-b: var(--faint);
+  --card: var(--panel);
+  --card-foreground: var(--foreground);
+  --popover: var(--panel);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--raised);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--raised);
+  --accent: var(--raised);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--verdict-unreliable);
+  --destructive-foreground: var(--primary-foreground);
+  --border: var(--line);
+  --input: var(--line);
+  --chart-1: var(--primary);
+  --chart-2: var(--verdict-reliable);
+  --chart-3: var(--verdict-inconsistent);
+  --chart-4: var(--verdict-unreliable);
+  --chart-5: var(--faint);
+}
+
 @theme inline {
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-background: var(--background);
@@ -81,6 +118,7 @@
   --color-panel: var(--panel);
   --color-raised: var(--raised);
   --color-line: var(--line);
+  --color-sunken: var(--sunken);
   --color-faint: var(--faint);
   --color-verdict-reliable: var(--verdict-reliable);
   --color-verdict-inconsistent: var(--verdict-inconsistent);
@@ -131,22 +169,6 @@
     scroll-behavior: auto !important;
     transition: none !important;
   }
-}
-
-@keyframes term-blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-.cursor-blink::after {
-  content: "▌";
-  margin-left: 0.25rem;
-  animation: term-blink 1.1s steps(1) infinite;
 }
 
 @media print {

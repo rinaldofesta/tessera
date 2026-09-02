@@ -129,3 +129,10 @@ def test_k_out_of_range_is_a_spec_error(k, tmp_path, monkeypatch):
             {"model": "anthropic/claude-sonnet-4-6", "k": k},
             env=_connected_env(), suites_dir=tmp_path,
         )
+
+
+def test_plan_blocks_a_suite_with_no_questions(tmp_path):
+    (tmp_path / "empty.json").write_text('{"claims": [], "probes": []}')
+    result = plan({"model": "ollama/test", "suite": "empty"}, env={}, suites_dir=tmp_path)
+    codes = [blocker["code"] for blocker in result["blockers"]]
+    assert result["ready"] is False and "empty_suite" in codes

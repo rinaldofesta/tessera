@@ -2,9 +2,7 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import type { ValidationError } from "@/types";
 
-/** Shared form primitives for the dataset editor and the scenario wizard — labeled
-    text inputs and the validation-issues list, in the same terminal aesthetic as
-    the display widgets in `term.tsx`. */
+/** Shared labeled inputs and validation feedback for suite authoring. */
 
 export function FieldLabel({ children }: React.PropsWithChildren) {
   return (

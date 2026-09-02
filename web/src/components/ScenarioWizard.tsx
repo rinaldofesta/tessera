@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/api";
-import { conflictLabel, RECIPE_CONFLICT, RECIPES, type RecipeKey } from "@/copy";
-import { RECIPE_SPECS } from "@/lib/scenarioRecipes";
+import { conflictLabel, SUITE_COPY, type RecipeKey } from "@/copy";
+import { buildRecipe, RECIPE_SPECS } from "@/lib/scenarioRecipes";
 import { Field, FieldLabel, ValidationErrors } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,8 +38,10 @@ export function ScenarioWizard({
   const spec = recipeKey ? RECIPE_SPECS[recipeKey] : null;
   // generate() assumes fully-populated (post-defaults) fields, which is only true
   // once "next" has run defaults() — never call it against the mid-fill draft
-  const existingIds = new Set([...claims.map((c) => c.claim_id), ...probes.map((p) => p.probe_id)]);
-  const draft = spec && step === "review" ? spec.generate(fields, existingIds) : null;
+  const built = recipeKey && step === "review"
+    ? buildRecipe(recipeKey, fields, { claims, probes })
+    : null;
+  const draft = built ? { claims: built.claims, probe: built.probes[0] } : null;
   const warnings = spec && draft ? spec.warn(fields, { claims, probes }) : [];
 
   // preflight = the real validate endpoint against existing + draft, on entry and on edits
@@ -53,7 +55,7 @@ export function ScenarioWizard({
         .then((v) => { if (alive) setPreflight(v); })
         .catch(() => {
           if (alive)
-            setPreflight({ ok: false, errors: [{ location: "(api)", message: "validation request failed — backend unreachable?" }] });
+            setPreflight({ ok: false, errors: [{ location: "(api)", message: SUITE_COPY.wizard.requestFailed }] });
         });
     }, 400);
     return () => { alive = false; clearTimeout(t); };
@@ -85,28 +87,28 @@ export function ScenarioWizard({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {step === "pick" && "new scenario — pick a situation"}
-            {step === "fill" && spec && RECIPES[spec.key].title}
-            {step === "review" && "review before inserting"}
+            {step === "pick" && SUITE_COPY.wizard.pickTitle}
+            {step === "fill" && spec && SUITE_COPY.RECIPES[spec.key].title}
+            {step === "review" && SUITE_COPY.wizard.reviewTitle}
           </DialogTitle>
         </DialogHeader>
 
         {step === "pick" && (
           <div className="grid gap-2 sm:grid-cols-2">
-            {(Object.keys(RECIPES) as RecipeKey[]).map((key) => (
+            {(Object.keys(SUITE_COPY.RECIPES) as RecipeKey[]).map((key) => (
               <button
                 key={key}
                 onClick={() => pick(key)}
                 className="border border-border p-3 text-left hover:bg-muted"
               >
                 <div className="mb-1">
-                  <div className="text-sm font-bold">{RECIPES[key].title}</div>
+                  <div className="text-sm font-bold">{SUITE_COPY.RECIPES[key].title}</div>
                   <span className="mt-1 inline-block border border-border px-1 text-[10px] uppercase text-muted-foreground">
-                    {conflictLabel(RECIPE_CONFLICT[key])}
+                    {conflictLabel(SUITE_COPY.RECIPE_CONFLICT[key])}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{RECIPES[key].blurb}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground italic">{RECIPES[key].example}</p>
+                <p className="text-xs text-muted-foreground">{SUITE_COPY.RECIPES[key].blurb}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground italic">{SUITE_COPY.RECIPES[key].example}</p>
               </button>
             ))}
           </div>
@@ -126,8 +128,8 @@ export function ScenarioWizard({
               ))}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep("pick")}>back</Button>
-              <Button disabled={missingRequired} onClick={next}>next</Button>
+              <Button variant="outline" onClick={() => setStep("pick")}>{SUITE_COPY.wizard.back}</Button>
+              <Button disabled={missingRequired} onClick={next}>{SUITE_COPY.wizard.next}</Button>
             </DialogFooter>
           </div>
         )}
@@ -136,20 +138,20 @@ export function ScenarioWizard({
           <div className="space-y-3">
             {draft.claims.length === 0 ? (
               <div className="border border-border p-2 text-xs text-muted-foreground">
-                no facts generated for this scenario — the question stands on its own, unanswerable by design.
+                {SUITE_COPY.wizard.noFacts}
               </div>
             ) : (
               draft.claims.map((c, i) => (
                 <div key={c.claim_id} className="border border-border p-2 text-xs">
                   <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                    fact {i + 1} — {c.silo}
+                    {SUITE_COPY.wizard.fact(i + 1, c.silo)}
                   </div>
                   <div>{c.subject} — {c.predicate}: {String(c.value)}</div>
-                  {c.asserted_at && <div className="text-muted-foreground">as of {c.asserted_at}</div>}
+                  {c.asserted_at && <div className="text-muted-foreground">{SUITE_COPY.wizard.asOf(c.asserted_at)}</div>}
                   {c.render.as === "prose" && (
                     <div className="mt-1.5">
                       <Field
-                        label="sentence template — {value} is replaced by the value"
+                        label={SUITE_COPY.wizard.sentenceTemplate}
                         value={c.render.template ?? ""}
                         onChange={(v) => setFields((f) => ({ ...f, template: v }))}
                       />
@@ -161,8 +163,8 @@ export function ScenarioWizard({
 
             {spec.key === "recency" && (
               <div className="grid grid-cols-2 gap-2">
-                <Field label="as of (crm, older)" value={fields.assertedAtA ?? ""} onChange={set("assertedAtA")} />
-                <Field label="as of (docs, newer)" value={fields.assertedAtB ?? ""} onChange={set("assertedAtB")} />
+                <Field label={SUITE_COPY.wizard.older} value={fields.assertedAtA ?? ""} onChange={set("assertedAtA")} />
+                <Field label={SUITE_COPY.wizard.newer} value={fields.assertedAtB ?? ""} onChange={set("assertedAtB")} />
               </div>
             )}
 
@@ -172,13 +174,13 @@ export function ScenarioWizard({
                   {conflictLabel(draft.probe.conflict_type)}
                 </span>
               </div>
-              <Field label="question" value={fields.question ?? ""} onChange={set("question")} />
+              <Field label={SUITE_COPY.wizard.question} value={fields.question ?? ""} onChange={set("question")} />
               {draft.probe.expected_behavior === "answer" ? (
                 <div className="mt-1.5">
-                  <Field label="expected answer" value={fields.expected_answer ?? ""} onChange={set("expected_answer")} />
+                  <Field label={SUITE_COPY.wizard.expectedAnswer} value={fields.expected_answer ?? ""} onChange={set("expected_answer")} />
                 </div>
               ) : (
-                <div className="mt-1.5 text-muted-foreground">→ must refuse — no answer to give</div>
+                <div className="mt-1.5 text-muted-foreground">{SUITE_COPY.wizard.mustRefuse}</div>
               )}
             </div>
 
@@ -189,19 +191,19 @@ export function ScenarioWizard({
             )}
 
             <div>
-              <FieldLabel>preflight — a real validate call against the full blueprint</FieldLabel>
+              <FieldLabel>{SUITE_COPY.wizard.preflight}</FieldLabel>
               {!preflight ? (
-                <div className="text-xs text-muted-foreground">checking…</div>
+                <div className="text-xs text-muted-foreground">{SUITE_COPY.wizard.checking}</div>
               ) : preflight.ok ? (
-                <div className="text-xs">✓ valid</div>
+                <div className="text-xs">{SUITE_COPY.wizard.valid}</div>
               ) : (
                 <ValidationErrors errors={preflight.errors} />
               )}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep("fill")}>back</Button>
-              <Button onClick={insert}>insert</Button>
+              <Button variant="outline" onClick={() => setStep("fill")}>{SUITE_COPY.wizard.back}</Button>
+              <Button onClick={insert}>{SUITE_COPY.wizard.insert}</Button>
             </DialogFooter>
           </div>
         )}
