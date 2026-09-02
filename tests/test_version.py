@@ -12,4 +12,4 @@ def test_release_version_is_single_across_package_metadata():
     project_version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
     citation_version = re.search(r'^version: "([^"]+)"$', citation, re.MULTILINE)
     assert project_version and citation_version
-    assert project_version.group(1) == citation_version.group(1) == __version__ == "0.2.0"
+    assert project_version.group(1) == citation_version.group(1) == __version__ == "0.3.0"

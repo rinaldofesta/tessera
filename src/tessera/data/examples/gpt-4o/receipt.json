@@ -3,7 +3,7 @@
     "path": "src/tessera/data/examples/gpt-4o/log.eval",
     "sha256": "bfb2f34e372d594f7d90634ec5f8f80e5fb6af0b80892335c3545ba375388f96"
   },
-  "execution_hash": "19b44856de7be30a6ce7e612b40ae1b10e78b8870b393dda66af615b440dcf4c",
+  "execution_hash": "a462d99a66d435b381b00b9164ad0fd6d5935f77cfd75f2b4c27f64a4e51494e",
   "protocol": {
     "blueprint_sha256": null,
     "engine": "llm",
@@ -26,7 +26,7 @@
     "inspect_ai_version": "0.3.235",
     "reported_model": "openai/gpt-4o",
     "requested_model": "openai/gpt-4o",
-    "tessera_version": "0.2.0"
+    "tessera_version": "0.3.0"
   },
   "timing": {
     "completed_at": "2026-06-07T16:58:53+00:00",

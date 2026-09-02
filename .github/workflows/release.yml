@@ -1,0 +1,136 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      publish_pypi:
+        description: Publish the verified distributions to PyPI
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Check the tag matches the declared version
+        if: github.event_name == 'push'
+        run: bash scripts/check-version.sh "${GITHUB_REF_NAME}"
+      - name: Check the declared versions on a manual run
+        if: github.event_name == 'workflow_dispatch'
+        run: bash scripts/check-version.sh
+      - name: Require the release tag when publishing to PyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi
+        run: |
+          set -euo pipefail
+          # workflow_dispatch defaults to the branch selector, not a tag. Rebuilding and
+          # publishing from an arbitrary branch ref would ship code that was never tagged
+          # or attached to a GitHub Release, so require an actual tag here.
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "publish_pypi requires dispatching from the release tag (vX.Y.Z), not a branch — got ref type '${GITHUB_REF_TYPE}'" >&2
+            exit 1
+          fi
+          bash scripts/check-version.sh "${GITHUB_REF_NAME}"
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen pytest --durations=10 -o faulthandler_timeout=60
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npm run check:bundle
+      - run: uv build
+      - run: uvx twine check dist/*
+      - name: Rebuild and exercise the wheel from the sdist
+        run: bash scripts/wheel-gate.sh
+      - name: Reject secrets in distributions
+        run: |
+          set -euo pipefail
+          # Capture each archive listing into a variable first: piping straight into
+          # `grep ... && exit 1 || true` makes a tar/unzip read failure (corrupt archive,
+          # missing tool) indistinguishable from "no secrets found" under `pipefail`,
+          # since grep (the rightmost pipeline stage) still exits 1 on no-match either way.
+          sdist_list="$(tar -tzf dist/*.tar.gz)"
+          if grep -E '\.env$|\.env\.' <<<"$sdist_list"; then exit 1; fi
+          wheel_list="$(unzip -l dist/*.whl)"
+          if grep -Ei 'secret|api_key|\.env' <<<"$wheel_list"; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist
+          if-no-files-found: error
+
+  github-release:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - name: Extract release notes from the changelog
+        id: notes
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = rf"^## \[{re.escape(version)}\].*?(?=^## \[|^\[[^]]+\]:|\Z)"
+          match = re.search(pattern, changelog, flags=re.MULTILINE | re.DOTALL)
+          if match is None:
+              raise SystemExit(f"CHANGELOG.md has no section for {version}")
+
+          body_path = Path(os.environ["RUNNER_TEMP"]) / "release-notes.md"
+          body_path.write_text(match.group(0).rstrip() + "\n", encoding="utf-8")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"body_path={body_path}\n")
+          PY
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ steps.notes.outputs.body_path }}
+          files: dist/*
+
+  # The pypi environment must exist with required reviewers. PyPI's pending publisher
+  # for tessera-eval must name .github/workflows/release.yml and the pypi environment.
+  pypi:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

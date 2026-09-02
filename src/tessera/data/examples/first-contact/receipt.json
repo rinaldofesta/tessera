@@ -3,7 +3,7 @@
     "path": "src/tessera/data/examples/first-contact/log.eval",
     "sha256": "38bd2551b847a36c337c3dd635a1fe711b72742b71af8752485e7f4e259038b3"
   },
-  "execution_hash": "61d08268f57cc5ea13aafa1d41278625c5e238e5890f5adef54a5a142d31b5a6",
+  "execution_hash": "59797a3c0796995c1f6892a99a1847860bf3bfc83c4ccc0c48da019d7debd35d",
   "protocol": {
     "blueprint_sha256": null,
     "engine": "llm",
@@ -26,7 +26,7 @@
     "inspect_ai_version": "0.3.232",
     "reported_model": "anthropic/claude-sonnet-4-6",
     "requested_model": "anthropic/claude-sonnet-4-6",
-    "tessera_version": "0.2.0"
+    "tessera_version": "0.3.0"
   },
   "timing": {
     "completed_at": "2026-06-04T18:26:43+00:00",
