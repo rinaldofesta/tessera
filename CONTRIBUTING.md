@@ -120,6 +120,20 @@ resolution_rule, void ⇒ no references).
 - **Security**: see [SECURITY.md](SECURITY.md) — do not open a public issue.
 - **Conduct**: see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+## Releasing
+
+1. Bump the version in `pyproject.toml`, `CITATION.cff`, and
+   `src/tessera/__init__.py`, and update the citation release date.
+2. Move the release notes from Unreleased into a dated `CHANGELOG.md` section.
+3. Tag the release as `vX.Y.Z` and push the tag. The `release` workflow verifies the
+   version and tests, builds the distributions, and creates the GitHub Release.
+4. After reviewing that release, manually run the `release` workflow **from the `vX.Y.Z`
+   tag** (select it as the ref when dispatching — the workflow rebuilds distributions from
+   whatever ref is selected, and defaults to the branch, not the tag; `verify` refuses a
+   `publish_pypi=true` dispatch made from anything but that tag) with `publish_pypi=true`.
+   The protected `pypi` environment and trusted publisher then publish the resulting
+   distributions.
+
 ## License of contributions
 
 Code contributions are accepted under [Apache-2.0](LICENSE); dataset contributions

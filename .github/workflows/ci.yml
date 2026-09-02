@@ -73,28 +73,8 @@ jobs:
           path: src/tessera/data/web
       - run: uv build
       - run: uvx twine check dist/*
-      - name: Rebuild the wheel from the sdist without Node
-        run: |
-          set -euo pipefail
-          work="$(mktemp -d)"; tar -xzf dist/*.tar.gz -C "$work"; src="$(find "$work" -maxdepth 1 -mindepth 1 -type d)"
-          # Node is absent in this job by construction (no setup-node) — the wheel must build from the sdist alone
-          (cd "$src" && uv build --wheel --out-dir "$work/dist")
-          uv venv "$work/venv" --python 3.12 && uv pip install --python "$work/venv/bin/python" "$work"/dist/*.whl
-          echo "REBUILD_VENV=$work/venv" >> "$GITHUB_ENV"
-          echo "REBUILD_DIST=$work/dist" >> "$GITHUB_ENV"
-      - name: Exercise the rebuilt wheel's command surface
-        run: |
-          set -euo pipefail
-          cd "$(mktemp -d)"; export TESSERA_HOME="$(mktemp -d)"; T="$REBUILD_VENV/bin/tessera"
-          $T ui --check
-          $T report first-contact --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']['pass_k_rate']==0.75"
-          # Captured to a variable, not piped straight into `grep -q`: grep can exit (and
-          # close the pipe) before the producer finishes writing, and under `pipefail` a
-          # SIGPIPE'd producer can fail the pipeline even though the match itself succeeded.
-          guide_list="$($T guide --list)"
-          grep -q start <<<"$guide_list"
-          wheel_list="$(unzip -l "$REBUILD_DIST"/*.whl)"
-          grep -q 'tessera/data/web/index.html' <<<"$wheel_list"
+      - name: Rebuild and exercise the wheel from the sdist
+        run: bash scripts/wheel-gate.sh
       - name: Reject secrets in distributions
         run: |
           set -euo pipefail
