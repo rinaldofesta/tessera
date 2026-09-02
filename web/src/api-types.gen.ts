@@ -4,62 +4,92 @@
  */
 
 export interface paths {
-    "/api/orgs": {
+    "/api/blueprints": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Orgs
-         * @description Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
-         *     dataset authored on the Datasets page is immediately runnable here. Raises (500)
-         *     if a custom org module fails to import — surfaced by the frontend as a warning.
-         */
-        get: operations["list_orgs_api_orgs_get"];
+        /** List Blueprints */
+        get: operations["list_blueprints_api_blueprints_get"];
         put?: never;
-        post?: never;
+        /** Create Blueprint */
+        post: operations["create_blueprint_api_blueprints_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/models": {
+    "/api/blueprints/preview": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Models
-         * @description The published model set displayed by the Run form.
-         */
-        get: operations["list_models_api_models_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Preview Blueprint
+         * @description Compile in memory and return the resulting org (CRM db.json, docs, manifest) —
+         *     no disk write, no eval. Powers the editor's live preview.
+         */
+        post: operations["preview_blueprint_api_blueprints_preview_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/leaderboard": {
+    "/api/blueprints/validate": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Leaderboard
-         * @description The committed public-leaderboard manifest served verbatim to the SPA.
-         */
-        get: operations["leaderboard_api_leaderboard_get"];
+        get?: never;
         put?: never;
+        /** Validate Blueprint */
+        post: operations["validate_blueprint_api_blueprints_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/blueprints/{blueprint_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Blueprint */
+        get: operations["get_blueprint_api_blueprints__blueprint_id__get"];
+        /** Upsert Blueprint */
+        put: operations["upsert_blueprint_api_blueprints__blueprint_id__put"];
         post?: never;
+        /** Delete Blueprint */
+        delete: operations["delete_blueprint_api_blueprints__blueprint_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comparisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Comparison */
+        post: operations["create_comparison_api_comparisons_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -86,61 +116,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/blueprints": {
+    "/api/evaluations": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Blueprints */
-        get: operations["list_blueprints_api_blueprints_get"];
+        /** List Evaluations */
+        get: operations["list_evaluations_api_evaluations_get"];
         put?: never;
-        /** Create Blueprint */
-        post: operations["create_blueprint_api_blueprints_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/blueprints/{blueprint_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Blueprint */
-        get: operations["get_blueprint_api_blueprints__blueprint_id__get"];
-        /** Upsert Blueprint */
-        put: operations["upsert_blueprint_api_blueprints__blueprint_id__put"];
         post?: never;
-        /** Delete Blueprint */
-        delete: operations["delete_blueprint_api_blueprints__blueprint_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/blueprints/validate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Validate Blueprint */
-        post: operations["validate_blueprint_api_blueprints_validate_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/blueprints/preview": {
+    "/api/evaluations/import": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,12 +142,131 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Import Evaluation */
+        post: operations["import_evaluation_api_evaluations_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluations/{evaluation_id}/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluation Diagnostics */
+        get: operations["evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluations/{evaluation_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluation Report */
+        get: operations["evaluation_report_api_evaluations__evaluation_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Experiments */
+        get: operations["list_experiments_api_experiments_get"];
+        put?: never;
+        /** Start Experiment */
+        post: operations["start_experiment_api_experiments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Experiment */
+        get: operations["get_experiment_api_experiments__experiment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}/comparisons/{variant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment Comparison */
+        get: operations["experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/experiments/{experiment_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Experiment */
+        post: operations["resume_experiment_api_experiments__experiment_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Preview Blueprint
-         * @description Compile in memory and return the resulting org (CRM db.json, docs, manifest) —
-         *     no disk write, no eval. Powers the editor's live preview.
+         * Leaderboard
+         * @description The committed public-leaderboard manifest served verbatim to the SPA.
          */
-        post: operations["preview_blueprint_api_blueprints_preview_post"];
+        get: operations["leaderboard_api_leaderboard_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -188,6 +300,116 @@ export interface paths {
         /** Get Report */
         get: operations["get_report_api_logs__log_id__report_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/model-discovery/rescan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rescan */
+        post: operations["rescan_api_model_discovery_rescan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Models
+         * @description The published model set displayed by the Run form.
+         */
+        get: operations["list_models_api_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orgs
+         * @description Runnable orgs = built-in ORGS builders + saved blueprints from the store, so a
+         *     dataset authored on the Datasets page is immediately runnable here. Raises (500)
+         *     if a custom org module fails to import — surfaced by the frontend as a warning.
+         */
+        get: operations["list_orgs_api_orgs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/preflights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Preflight */
+        post: operations["run_preflight_api_preflights_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Providers */
+        get: operations["list_providers_api_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/providers/{provider_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Provider */
+        put: operations["save_provider_api_providers__provider_id__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -233,23 +455,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs/{job_id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Archive Run */
-        post: operations["archive_run_api_runs__job_id__archive_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/runs/{job_id}": {
         parameters: {
             query?: never;
@@ -261,6 +466,23 @@ export interface paths {
         get: operations["get_run_api_runs__job_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{job_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Run */
+        post: operations["archive_run_api_runs__job_id__archive_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -309,228 +531,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/providers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Providers */
-        get: operations["list_providers_api_providers_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/providers/{provider_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Save Provider */
-        put: operations["save_provider_api_providers__provider_id__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/model-discovery/rescan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rescan */
-        post: operations["rescan_api_model_discovery_rescan_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/evaluations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Evaluations */
-        get: operations["list_evaluations_api_evaluations_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/evaluations/{evaluation_id}/report": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Evaluation Report */
-        get: operations["evaluation_report_api_evaluations__evaluation_id__report_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/evaluations/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Import Evaluation */
-        post: operations["import_evaluation_api_evaluations_import_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/comparisons": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Comparison */
-        post: operations["create_comparison_api_comparisons_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/evaluations/{evaluation_id}/diagnostics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Evaluation Diagnostics */
-        get: operations["evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/preflights": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run Preflight */
-        post: operations["run_preflight_api_preflights_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/experiments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Experiments */
-        get: operations["list_experiments_api_experiments_get"];
-        put?: never;
-        /** Start Experiment */
-        post: operations["start_experiment_api_experiments_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/experiments/{experiment_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Experiment */
-        get: operations["get_experiment_api_experiments__experiment_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/experiments/{experiment_id}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resume Experiment */
-        post: operations["resume_experiment_api_experiments__experiment_id__resume_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/experiments/{experiment_id}/comparisons/{variant_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Experiment Comparison */
-        get: operations["experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -545,6 +545,8 @@ export interface components {
         };
         /** Artifacts */
         Artifacts: {
+            /** Docs */
+            docs: components["schemas"]["DocFile"][];
             /** Manifest */
             manifest: {
                 [key: string]: components["schemas"]["ManifestEntry"];
@@ -557,8 +559,6 @@ export interface components {
                     };
                 };
             };
-            /** Docs */
-            docs: components["schemas"]["DocFile"][];
         };
         /**
          * Blueprint
@@ -582,10 +582,10 @@ export interface components {
         };
         /** BlueprintMeta */
         BlueprintMeta: {
-            /** Id */
-            id: string;
             /** Claims */
             claims: number;
+            /** Id */
+            id: string;
             /** Probes */
             probes: number;
         };
@@ -601,45 +601,45 @@ export interface components {
         };
         /** CategoryPairCounts */
         CategoryPairCounts: {
-            /** Matched */
-            matched: number;
             /** A Wins */
             a_wins: number;
             /** B Wins */
             b_wins: number;
-            /** Both Pass */
-            both_pass: number;
             /** Both Fail */
             both_fail: number;
+            /** Both Pass */
+            both_pass: number;
             /** Discordant */
             discordant: number;
-            /** P Value */
-            p_value: number;
             /** Dropped */
             dropped: string[];
             /** Key */
             key: string;
+            /** Matched */
+            matched: number;
+            /** P Value */
+            p_value: number;
         };
         /**
          * Claim
          * @description An atomic knowledge unit that lives in exactly one silo.
          */
         Claim: {
-            /** Claim Id */
-            claim_id: string;
-            /** Subject */
-            subject: string;
-            /** Predicate */
-            predicate: string;
-            /** Value */
-            value: unknown;
-            /** Silo */
-            silo: string;
             /** Asserted At */
             asserted_at?: string | null;
             /** Authority */
             authority?: number | null;
+            /** Claim Id */
+            claim_id: string;
+            /** Predicate */
+            predicate: string;
             render: components["schemas"]["Render"];
+            /** Silo */
+            silo: string;
+            /** Subject */
+            subject: string;
+            /** Value */
+            value: unknown;
         };
         /** ComparisonDiagnostics */
         ComparisonDiagnostics: {
@@ -663,18 +663,18 @@ export interface components {
         };
         /** ComparisonResult */
         ComparisonResult: {
-            /** Compatible */
-            compatible: boolean;
-            /** Intervention */
-            intervention: string;
-            /** Changed Dimensions */
-            changed_dimensions: string[];
-            /** Unexpected Dimensions */
-            unexpected_dimensions: string[];
-            overall: components["schemas"]["PairCounts"];
             /** Categories */
             categories: components["schemas"]["CategoryPairCounts"][];
+            /** Changed Dimensions */
+            changed_dimensions: string[];
+            /** Compatible */
+            compatible: boolean;
             diagnostics: components["schemas"]["ComparisonDiagnostics"];
+            /** Intervention */
+            intervention: string;
+            overall: components["schemas"]["PairCounts"];
+            /** Unexpected Dimensions */
+            unexpected_dimensions: string[];
         };
         /**
          * ConflictType
@@ -687,29 +687,29 @@ export interface components {
         ConflictType: "none" | "resolvable" | "unresolvable" | "void";
         /** Diagnostic */
         Diagnostic: {
+            /** Count */
+            count: number;
             /** Kind */
             kind: string;
             /** Signature */
             signature: string;
-            /** Count */
-            count: number;
         };
         /** DocFile */
         DocFile: {
-            /** Path */
-            path: string;
             /** Content */
             content: string;
+            /** Path */
+            path: string;
         };
         /** EvalSetup */
         EvalSetup: {
             defaults: components["schemas"]["EvalSetupDefaults"];
             /** Models */
             models: components["schemas"]["EvalSetupModel"][];
-            /** Suites */
-            suites: components["schemas"]["EvalSetupSuite"][];
             /** Sources */
             sources: components["schemas"]["SourceStatus"][];
+            /** Suites */
+            suites: components["schemas"]["EvalSetupSuite"][];
         };
         /** EvalSetupDefaults */
         EvalSetupDefaults: {
@@ -718,37 +718,41 @@ export interface components {
              * @constant
              */
             engine: "deterministic";
-            /** Repeats */
-            repeats: number;
             /** Grader */
             grader: string | null;
+            /** Repeats */
+            repeats: number;
         };
         /** EvalSetupModel */
         EvalSetupModel: {
+            /** Detail */
+            detail?: string | null;
             /** Id */
             id: string;
             /** Label */
             label: string;
             /** Provider */
             provider: string;
+            /** Published */
+            published: boolean;
             /**
              * Readiness
              * @enum {string}
              */
             readiness: "ready" | "needs_config" | "needs_server" | "offline" | "unverified";
-            /** Source */
-            source: string;
-            /** Published */
-            published: boolean;
             /** Released */
             released: string | null;
             /** Retired */
             retired: boolean;
-            /** Detail */
-            detail?: string | null;
+            /** Source */
+            source: string;
         };
         /** EvalSetupSuite */
         EvalSetupSuite: {
+            /** Claims */
+            claims: number;
+            /** Editable */
+            editable: boolean;
             /** Id */
             id: string;
             /**
@@ -756,15 +760,25 @@ export interface components {
              * @enum {string}
              */
             kind: "builtin" | "custom";
-            /** Editable */
-            editable: boolean;
-            /** Claims */
-            claims: number;
             /** Questions */
             questions: number;
         };
         /** EvaluationSummary */
         EvaluationSummary: {
+            /** Artifact Path */
+            artifact_path: string | null;
+            /** Artifact Sha256 */
+            artifact_sha256: string | null;
+            /** Created At */
+            created_at: string;
+            /** Engine */
+            engine: string;
+            /** Epochs */
+            epochs: number;
+            /** Execution Hash */
+            execution_hash: string;
+            /** Grader */
+            grader: string | null;
             /** Id */
             id: string;
             /**
@@ -772,6 +786,17 @@ export interface components {
              * @enum {string}
              */
             kind: "run" | "log" | "pinned" | "import";
+            /** Mean Rate */
+            mean_rate: number | null;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string | null;
+            /** Pass K Rate */
+            pass_k_rate: number | null;
+            /** Protocol Hash */
+            protocol_hash: string;
+            receipt: components["schemas"]["RunReceipt"];
             /** Source */
             source: string;
             /**
@@ -779,31 +804,6 @@ export interface components {
              * @enum {string}
              */
             status: "done" | "error";
-            /** Created At */
-            created_at: string;
-            /** Model */
-            model: string;
-            /** Org */
-            org: string | null;
-            /** Engine */
-            engine: string;
-            /** Grader */
-            grader: string | null;
-            /** Epochs */
-            epochs: number;
-            /** Pass K Rate */
-            pass_k_rate: number | null;
-            /** Mean Rate */
-            mean_rate: number | null;
-            /** Artifact Path */
-            artifact_path: string | null;
-            /** Artifact Sha256 */
-            artifact_sha256: string | null;
-            /** Protocol Hash */
-            protocol_hash: string;
-            /** Execution Hash */
-            execution_hash: string;
-            receipt: components["schemas"]["RunReceipt"];
         };
         /**
          * ExpectedBehavior
@@ -813,72 +813,70 @@ export interface components {
         ExpectedBehavior: "answer" | "refuse";
         /** Experiment */
         Experiment: {
+            /** Baseline Variant */
+            baseline_variant: string;
+            /** Cells */
+            cells: components["schemas"]["ExperimentCell"][];
+            /** Created At */
+            created_at: string;
+            /** Error */
+            error: string | null;
             /** Id */
             id: string;
             /** Name */
             name: string;
+            request: components["schemas"]["ExperimentRequest"];
             /**
              * Status
              * @enum {string}
              */
             status: "running" | "done" | "error" | "stopped";
-            /** Created At */
-            created_at: string;
-            /** Updated At */
-            updated_at: string;
-            /** Baseline Variant */
-            baseline_variant: string;
-            request: components["schemas"]["ExperimentRequest"];
-            /** Error */
-            error: string | null;
             /** Total Cost */
             total_cost: number | null;
-            /** Cells */
-            cells: components["schemas"]["ExperimentCell"][];
+            /** Updated At */
+            updated_at: string;
         };
         /** ExperimentCell */
         ExperimentCell: {
-            /** Id */
-            id: string;
+            /** Error */
+            error: string | null;
             /** Experiment Id */
             experiment_id: string;
-            /** Variant Id */
-            variant_id: string;
+            /** Id */
+            id: string;
             /** Repeat Index */
             repeat_index: number;
+            /** Run Id */
+            run_id: string | null;
             /**
              * Status
              * @enum {string}
              */
             status: "pending" | "running" | "done" | "error" | "skipped";
-            /** Run Id */
-            run_id: string | null;
-            /** Error */
-            error: string | null;
+            /** Variant Id */
+            variant_id: string;
         };
         /** ExperimentComparison */
         ExperimentComparison: {
-            /** Compatible */
-            compatible: boolean;
-            /** Intervention */
-            intervention: string;
-            /** Changed Dimensions */
-            changed_dimensions: string[];
-            /** Unexpected Dimensions */
-            unexpected_dimensions: string[];
-            overall: components["schemas"]["PairCounts"];
             /** Categories */
             categories: components["schemas"]["CategoryPairCounts"][];
+            /** Changed Dimensions */
+            changed_dimensions: string[];
+            /** Compatible */
+            compatible: boolean;
             diagnostics: components["schemas"]["ComparisonDiagnostics"];
-            /** Paired Repeats */
-            paired_repeats: number[];
             /** Dropped Repeats */
             dropped_repeats: number[];
+            /** Intervention */
+            intervention: string;
+            overall: components["schemas"]["PairCounts"];
+            /** Paired Repeats */
+            paired_repeats: number[];
+            /** Unexpected Dimensions */
+            unexpected_dimensions: string[];
         };
         /** ExperimentRequest */
         ExperimentRequest: {
-            /** Name */
-            name: string;
             /** Baseline Variant */
             baseline_variant: string;
             /**
@@ -887,20 +885,22 @@ export interface components {
              * @enum {string}
              */
             intervention: "model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness";
-            /** Variants */
-            variants: components["schemas"]["ExperimentVariant"][];
-            /**
-             * Repeats
-             * @default 1
-             */
-            repeats: number;
-            /** Max Cost */
-            max_cost?: number | null;
             /**
              * Max Consecutive Errors
              * @default 3
              */
             max_consecutive_errors: number;
+            /** Max Cost */
+            max_cost?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * Repeats
+             * @default 1
+             */
+            repeats: number;
+            /** Variants */
+            variants: components["schemas"]["ExperimentVariant"][];
         };
         /** ExperimentStarted */
         ExperimentStarted: {
@@ -914,36 +914,36 @@ export interface components {
         };
         /** ExperimentVariant */
         ExperimentVariant: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Model */
-            model: string;
+            /**
+             * Epochs
+             * @default 3
+             */
+            epochs: number;
             /** Grader */
             grader?: string | null;
+            /** Id */
+            id: string;
             /**
              * Judge
              * @default deterministic
              * @enum {string}
              */
             judge: "llm" | "deterministic";
+            /** Label */
+            label: string;
+            /** Model */
+            model: string;
             /**
              * Org
              * @default toy
              */
             org: string;
             /**
-             * Epochs
-             * @default 3
-             */
-            epochs: number;
-            /**
              * Scaffold
              * @default baseline
              * @enum {string}
              */
-            scaffold: "baseline" | "refuse-aware";
+            scaffold: "baseline" | "refusal_aware";
             /**
              * Seed
              * @default 0
@@ -957,10 +957,6 @@ export interface components {
         };
         /** LeaderboardManifest */
         LeaderboardManifest: {
-            /** Title */
-            title?: string | null;
-            /** Rows */
-            rows: components["schemas"]["LeaderboardRow"][];
             /**
              * Exhibitions
              * @default []
@@ -968,182 +964,186 @@ export interface components {
             exhibitions: {
                 [key: string]: unknown;
             }[];
+            /** Rows */
+            rows: components["schemas"]["LeaderboardRow"][];
+            /** Title */
+            title?: string | null;
         };
         /** LeaderboardRow */
         LeaderboardRow: {
-            /** Label */
-            label: string;
-            /** Model */
-            model: string;
-            /** Date */
-            date?: string | null;
-            /** Pass K Rate */
-            pass_k_rate: number;
-            /** Mean Rate */
-            mean_rate: number;
+            /** Answer Format Rate */
+            answer_format_rate?: number | null;
             /** Categories */
             categories: {
                 [key: string]: number;
             };
-            /** Answer Format Rate */
-            answer_format_rate?: number | null;
-            /** Scorer Version */
-            scorer_version?: string | null;
-            /** Org */
-            org?: string | null;
-            /** K */
-            k: number;
-            /** Scaffold */
-            scaffold?: string | null;
-            /** Seed */
-            seed?: number | null;
+            /** Date */
+            date?: string | null;
             /** Harness */
             harness?: string | null;
-            /** Notes */
-            notes?: string | null;
+            /** K */
+            k: number;
+            /** Label */
+            label: string;
             /** Log */
             log?: string | null;
+            /** Mean Rate */
+            mean_rate: number;
+            /** Model */
+            model: string;
+            /** Notes */
+            notes?: string | null;
+            /** Org */
+            org?: string | null;
+            /** Pass K Rate */
+            pass_k_rate: number;
+            /** Scaffold */
+            scaffold?: string | null;
+            /** Scorer Version */
+            scorer_version?: string | null;
+            /** Seed */
+            seed?: number | null;
         };
         /** LogMeta */
         LogMeta: {
-            /** Id */
-            id: string;
-            /** Source */
-            source: string;
-            /** Path */
-            path: string;
-            /** Model */
-            model: string;
+            /** Created */
+            created: string;
             /** Engine */
             engine: string;
             /** Grader */
             grader: string | null;
-            /** Org */
-            org: string | null;
-            /** Created */
-            created: string;
+            /** Id */
+            id: string;
             /** K */
             k: number;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string | null;
+            /** Path */
+            path: string;
+            /** Source */
+            source: string;
         };
         /** ManifestEntry */
         ManifestEntry: {
-            /** Silo */
-            silo: string;
-            /** Subject */
-            subject: string;
-            /** Predicate */
-            predicate: string;
             /** Artifact */
             artifact: string;
             /** Locator */
             locator: string;
+            /** Predicate */
+            predicate: string;
+            /** Silo */
+            silo: string;
+            /** Subject */
+            subject: string;
         };
         /** PairCounts */
         PairCounts: {
-            /** Matched */
-            matched: number;
             /** A Wins */
             a_wins: number;
             /** B Wins */
             b_wins: number;
-            /** Both Pass */
-            both_pass: number;
             /** Both Fail */
             both_fail: number;
+            /** Both Pass */
+            both_pass: number;
             /** Discordant */
             discordant: number;
-            /** P Value */
-            p_value: number;
             /** Dropped */
             dropped: string[];
+            /** Matched */
+            matched: number;
+            /** P Value */
+            p_value: number;
         };
         /** PreflightRequest */
         PreflightRequest: {
             /** Model */
             model: string;
             /**
-             * Require Tools
-             * @default true
-             */
-            require_tools: boolean;
-            /**
              * Refresh
              * @default false
              */
             refresh: boolean;
+            /**
+             * Require Tools
+             * @default true
+             */
+            require_tools: boolean;
         };
         /** PreflightResult */
         PreflightResult: {
-            /** Model */
-            model: string;
+            /** Cached */
+            cached: boolean;
+            /** Checked At */
+            checked_at: string;
             /** Effective Model */
             effective_model: string | null;
-            /** Tool Call */
-            tool_call: boolean;
-            /** Ok */
-            ok: boolean;
             /** Error */
             error: string | null;
             /** Latency Seconds */
             latency_seconds: number;
-            /** Checked At */
-            checked_at: string;
-            /** Cached */
-            cached: boolean;
+            /** Model */
+            model: string;
+            /** Ok */
+            ok: boolean;
+            /** Tool Call */
+            tool_call: boolean;
             usage: components["schemas"]["PreflightUsage"];
         };
         /** PreflightUsage */
         PreflightUsage: {
+            /** Billed Cost */
+            billed_cost: number | null;
             /** Input Tokens */
             input_tokens: number;
             /** Output Tokens */
             output_tokens: number;
             /** Total Tokens */
             total_tokens: number;
-            /** Billed Cost */
-            billed_cost: number | null;
         };
         /**
          * Probe
          * @description A question that references claims and declares expected behavior.
          */
         Probe: {
+            conflict_type: components["schemas"]["ConflictType"];
+            /** Expected Answer */
+            expected_answer?: string | null;
+            expected_behavior: components["schemas"]["ExpectedBehavior"];
+            /** Expected Sources */
+            expected_sources?: string[];
             /** Probe Id */
             probe_id: string;
             /** Question */
             question: string;
             /** References */
             references?: string[];
-            conflict_type: components["schemas"]["ConflictType"];
             resolution_rule?: components["schemas"]["ResolutionRule"] | null;
-            expected_behavior: components["schemas"]["ExpectedBehavior"];
-            /** Expected Answer */
-            expected_answer?: string | null;
-            /** Expected Sources */
-            expected_sources?: string[];
         };
         /** Provider */
         Provider: {
-            /** Id */
-            id: string;
             /** Configured */
             configured: boolean;
+            /** Fields */
+            fields: components["schemas"]["ProviderField"][];
+            /** Id */
+            id: string;
             /**
              * Readiness
              * @enum {string}
              */
             readiness: "configured" | "needs_config";
-            /** Fields */
-            fields: components["schemas"]["ProviderField"][];
         };
         /** ProviderField */
         ProviderField: {
-            /** Id */
-            id: string;
-            /** Env Var */
-            env_var: string;
             /** Configured */
             configured: boolean;
+            /** Env Var */
+            env_var: string;
+            /** Id */
+            id: string;
         };
         /** ProviderUpdate */
         ProviderUpdate: {
@@ -1161,61 +1161,61 @@ export interface components {
         };
         /** ReceiptProtocol */
         ReceiptProtocol: {
-            /** Org */
-            org: string | null;
             /** Blueprint Sha256 */
             blueprint_sha256: string | null;
-            /** Scaffold */
-            scaffold: string | null;
-            /** Seed */
-            seed: number | null;
-            /** Harness */
-            harness: string | null;
             /** Engine */
             engine: string;
-            /** Grader */
-            grader: string | null;
             /** Epochs */
             epochs: number;
+            /** Grader */
+            grader: string | null;
+            /** Harness */
+            harness: string | null;
+            /** Org */
+            org: string | null;
+            /** Scaffold */
+            scaffold: string | null;
             /** Scorer Version */
             scorer_version: string | null;
+            /** Seed */
+            seed: number | null;
         };
         /** ReceiptRuntime */
         ReceiptRuntime: {
-            /** Requested Model */
-            requested_model: string;
-            /** Reported Model */
-            reported_model: string;
             /** Effective Models */
             effective_models: string[];
-            /** Inspect Ai Version */
-            inspect_ai_version: string | null;
-            /** Tessera Version */
-            tessera_version: string | null;
-            /** Git Revision */
-            git_revision: string | null;
             /** Git Dirty */
             git_dirty: boolean | null;
+            /** Git Revision */
+            git_revision: string | null;
+            /** Inspect Ai Version */
+            inspect_ai_version: string | null;
+            /** Reported Model */
+            reported_model: string;
+            /** Requested Model */
+            requested_model: string;
+            /** Tessera Version */
+            tessera_version: string | null;
         };
         /** ReceiptTiming */
         ReceiptTiming: {
-            /** Started At */
-            started_at: string | null;
             /** Completed At */
             completed_at: string | null;
             /** Duration Seconds */
             duration_seconds: number | null;
+            /** Started At */
+            started_at: string | null;
         };
         /** ReceiptUsage */
         ReceiptUsage: {
+            /** Billed Cost */
+            billed_cost: number | null;
             /** Input Tokens */
             input_tokens: number;
             /** Output Tokens */
             output_tokens: number;
             /** Total Tokens */
             total_tokens: number;
-            /** Billed Cost */
-            billed_cost: number | null;
         };
         /**
          * Render
@@ -1234,11 +1234,11 @@ export interface components {
         RenderAs: "field" | "prose";
         /** Report */
         Report: {
-            header: components["schemas"]["ReportHeader"];
-            overall: components["schemas"]["ReportOverall"];
+            axes: components["schemas"]["ReportAxes"];
             /** Categories */
             categories: components["schemas"]["ReportCategory"][];
-            axes: components["schemas"]["ReportAxes"];
+            header: components["schemas"]["ReportHeader"];
+            overall: components["schemas"]["ReportOverall"];
             /** Probes */
             probes: components["schemas"]["ReportProbe"][];
         };
@@ -1246,116 +1246,116 @@ export interface components {
         ReportAxes: {
             /** Accuracy Rate */
             accuracy_rate: number | null;
-            /** Provenance Rate */
-            provenance_rate: number;
-            /** Refusal Rate */
-            refusal_rate: number | null;
+            /** Answer Format Rate */
+            answer_format_rate?: number | null;
             /** N Answer Epochs */
             n_answer_epochs: number;
             /** N Refuse Epochs */
             n_refuse_epochs: number;
             /** N Total Epochs */
             n_total_epochs: number;
-            /** Answer Format Rate */
-            answer_format_rate?: number | null;
+            /** Provenance Rate */
+            provenance_rate: number;
+            /** Refusal Rate */
+            refusal_rate: number | null;
         };
         /** ReportCategory */
         ReportCategory: {
+            /** Flaky */
+            flaky: boolean;
             /** Key */
             key: string;
+            /** Mean Rate */
+            mean_rate: number;
             /** N Probes */
             n_probes: number;
             /** Pass K Rate */
             pass_k_rate: number;
-            /** Mean Rate */
-            mean_rate: number;
-            /** Flaky */
-            flaky: boolean;
         };
         /** ReportFailure */
         ReportFailure: {
-            /** Epoch */
-            epoch: number;
-            /** Passed */
-            passed: boolean;
             /** Accuracy Ok */
             accuracy_ok: boolean;
-            /** Provenance Ok */
-            provenance_ok: boolean;
-            /** Refusal Ok */
-            refusal_ok: boolean;
-            /** Question */
-            question: string;
             /** Answer */
             answer: string;
+            /** Answer Format Ok */
+            answer_format_ok?: boolean | null;
             /** Consulted */
             consulted: string[];
+            /** Epoch */
+            epoch: number;
             /** Expected Sources */
             expected_sources: string[];
             /** Missing */
             missing: string[];
-            /** Answer Format Ok */
-            answer_format_ok?: boolean | null;
+            /** Passed */
+            passed: boolean;
+            /** Provenance Ok */
+            provenance_ok: boolean;
+            /** Question */
+            question: string;
+            /** Refusal Ok */
+            refusal_ok: boolean;
         };
         /** ReportHeader */
         ReportHeader: {
-            /** Model */
-            model: string;
+            /** Created */
+            created: string;
             /** Engine */
             engine: string;
             /** Grader */
             grader: string | null;
-            /** Org */
-            org: string | null;
-            /** K */
-            k: number;
-            /** Created */
-            created: string;
-            /** Location */
-            location: string;
-            /** Scorer Version */
-            scorer_version?: string | null;
-            /** Inspect Ai Version */
-            inspect_ai_version?: string | null;
-            /** Scaffold */
-            scaffold?: string | null;
-            /** Seed */
-            seed?: number | null;
             /** Harness */
             harness?: string | null;
+            /** Inspect Ai Version */
+            inspect_ai_version?: string | null;
+            /** K */
+            k: number;
+            /** Location */
+            location: string;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string | null;
+            /** Scaffold */
+            scaffold?: string | null;
+            /** Scorer Version */
+            scorer_version?: string | null;
+            /** Seed */
+            seed?: number | null;
         };
         /** ReportOverall */
         ReportOverall: {
-            /** Pass K Rate */
-            pass_k_rate: number;
             /** Mean Rate */
             mean_rate: number;
+            /** Pass K Rate */
+            pass_k_rate: number;
         };
         /** ReportProbe */
         ReportProbe: {
-            /** Probe Id */
-            probe_id: string;
             /** Conflict Type */
             conflict_type: string;
-            /** Expected Behavior */
-            expected_behavior: string;
-            /** Epochs Total */
-            epochs_total: number;
             /** Epochs Passed */
             epochs_passed: number;
-            /** Pass K */
-            pass_k: boolean;
-            /** Mean Pass */
-            mean_pass: number;
+            /** Epochs Total */
+            epochs_total: number;
+            /** Expected Behavior */
+            expected_behavior: string;
             /** Failures */
             failures: components["schemas"]["ReportFailure"][];
+            /** Mean Pass */
+            mean_pass: number;
+            /** Pass K */
+            pass_k: boolean;
+            /** Probe Id */
+            probe_id: string;
         };
         /** RescanResult */
         RescanResult: {
-            /** Sources */
-            sources: components["schemas"]["SourceStatus"][];
             /** Model Count */
             model_count: number;
+            /** Sources */
+            sources: components["schemas"]["SourceStatus"][];
         };
         /**
          * ResolutionRule
@@ -1366,44 +1366,44 @@ export interface components {
         ResolutionRule: "recency_wins" | "authority_wins";
         /** RunReceipt */
         RunReceipt: {
-            /** Protocol Hash */
-            protocol_hash: string;
+            artifact: components["schemas"]["ReceiptArtifact"];
             /** Execution Hash */
             execution_hash: string;
             protocol: components["schemas"]["ReceiptProtocol"];
+            /** Protocol Hash */
+            protocol_hash: string;
             runtime: components["schemas"]["ReceiptRuntime"];
-            artifact: components["schemas"]["ReceiptArtifact"];
             timing: components["schemas"]["ReceiptTiming"];
             usage: components["schemas"]["ReceiptUsage"];
         };
         /** RunRequest */
         RunRequest: {
-            /** Model */
-            model: string;
+            /**
+             * Epochs
+             * @default 3
+             */
+            epochs: number;
             /** Grader */
             grader?: string | null;
             /**
              * Judge
-             * @default llm
+             * @default deterministic
              * @enum {string}
              */
             judge: "llm" | "deterministic";
+            /** Model */
+            model: string;
             /**
              * Org
              * @default toy
              */
             org: string;
             /**
-             * Epochs
-             * @default 3
-             */
-            epochs: number;
-            /**
              * Scaffold
              * @default baseline
              * @enum {string}
              */
-            scaffold: "baseline" | "refuse-aware";
+            scaffold: "baseline" | "refusal_aware";
             /**
              * Seed
              * @default 0
@@ -1412,59 +1412,61 @@ export interface components {
         };
         /** RunStatus */
         RunStatus: {
+            /** Error */
+            error: string | null;
+            report: components["schemas"]["Report"] | null;
             /**
              * Status
              * @enum {string}
              */
             status: "running" | "done" | "error";
-            report: components["schemas"]["Report"] | null;
-            /** Error */
-            error: string | null;
         };
         /** RunSummary */
         RunSummary: {
-            /** Id */
-            id: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "running" | "done" | "error";
-            /** Error */
-            error: string | null;
-            /** Model */
-            model: string;
-            /** Org */
-            org: string;
-            /** Judge */
-            judge: string;
-            /** Grader */
-            grader: string | null;
-            /** Epochs */
-            epochs: number;
-            /** Created At */
-            created_at: string;
-            /** Finished At */
-            finished_at: string | null;
-            /** Pass K Rate */
-            pass_k_rate: number | null;
-            /** Mean Rate */
-            mean_rate: number | null;
             /**
              * Archived
              * @default false
              */
             archived: boolean;
+            /** Created At */
+            created_at: string;
+            /** Epochs */
+            epochs: number;
+            /** Error */
+            error: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Grader */
+            grader: string | null;
+            /** Id */
+            id: string;
+            /** Judge */
+            judge: string;
+            /** Mean Rate */
+            mean_rate: number | null;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string;
+            /** Pass K Rate */
+            pass_k_rate: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "done" | "error";
         };
         /** SiloField */
         SiloField: {
-            /** Value */
-            value: unknown;
             /** Asserted At */
             asserted_at: string | null;
+            /** Value */
+            value: unknown;
         };
         /** SourceStatus */
         SourceStatus: {
+            /** Detail */
+            detail: string | null;
             /** Source */
             source: string;
             /**
@@ -1472,8 +1474,6 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "offline" | "skipped";
-            /** Detail */
-            detail: string | null;
         };
         /** StartRunResult */
         StartRunResult: {
@@ -1487,38 +1487,38 @@ export interface components {
         };
         /** TrendPoint */
         TrendPoint: {
-            /** Id */
-            id: string;
-            /** Created At */
-            created_at: string;
-            /** Model */
-            model: string;
-            /** Org */
-            org: string;
-            /** Engine */
-            engine: string;
-            /** Pass K Rate */
-            pass_k_rate: number;
-            /** Mean Rate */
-            mean_rate: number;
+            axes: components["schemas"]["ReportAxes"];
             /** Categories */
             categories: {
                 [key: string]: number;
             };
-            axes: components["schemas"]["ReportAxes"];
+            /** Created At */
+            created_at: string;
+            /** Engine */
+            engine: string;
+            /** Id */
+            id: string;
+            /** Mean Rate */
+            mean_rate: number;
+            /** Model */
+            model: string;
+            /** Org */
+            org: string;
+            /** Pass K Rate */
+            pass_k_rate: number;
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /** ValidationIssue */
         ValidationIssue: {
@@ -1529,10 +1529,10 @@ export interface components {
         };
         /** ValidationResult */
         ValidationResult: {
-            /** Ok */
-            ok: boolean;
             /** Errors */
             errors: components["schemas"]["ValidationIssue"][];
+            /** Ok */
+            ok: boolean;
         };
     };
     responses: never;
@@ -1543,86 +1543,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_orgs_api_orgs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-        };
-    };
-    list_models_api_models_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-        };
-    };
-    leaderboard_api_leaderboard_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeaderboardManifest"];
-                };
-            };
-        };
-    };
-    eval_setup_api_eval_setup_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EvalSetup"];
-                };
-            };
-        };
-    };
     list_blueprints_api_blueprints_get: {
         parameters: {
             query?: never;
@@ -1665,6 +1585,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BlueprintId"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_blueprint_api_blueprints_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Artifacts"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_blueprint_api_blueprints_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationResult"];
                 };
             };
             /** @description Validation Error */
@@ -1777,7 +1767,7 @@ export interface operations {
             };
         };
     };
-    validate_blueprint_api_blueprints_validate_post: {
+    create_comparison_api_comparisons_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1786,9 +1776,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "application/json": components["schemas"]["ComparisonRequest"];
             };
         };
         responses: {
@@ -1798,7 +1786,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ValidationResult"];
+                    "application/json": components["schemas"]["ComparisonResult"];
                 };
             };
             /** @description Validation Error */
@@ -1812,7 +1800,47 @@ export interface operations {
             };
         };
     };
-    preview_blueprint_api_blueprints_preview_post: {
+    eval_setup_api_eval_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalSetup"];
+                };
+            };
+        };
+    };
+    list_evaluations_api_evaluations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationSummary"][];
+                };
+            };
+        };
+    };
+    import_evaluation_api_evaluations_import_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1821,19 +1849,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "multipart/form-data": components["schemas"]["Body_import_evaluation_api_evaluations_import_post"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Artifacts"];
+                    "application/json": components["schemas"]["EvaluationSummary"];
                 };
             };
             /** @description Validation Error */
@@ -1843,6 +1869,237 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Diagnostic"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluation_report_api_evaluations__evaluation_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_experiments_api_experiments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Experiment"][];
+                };
+            };
+        };
+    };
+    start_experiment_api_experiments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_experiment_api_experiments__experiment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Experiment"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get: {
+        parameters: {
+            query?: {
+                intervention?: ("model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness") | null;
+            };
+            header?: never;
+            path: {
+                experiment_id: string;
+                variant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_experiment_api_experiments__experiment_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leaderboard_api_leaderboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaderboardManifest"];
                 };
             };
         };
@@ -1885,6 +2142,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rescan_api_model_discovery_rescan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RescanResult"];
+                };
+            };
+        };
+    };
+    list_models_api_models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    list_orgs_api_orgs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    run_preflight_api_preflights_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreflightResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"][];
+                };
+            };
+        };
+    };
+    save_provider_api_providers__provider_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
                 };
             };
             /** @description Validation Error */
@@ -1995,6 +2400,37 @@ export interface operations {
             };
         };
     };
+    get_run_api_runs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     archive_run_api_runs__job_id__archive_post: {
         parameters: {
             query?: never;
@@ -2017,37 +2453,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_run_api_runs__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunStatus"];
                 };
             };
             /** @description Validation Error */
@@ -2112,411 +2517,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrendPoint"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_providers_api_providers_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Provider"][];
-                };
-            };
-        };
-    };
-    save_provider_api_providers__provider_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProviderUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Provider"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rescan_api_model_discovery_rescan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RescanResult"];
-                };
-            };
-        };
-    };
-    list_evaluations_api_evaluations_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EvaluationSummary"][];
-                };
-            };
-        };
-    };
-    evaluation_report_api_evaluations__evaluation_id__report_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                evaluation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Report"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    import_evaluation_api_evaluations_import_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_import_evaluation_api_evaluations_import_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EvaluationSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_comparison_api_comparisons_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ComparisonRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ComparisonResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    evaluation_diagnostics_api_evaluations__evaluation_id__diagnostics_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                evaluation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Diagnostic"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    run_preflight_api_preflights_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PreflightRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PreflightResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_experiments_api_experiments_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Experiment"][];
-                };
-            };
-        };
-    };
-    start_experiment_api_experiments_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExperimentRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperimentStarted"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_experiment_api_experiments__experiment_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                experiment_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Experiment"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    resume_experiment_api_experiments__experiment_id__resume_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                experiment_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperimentStarted"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    experiment_comparison_api_experiments__experiment_id__comparisons__variant_id__get: {
-        parameters: {
-            query?: {
-                intervention?: ("model" | "org" | "engine" | "grader" | "k" | "scaffold" | "seed" | "harness") | null;
-            };
-            header?: never;
-            path: {
-                experiment_id: string;
-                variant_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExperimentComparison"];
                 };
             };
             /** @description Validation Error */

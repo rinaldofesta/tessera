@@ -28,12 +28,10 @@ def _run_summary(row: dict) -> dict:
 
 @router.post("/api/runs", response_model=R.StartRunResult)
 async def start_run(req: RunRequest, request: Request):
-    if req.judge == "llm":
-        if not req.grader:
-            raise HTTPException(400, "the llm engine requires an independent grader")
-        if req.grader == req.model:
-            raise HTTPException(
-                400, "grader must differ from the model under test (self-grading guard)")
+    # RunRequest already guarantees an llm judge comes with a grader (422 otherwise).
+    if req.judge == "llm" and req.grader == req.model:
+        raise HTTPException(
+            400, "grader must differ from the model under test (self-grading guard)")
     store = request.app.state.run_store
     job_id = store.create(req)
     await request.app.state.schedule(

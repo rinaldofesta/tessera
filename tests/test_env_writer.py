@@ -4,7 +4,7 @@ import threading
 
 import pytest
 
-from tessera.api.env_writer import EnvValueError, apply_updates, validate_base_url, validate_secret
+from tessera.env_writer import EnvValueError, apply_updates, validate_base_url, validate_secret
 
 
 def _noop() -> None:

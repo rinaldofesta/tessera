@@ -221,7 +221,7 @@ static assets by the **FastAPI** backend (one process, no Node at runtime):
 ```bash
 uv pip install -e ".[app]"
 cd web && npm install && npm run build && cd ..   # build the SPA once
-.venv/bin/tessera-api   # = uvicorn tessera.api.app:app --port 8000; serves the app + API
+.venv/bin/tessera-api   # = uvicorn tessera.api.app:create_app --factory --port 8000; serves the app + API
 ```
 
 Open **http://localhost:8000**. Four views:

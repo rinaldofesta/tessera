@@ -12,7 +12,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
-from tessera.api import env_writer
+from tessera import env_writer
 from tessera.api import responses as R
 from tessera.api.providers import FIELD_BASE_URL, PROVIDERS, configured_fields, is_configured
 
