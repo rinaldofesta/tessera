@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
-from typing import Awaitable, Callable
 
 from tessera.api.scrub import scrub_error
 

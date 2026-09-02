@@ -1,7 +1,8 @@
 # tests/test_factory_validate.py
 import pytest
-from tessera.factory.validate import assert_variant_invariants, VariantInvariantError
+
 from tessera.examples.meridian_org import build_meridian_blueprint
+from tessera.factory.validate import VariantInvariantError, assert_variant_invariants
 from tessera.models import Blueprint
 
 

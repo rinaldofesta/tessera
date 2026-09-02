@@ -6,9 +6,11 @@ from tessera.report.serialize import report_to_dict
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
               model="anthropic/claude-sonnet-4-6", location="./logs/run.eval",
-              packages={"inspect_ai": "0.3.235"}):
+              packages=None):
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
     from inspect_ai.model import ModelConfig
+    if packages is None:
+        packages = {"inspect_ai": "0.3.235"}
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
     spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),

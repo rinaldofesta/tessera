@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 
 from tessera.report.models import (
-    AxesSummary, CategoryReliability, ProbeEpoch, ProbeReliability,
+    AxesSummary,
+    CategoryReliability,
+    ProbeEpoch,
+    ProbeReliability,
 )
 
 

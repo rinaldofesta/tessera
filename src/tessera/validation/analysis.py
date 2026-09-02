@@ -10,8 +10,9 @@ from __future__ import annotations
 import math
 import random
 import re
+from collections.abc import Sequence
 from itertools import combinations
-from typing import Any, Sequence
+from typing import Any
 
 
 class StudyError(ValueError):

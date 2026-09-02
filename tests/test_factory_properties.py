@@ -3,9 +3,10 @@ import os
 import subprocess
 import sys
 from collections import Counter
+
+from tessera.examples.meridian_org import build_meridian_blueprint
 from tessera.factory.generate import generate_variant
 from tessera.factory.schema import CANONICAL_ANSWERS
-from tessera.examples.meridian_org import build_meridian_blueprint
 
 
 def test_distinct_seeds_yield_distinct_blueprints():

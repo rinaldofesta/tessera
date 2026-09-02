@@ -4,8 +4,14 @@ import inspect
 import pytest
 
 from tessera.evals.task import (
-    _BASELINE_PROMPT, _PROMPT, _REFUSAL_AWARE_PROMPT, _SCAFFOLD_CONTRACT,
-    _SCAFFOLD_REFUSE_AWARE, _SCAFFOLD_REFUSE_BASELINE, _SCAFFOLDS, _SUBMIT_DESC,
+    _BASELINE_PROMPT,
+    _PROMPT,
+    _REFUSAL_AWARE_PROMPT,
+    _SCAFFOLD_CONTRACT,
+    _SCAFFOLD_REFUSE_AWARE,
+    _SCAFFOLD_REFUSE_BASELINE,
+    _SCAFFOLDS,
+    _SUBMIT_DESC,
     tessera_probes,
 )
 from tessera.orgs import get_blueprint

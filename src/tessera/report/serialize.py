@@ -8,7 +8,11 @@ Markdown so the API and the Markdown scorecard never diverge. The category order
 from __future__ import annotations
 
 from tessera.report.aggregate import (
-    aggregate_by, overall_mean_rate, overall_pass_k_rate, reduce_by_probe, summarize_axes,
+    aggregate_by,
+    overall_mean_rate,
+    overall_pass_k_rate,
+    reduce_by_probe,
+    summarize_axes,
 )
 from tessera.report.log_adapter import eval_log_to_records
 from tessera.report.models import CANONICAL_ORDER, ProbeEpoch, ProbeReliability

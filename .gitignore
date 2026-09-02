@@ -25,6 +25,8 @@ runs.db
 web/node_modules/
 web/dist/
 web/*.tsbuildinfo
+# The SPA bundle Vite writes into the package for the wheel (built in CI, never committed)
+src/tessera/data/web/
 
 # Inspect logs (kept local) — except the holdout commitment + reveal, which are the
 # published half of the ADR-0008 pre-registration protocol (docs/scaffold.md links them).
@@ -39,6 +41,8 @@ logs/scaffold/holdout/*
 *.eval
 # ...but keep the pinned demo logs the showcase depends on
 !examples/*.eval
+# ...and the bundled example runs that ship inside the wheel
+!src/tessera/data/examples/**/*.eval
 # ...and the committed leaderboard logs that back manifest rows (ADR-0012). Two ignores to
 # beat here — the logs/* directory rule AND the global *.eval above — so re-include the
 # directory first (star-then-negate), then re-include *.eval AFTER the global ignore so
@@ -51,12 +55,14 @@ logs/leaderboard/*
 # Private dev docs (superpowers specs/plans) — local only, kept out of the public repo
 docs/superpowers/
 
-# Local agent config (Claude Code workspace files)
+# Local agent config and review artifacts (Claude Code, Lavish, omp)
 .claude/
+.lavish/
+.omp/
 
 # Secrets — API keys live here, never committed
 .env
 .env.*
 
-# Local MoA benchmark shim (untracked)
+# Local-only material: work logs, decks, explainer drafts, the MoA benchmark shim
 local/

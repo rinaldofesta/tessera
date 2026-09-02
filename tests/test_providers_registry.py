@@ -1,5 +1,8 @@
 from tessera.api.providers import (
-    PROVIDERS, configured_fields, is_configured, provider_for_model,
+    PROVIDERS,
+    configured_fields,
+    is_configured,
+    provider_for_model,
 )
 
 

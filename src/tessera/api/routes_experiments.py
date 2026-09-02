@@ -93,4 +93,4 @@ def experiment_comparison(experiment_id: str, variant_id: str, request: Request,
             intervention=intervention or experiment["request"]["intervention"],
         )
     except ValueError as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409, str(exc)) from exc

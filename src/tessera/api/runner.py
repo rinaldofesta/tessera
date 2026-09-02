@@ -15,9 +15,9 @@ from pathlib import Path
 
 import anyio
 
+from tessera.api.receipts import canonical_sha256, file_sha256, receipt_from_log
 from tessera.api.schemas import RunRequest
 from tessera.api.scrub import scrub_error
-from tessera.api.receipts import canonical_sha256, file_sha256, receipt_from_log
 from tessera.report.serialize import report_to_dict
 
 

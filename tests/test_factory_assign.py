@@ -1,6 +1,7 @@
 # tests/test_factory_assign.py
 import random
 from collections import Counter
+
 from tessera.factory.assign import assign_conflicts
 from tessera.factory.schema import SCHEMA
 

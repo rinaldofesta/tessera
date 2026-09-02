@@ -1,5 +1,6 @@
 # tests/test_factory_export.py
 import json
+
 from tessera.factory.export import export_variant
 from tessera.factory.generate import generate_variant
 from tessera.factory.schema import FACTORY_VERSION

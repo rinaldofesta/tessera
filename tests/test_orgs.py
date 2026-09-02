@@ -2,8 +2,8 @@
 
 import pytest
 
-from tessera.orgs import get_blueprint, org_names
 from tessera.models import Blueprint, ConflictType
+from tessera.orgs import get_blueprint, org_names
 
 
 def test_registry_lists_builtins():

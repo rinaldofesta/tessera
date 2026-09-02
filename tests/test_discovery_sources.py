@@ -1,4 +1,3 @@
-import pytest
 
 from tessera.api.discovery.ollama import discover_ollama
 
@@ -208,7 +207,7 @@ def test_the_cloud_listing_is_sent_with_the_provider_credential():
     # never succeed. The key must never appear in the RESULT, only in the request.
     client = _StubClient(payload={"data": []})
     discover_cloud(client, env={"OPENAI_API_KEY": "sk-token", "ANTHROPIC_API_KEY": "sk-ant"})
-    sent = {url: h for url, h in zip(client.calls, client.headers)}
+    sent = {url: h for url, h in zip(client.calls, client.headers, strict=True)}
     assert sent["https://api.openai.com/v1/models"]["Authorization"] == "Bearer sk-token"
     anthropic = sent["https://api.anthropic.com/v1/models"]
     assert anthropic["x-api-key"] == "sk-ant"

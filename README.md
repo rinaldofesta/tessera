@@ -52,11 +52,10 @@ quickstart_log=$(find logs/quickstart -name '*.eval' -type f | sort | tail -n 1)
 ```
 
 This live example needs provider keys for the selected model and independent grader. The
-full locked environment is:
+exact locked environment is `uv.lock`:
 
 ```bash
-uv pip install -r requirements.lock
-uv pip install -e . --no-deps
+uv sync --frozen --all-extras
 ```
 
 ## The failure Tessera catches

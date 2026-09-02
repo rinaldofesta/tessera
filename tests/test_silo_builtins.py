@@ -1,7 +1,6 @@
 from tessera.silos.builtin import CRM, DOCS
 from tessera.silos.registry import registry
 
-
 MANIFEST = {
     "acme.tier.crm": {
         "silo": "crm", "subject": "Acme Corp", "predicate": "tier",

@@ -5,7 +5,11 @@ from __future__ import annotations
 import os
 
 from tessera.report.models import (
-    CANONICAL_ORDER, AxesSummary, CategoryReliability, ProbeReliability, RunHeader,
+    CANONICAL_ORDER,
+    AxesSummary,
+    CategoryReliability,
+    ProbeReliability,
+    RunHeader,
 )
 
 
