@@ -42,9 +42,10 @@ from tessera.api import (
     routes_workbench,
 )
 from tessera.api.preflight import PreflightCache, default_preflight_runner
-from tessera.api.run_store import RunStore
+from tessera.api.run_store import RunStore as SqliteRunStore
 from tessera.api.runner import default_eval_runner
 from tessera.api.workbench_store import WorkbenchStore
+from tessera.store import RunStore
 
 # The bundled examples are run folders (<stem>/log.eval); routes_reports.logs_in lists
 # both that layout and flat <stem>.eval files, so the "examples:first-contact" ids hold.
@@ -97,12 +98,13 @@ async def _background_schedule(coro) -> None:
 _LESSON = Path("docs/tessera-lesson.html")
 
 
-def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = None,
+def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None = None,
                log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
                blueprint_dir: Path | None = None, env_file: Path | None = None,
                discovery_cache=None, workbench_store: WorkbenchStore | None = None,
                import_dir: Path | None = None, preflight_runner=default_preflight_runner,
-               preflight_cache: PreflightCache | None = None) -> FastAPI:
+               preflight_cache: PreflightCache | None = None,
+               home: Path | None = None, folder_eval_runner=None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -114,6 +116,11 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
             load_dotenv(app.state.env_file, interpolate=False, override=False)
         except ImportError:
             pass
+        interrupted = app.state.runs.reconcile()
+        if interrupted:
+            logging.getLogger("tessera").info(
+                "reconciled interrupted runs: %s", ", ".join(interrupted),
+            )
         app.state.workbench_store.recover_interrupted()
         # Say at startup which configured providers cannot actually run: a key without
         # its SDK fails mid-eval with a bare ModuleNotFoundError, long after the
@@ -134,7 +141,9 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
         yield
 
     app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
-    app.state.run_store = run_store or RunStore(_DEFAULT_RUNS_DB)
+    app.state.run_store = run_store or SqliteRunStore(_DEFAULT_RUNS_DB)
+    app.state.runs = RunStore(home or paths.home())
+    app.state.folder_eval_runner = folder_eval_runner
     app.state.workbench_store = workbench_store or WorkbenchStore(app.state.run_store.db_path)
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
@@ -169,11 +178,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_meta.router)
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
-    # Registration order doesn't matter today: routes_runs.py's dynamic segment is
-    # GET-only (/api/runs/{job_id}), and dry-run is POST-only, so FastAPI/Starlette's
-    # method+path matching can never confuse the two regardless of order. Kept ahead of
-    # routes_runs anyway — if a POST /api/runs/{job_id} handler is ever added, a literal
-    # "/api/runs/dry-run" route only stays unambiguous while it precedes the dynamic one.
+    # Catalog precedes runs by convention; dry-run is POST while the dynamic run route is GET.
     app.include_router(routes_catalog.router)
     app.include_router(routes_runs.router)
     app.include_router(routes_providers.router)

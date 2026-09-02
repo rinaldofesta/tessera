@@ -32,6 +32,7 @@ from pathlib import Path
 import psutil
 
 from tessera.api.receipts import receipt_from_log
+from tessera.catalog import suite_name_for_org
 from tessera.errors import SpecError, TesseraError
 from tessera.report.log_adapter import read_log
 from tessera.report.render import render_markdown
@@ -318,11 +319,21 @@ class RunStore:
     ) -> RunRecord:
         def mutate(data: dict, directory: Path) -> bool:
             # Artifacts first, state last: a reader that sees "completed" finds them.
-            _write_atomic(directory / "report.json", _json_bytes(report))
-            _write_atomic(directory / "receipt.json", _json_bytes(receipt))
-            _write_atomic(directory / "report.md", markdown.encode())
+            # If any artifact write fails, none survive — a failed run has no report.
+            artifacts = [
+                ("report.json", _json_bytes(report)),
+                ("receipt.json", _json_bytes(receipt)),
+                ("report.md", markdown.encode()),
+            ]
             if log_path is not None:
-                _write_atomic(directory / "log.eval", Path(log_path).read_bytes())
+                artifacts.append(("log.eval", Path(log_path).read_bytes()))
+            try:
+                for name, payload in artifacts:
+                    _write_atomic(directory / name, payload)
+            except BaseException:
+                for name, _ in artifacts:
+                    (directory / name).unlink(missing_ok=True)
+                raise
             data.update({
                 "status": "completed",
                 "finished_at": _now(),
@@ -428,7 +439,7 @@ class RunStore:
             report = report_to_dict(log)
             header = report["header"]
             request = {
-                "suite": header.get("org") or "",
+                "suite": suite_name_for_org(header.get("org")),
                 "model": header["model"],
                 "engine": header["engine"],
                 "grader": header.get("grader"),

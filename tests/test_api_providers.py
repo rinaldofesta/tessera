@@ -11,6 +11,7 @@ SENTINEL = "sk-" + "S3NT1NEL" * 4
 
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
+        home=tmp_path / "home",
         eval_runner=lambda req: None,
         log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
@@ -119,7 +120,7 @@ def test_a_typo_in_a_field_name_is_rejected_rather_than_silently_ignored(tmp_pat
 def test_a_runner_error_cannot_persist_or_return_a_configured_credential(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", SENTINEL)
 
-    def _raise_with_credential(req):
+    def _raise_with_credential(**_kwargs):
         raise RuntimeError(f"provider request failed with {SENTINEL}")
 
     async def _inline_schedule(coro):
@@ -127,7 +128,9 @@ def test_a_runner_error_cannot_persist_or_return_a_configured_credential(tmp_pat
 
     store = RunStore(tmp_path / "runs.db")
     client = TestClient(create_app(
-        eval_runner=_raise_with_credential,
+        home=tmp_path / "home",
+        eval_runner=lambda req: None,
+        folder_eval_runner=_raise_with_credential,
         log_dirs={"logs": tmp_path / "logs"},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "bp",
@@ -135,16 +138,15 @@ def test_a_runner_error_cannot_persist_or_return_a_configured_credential(tmp_pat
         env_file=tmp_path / ".env",
     ))
     started = client.post(
-        "/api/runs", json={"model": "openai/gpt-4o", "judge": "deterministic"})
+        "/api/runs", json={"model": "openai/gpt-4o", "engine": "deterministic"})
     assert started.status_code == 200
-    job_id = started.json()["job_id"]
+    run_id = started.json()["id"]
 
-    responses = (client.get("/api/runs"), client.get(f"/api/runs/{job_id}"))
+    responses = (client.get("/api/runs"), client.get(f"/api/runs/{run_id}"))
     for response in responses:
         assert response.status_code == 200
         assert SENTINEL not in response.text
         assert find_credential_like_values(response.json()) == []
 
-    persisted = store.get(job_id)
-    assert persisted is not None
-    assert SENTINEL not in persisted["error"]
+    persisted = client.app.state.runs.get(run_id)
+    assert SENTINEL not in persisted.data["error"]

@@ -32,7 +32,10 @@ jobs:
       # The suite is key-free by design: no model API key is ever needed here. --frozen
       # installs exactly what uv.lock resolves, so CI tests the environment we ship.
       - run: uv sync --frozen --all-extras
-      - run: uv run --frozen pytest
+      # --durations surfaces any test that stalls; the suite is meant to finish in seconds.
+      # faulthandler dumps every thread's stack when one test exceeds 60 s, so a stall
+      # shows *where* it hangs instead of only how long.
+      - run: uv run --frozen pytest --durations=10 -o faulthandler_timeout=60
 
   web:
     runs-on: ubuntu-latest

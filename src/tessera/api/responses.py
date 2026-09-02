@@ -17,15 +17,8 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from tessera.api.schemas import ExperimentRequest
-from tessera.contract import (
-    Diagnostic,
-    Report,
-    ReportAxes,
-    RunReceipt,
-)
-
-RunState = Literal["running", "done", "error"]
-
+from tessera.contract import Diagnostic, ReportAxes, RunReceipt
+from tessera.contract import Report as Report  # re-export: routes still spell it R.Report
 
 # ----- logs -----
 
@@ -39,35 +32,6 @@ class LogMeta(BaseModel):
     org: str | None
     created: str
     k: int
-
-
-# ----- runs -----
-
-class StartRunResult(BaseModel):
-    job_id: str
-    status: RunState
-
-
-class RunStatus(BaseModel):
-    status: RunState
-    report: Report | None            # set once the run is done
-    error: str | None                # set when status == "error"
-
-
-class RunSummary(BaseModel):
-    id: str
-    status: RunState
-    error: str | None
-    model: str
-    org: str
-    judge: str
-    grader: str | None
-    epochs: int
-    created_at: str
-    finished_at: str | None
-    pass_k_rate: float | None        # null until a report exists
-    mean_rate: float | None
-    archived: bool = False
 
 
 class LeaderboardRow(BaseModel):

@@ -141,6 +141,17 @@ def build_catalog(
     ).model_dump()
 
 
+def suite_name_for_org(org: str | None) -> str:
+    """The user-facing suite name for a protocol org id found in a log header. Logs
+    written before `org` was recorded ran the default org, which is the default suite."""
+    if org is None:
+        return DEFAULTS.suite
+    for name, metadata in BUILTIN_SUITES.items():
+        if metadata["org"] == org:
+            return name
+    return org
+
+
 def resolve_suite(ref: str, *, suites_dir: Path | None = None) -> tuple[dict, list[str]]:
     diagnostics = []
     resolved = SUITE_ALIASES.get(ref, ref)

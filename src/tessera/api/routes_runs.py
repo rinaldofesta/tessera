@@ -1,87 +1,127 @@
-"""Live eval runs: start (gated), history, poll, SSE stream, and dashboard trends.
-
-Live runs need model keys (loaded from .env by the default runner) and run
-one-at-a-time in a worker thread.
-"""
+"""Folder-backed live runs plus the legacy sqlite dashboard trends endpoint."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
+import tempfile
+from functools import partial
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+import anyio
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from tessera.api import responses as R
-from tessera.api.runner import run_eval_job
-from tessera.api.schemas import ArchiveRequest, RunRequest
+from tessera.api.schemas import ArchiveRequest
+from tessera.api.scrub import scrub_error
+from tessera.contract import Run, RunSpec
+from tessera.errors import SpecError
+from tessera.runner import execute, plan, run_result_payload
 
 router = APIRouter()
 
 
-def _run_summary(row: dict) -> dict:
-    row = row.copy()
-    report = row.pop("report")
-    row["pass_k_rate"] = report["overall"]["pass_k_rate"] if report else None
-    row["mean_rate"] = report["overall"]["mean_rate"] if report else None
-    return row
+@router.post("/api/runs", response_model=Run)
+async def start_run(spec: RunSpec, request: Request):
+    planned = plan(spec, suites_dir=request.app.state.blueprint_dir)
+    if not planned["ready"]:
+        raise HTTPException(422, detail=planned["blockers"])
 
-
-@router.post("/api/runs", response_model=R.StartRunResult)
-async def start_run(req: RunRequest, request: Request):
-    # RunRequest already guarantees an llm judge comes with a grader (422 otherwise).
-    if req.judge == "llm" and req.grader == req.model:
-        raise HTTPException(
-            400, "grader must differ from the model under test (self-grading guard)")
-    store = request.app.state.run_store
-    job_id = store.create(req)
+    store = request.app.state.runs
+    record = store.create(spec.model_dump())
+    job = partial(
+        execute,
+        record,
+        spec.model_dump(),
+        store=store,
+        suites_dir=request.app.state.blueprint_dir,
+        eval_fn=request.app.state.folder_eval_runner,
+    )
+    queued = run_result_payload(record)
     await request.app.state.schedule(
-        run_eval_job(
-            job_id, req, store, request.app.state.eval_runner,
-            request.app.state.workbench_store,
-        ))
-    job = store.get(job_id)
-    return {"job_id": job_id, "status": job["status"] if job else "running"}
+        anyio.to_thread.run_sync(job)
+    )
+    # An inline test scheduler may already have completed the store; the launch response
+    # remains the coherent queued snapshot captured before scheduling.
+    return queued
 
 
-@router.get("/api/runs", response_model=list[R.RunSummary])
+@router.get("/api/runs", response_model=list[Run])
 def list_runs(request: Request, include_archived: bool = False):
-    """Run history (newest first) with headline rates — for the monitor + dashboard."""
-    return request.app.state.run_store.list(include_archived=include_archived)
+    """Run history with verdicts but without heavyweight reports and receipts."""
+    return [
+        run_result_payload(record, include_report=False)
+        for record in request.app.state.runs.list(include_archived=include_archived)
+    ]
 
 
-@router.post("/api/runs/{job_id}/archive", response_model=R.RunSummary)
-def archive_run(job_id: str, request: Request, req: ArchiveRequest = ArchiveRequest()):
-    store = request.app.state.run_store
-    job = store.get(job_id)
-    if job is None:
-        raise HTTPException(404, f"unknown job: {job_id}")
-    if job["status"] == "running":
+@router.post("/api/runs/import", response_model=Run)
+async def import_run(request: Request, file: UploadFile = File(...)):
+    data = await file.read()
+    temporary: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".eval", delete=False) as handle:
+            handle.write(data)
+            temporary = handle.name
+        record = request.app.state.runs.import_log(Path(temporary))
+        return run_result_payload(record)
+    except Exception as exc:  # noqa: BLE001 — malformed uploads fail at several layers
+        raise HTTPException(
+            400, detail=scrub_error(f"cannot read log: {type(exc).__name__}: {exc}"),
+        ) from exc
+    finally:
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+
+
+@router.post("/api/runs/{run_id}/archive", response_model=Run)
+def archive_run(run_id: str, request: Request, req: ArchiveRequest = ArchiveRequest()):
+    store = request.app.state.runs
+    try:
+        record = store.get(run_id)
+    except SpecError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+    if record.data["status"] == "running":
         raise HTTPException(409, "a running evaluation cannot be archived")
-    return _run_summary(store.set_archived(job_id, req.archived))
+    try:
+        return run_result_payload(store.set_archived(run_id, req.archived))
+    except SpecError as exc:
+        raise HTTPException(409, detail=str(exc)) from exc
 
 
-@router.get("/api/runs/{job_id}", response_model=R.RunStatus)
-def get_run(job_id: str, request: Request):
-    job = request.app.state.run_store.get(job_id)
-    if job is None:
-        raise HTTPException(404, f"unknown job: {job_id}")
-    return {"status": job["status"], "report": job["report"], "error": job["error"]}
+@router.get("/api/runs/{run_id}", response_model=Run)
+def get_run(run_id: str, request: Request):
+    try:
+        return run_result_payload(request.app.state.runs.get(run_id))
+    except SpecError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
 
 
-@router.get("/api/runs/{job_id}/events")
-async def run_events(job_id: str, request: Request):
+@router.get("/api/runs/{run_id}/events")
+async def run_events(run_id: str, request: Request):
     """Server-Sent Events stream of run status until terminal. SSE (not WebSocket) is
     simpler and more air-gap-friendly; the FE shows live status off this."""
     from fastapi.responses import StreamingResponse
 
+    try:
+        request.app.state.runs.get(run_id)
+    except SpecError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+
     async def gen():
         for _ in range(600):  # ~10 min ceiling
-            job = request.app.state.run_store.get(job_id)
-            if job is None:
-                yield f"event: error\ndata: {json.dumps({'error': 'unknown job'})}\n\n"
+            try:
+                record = request.app.state.runs.get(run_id)
+            except SpecError:
+                yield f"event: error\ndata: {json.dumps({'error': 'unknown run'})}\n\n"
                 return
-            yield f"data: {json.dumps({'status': job['status'], 'error': job['error']})}\n\n"
-            if job["status"] != "running":
+            status = record.data["status"]
+            yield f"data: {json.dumps({'status': status, 'error': record.data['error']})}\n\n"
+            if status not in {"queued", "running"}:
                 return
             await asyncio.sleep(1)
     return StreamingResponse(gen(), media_type="text/event-stream")

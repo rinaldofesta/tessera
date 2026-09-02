@@ -8,6 +8,7 @@ from tessera.api.run_store import RunStore
 
 def _client(tmp_path) -> TestClient:
     return TestClient(create_app(
+        home=tmp_path / "home",
         eval_runner=lambda req: None,
         log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "suites",

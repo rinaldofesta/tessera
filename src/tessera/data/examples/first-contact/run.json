@@ -12,7 +12,7 @@
     "model": "anthropic/claude-sonnet-4-6",
     "scaffold": "baseline",
     "seed": 0,
-    "suite": ""
+    "suite": "starter"
   },
   "schema_version": 1,
   "source": "bundled",

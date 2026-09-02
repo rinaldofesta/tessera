@@ -176,6 +176,20 @@
         "title": "Body_import_evaluation_api_evaluations_import_post",
         "type": "object"
       },
+      "Body_import_run_api_runs_import_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_run_api_runs_import_post",
+        "type": "object"
+      },
       "Body_upload_report_api_reports_post": {
         "properties": {
           "file": {
@@ -1384,6 +1398,24 @@
           "model"
         ],
         "title": "ExperimentVariant",
+        "type": "object"
+      },
+      "Gate": {
+        "properties": {
+          "min_pass_k": {
+            "title": "Min Pass K",
+            "type": "number"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "min_pass_k",
+          "passed"
+        ],
+        "title": "Gate",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2801,6 +2833,206 @@
         "title": "ResolutionRule",
         "type": "string"
       },
+      "Run": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "gate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Gate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "paths": {
+            "$ref": "#/components/schemas/RunPaths"
+          },
+          "receipt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Report"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request": {
+            "$ref": "#/components/schemas/RunRequestSpec"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "run",
+              "import",
+              "bundled"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "interrupted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Verdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ok",
+          "id",
+          "status",
+          "source",
+          "archived",
+          "schema_version",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "request",
+          "verdict",
+          "gate",
+          "report",
+          "receipt",
+          "diagnostics",
+          "paths",
+          "error"
+        ],
+        "title": "Run",
+        "type": "object"
+      },
+      "RunPaths": {
+        "properties": {
+          "dir": {
+            "title": "Dir",
+            "type": "string"
+          },
+          "log": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log"
+          },
+          "report_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Json"
+          },
+          "report_md": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Md"
+          }
+        },
+        "required": [
+          "dir",
+          "log",
+          "report_json",
+          "report_md"
+        ],
+        "title": "RunPaths",
+        "type": "object"
+      },
       "RunReceipt": {
         "properties": {
           "artifact": {
@@ -2839,14 +3071,15 @@
         "title": "RunReceipt",
         "type": "object"
       },
-      "RunRequest": {
+      "RunRequestSpec": {
         "properties": {
-          "epochs": {
-            "default": 3,
-            "maximum": 10.0,
-            "minimum": 1.0,
-            "title": "Epochs",
-            "type": "integer"
+          "engine": {
+            "enum": [
+              "deterministic",
+              "llm"
+            ],
+            "title": "Engine",
+            "type": "string"
           },
           "grader": {
             "anyOf": [
@@ -2859,44 +3092,37 @@
             ],
             "title": "Grader"
           },
-          "judge": {
-            "default": "deterministic",
-            "enum": [
-              "llm",
-              "deterministic"
-            ],
-            "title": "Judge",
-            "type": "string"
+          "k": {
+            "title": "K",
+            "type": "integer"
           },
           "model": {
             "title": "Model",
             "type": "string"
           },
-          "org": {
-            "default": "toy",
-            "title": "Org",
-            "type": "string"
-          },
           "scaffold": {
-            "default": "baseline",
-            "enum": [
-              "baseline",
-              "refusal_aware"
-            ],
             "title": "Scaffold",
             "type": "string"
           },
           "seed": {
-            "default": 0,
-            "minimum": 0.0,
             "title": "Seed",
             "type": "integer"
+          },
+          "suite": {
+            "title": "Suite",
+            "type": "string"
           }
         },
         "required": [
-          "model"
+          "suite",
+          "model",
+          "engine",
+          "grader",
+          "k",
+          "scaffold",
+          "seed"
         ],
-        "title": "RunRequest",
+        "title": "RunRequestSpec",
         "type": "object"
       },
       "RunSpec": {
@@ -2956,160 +3182,6 @@
         "title": "RunSpec",
         "type": "object"
       },
-      "RunStatus": {
-        "properties": {
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "report": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Report"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "enum": [
-              "running",
-              "done",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "report",
-          "error"
-        ],
-        "title": "RunStatus",
-        "type": "object"
-      },
-      "RunSummary": {
-        "properties": {
-          "archived": {
-            "default": false,
-            "title": "Archived",
-            "type": "boolean"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "epochs": {
-            "title": "Epochs",
-            "type": "integer"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "finished_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
-          },
-          "grader": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grader"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "judge": {
-            "title": "Judge",
-            "type": "string"
-          },
-          "mean_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mean Rate"
-          },
-          "model": {
-            "title": "Model",
-            "type": "string"
-          },
-          "org": {
-            "title": "Org",
-            "type": "string"
-          },
-          "pass_k_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pass K Rate"
-          },
-          "status": {
-            "enum": [
-              "running",
-              "done",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "status",
-          "error",
-          "model",
-          "org",
-          "judge",
-          "grader",
-          "epochs",
-          "created_at",
-          "finished_at",
-          "pass_k_rate",
-          "mean_rate"
-        ],
-        "title": "RunSummary",
-        "type": "object"
-      },
       "SiloField": {
         "properties": {
           "asserted_at": {
@@ -3167,29 +3239,6 @@
           "detail"
         ],
         "title": "SourceStatus",
-        "type": "object"
-      },
-      "StartRunResult": {
-        "properties": {
-          "job_id": {
-            "title": "Job Id",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "running",
-              "done",
-              "error"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "job_id",
-          "status"
-        ],
-        "title": "StartRunResult",
         "type": "object"
       },
       "TrendPoint": {
@@ -3324,6 +3373,34 @@
           "errors"
         ],
         "title": "ValidationResult",
+        "type": "object"
+      },
+      "Verdict": {
+        "properties": {
+          "label": {
+            "enum": [
+              "reliable",
+              "inconsistent",
+              "unreliable"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "mean_rate": {
+            "title": "Mean Rate",
+            "type": "number"
+          },
+          "pass_k_rate": {
+            "title": "Pass K Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "pass_k_rate",
+          "mean_rate",
+          "label"
+        ],
+        "title": "Verdict",
         "type": "object"
       }
     }
@@ -4320,7 +4397,7 @@
     },
     "/api/runs": {
       "get": {
-        "description": "Run history (newest first) with headline rates \u2014 for the monitor + dashboard.",
+        "description": "Run history with verdicts but without heavyweight reports and receipts.",
         "operationId": "list_runs_api_runs_get",
         "parameters": [
           {
@@ -4340,7 +4417,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RunSummary"
+                    "$ref": "#/components/schemas/Run"
                   },
                   "title": "Response List Runs Api Runs Get",
                   "type": "array"
@@ -4368,7 +4445,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RunRequest"
+                "$ref": "#/components/schemas/RunSpec"
               }
             }
           },
@@ -4379,7 +4456,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StartRunResult"
+                  "$ref": "#/components/schemas/Run"
                 }
               }
             },
@@ -4437,16 +4514,54 @@
         "summary": "Dry Run"
       }
     },
-    "/api/runs/{job_id}": {
+    "/api/runs/import": {
+      "post": {
+        "operationId": "import_run_api_runs_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_run_api_runs_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Run"
+      }
+    },
+    "/api/runs/{run_id}": {
       "get": {
-        "operationId": "get_run_api_runs__job_id__get",
+        "operationId": "get_run_api_runs__run_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "job_id",
+            "name": "run_id",
             "required": true,
             "schema": {
-              "title": "Job Id",
+              "title": "Run Id",
               "type": "string"
             }
           }
@@ -4456,7 +4571,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunStatus"
+                  "$ref": "#/components/schemas/Run"
                 }
               }
             },
@@ -4476,16 +4591,16 @@
         "summary": "Get Run"
       }
     },
-    "/api/runs/{job_id}/archive": {
+    "/api/runs/{run_id}/archive": {
       "post": {
-        "operationId": "archive_run_api_runs__job_id__archive_post",
+        "operationId": "archive_run_api_runs__run_id__archive_post",
         "parameters": [
           {
             "in": "path",
-            "name": "job_id",
+            "name": "run_id",
             "required": true,
             "schema": {
-              "title": "Job Id",
+              "title": "Run Id",
               "type": "string"
             }
           }
@@ -4507,7 +4622,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunSummary"
+                  "$ref": "#/components/schemas/Run"
                 }
               }
             },
@@ -4527,17 +4642,17 @@
         "summary": "Archive Run"
       }
     },
-    "/api/runs/{job_id}/events": {
+    "/api/runs/{run_id}/events": {
       "get": {
         "description": "Server-Sent Events stream of run status until terminal. SSE (not WebSocket) is\nsimpler and more air-gap-friendly; the FE shows live status off this.",
-        "operationId": "run_events_api_runs__job_id__events_get",
+        "operationId": "run_events_api_runs__run_id__events_get",
         "parameters": [
           {
             "in": "path",
-            "name": "job_id",
+            "name": "run_id",
             "required": true,
             "schema": {
-              "title": "Job Id",
+              "title": "Run Id",
               "type": "string"
             }
           }
