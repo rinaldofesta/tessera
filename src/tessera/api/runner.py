@@ -15,6 +15,7 @@ from pathlib import Path
 
 import anyio
 
+from tessera import paths
 from tessera.api.receipts import canonical_sha256, file_sha256, receipt_from_log
 from tessera.api.schemas import RunRequest
 from tessera.api.scrub import scrub_error
@@ -48,7 +49,9 @@ def _job_env() -> dict[str, str]:
         # Per-job org dir so a future concurrent run can't clobber the compiled fixtures.
         "TESSERA_OUT": os.path.join("/tmp/tessera", f"run-{uuid.uuid4().hex}"),
         "TESSERA_BLUEPRINT_DIR": str(
-            Path(os.environ.get("TESSERA_BLUEPRINT_DIR", "blueprints")).resolve()
+            Path(os.environ["TESSERA_BLUEPRINT_DIR"]).resolve()
+            if "TESSERA_BLUEPRINT_DIR" in os.environ
+            else paths.suites_dir()
         ),
     }
     # inspect_ai's openai-compatible provider raises unless <SERVICE>_API_KEY is set, but

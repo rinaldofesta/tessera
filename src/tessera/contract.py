@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ReportHeader(BaseModel):
@@ -141,16 +141,102 @@ class Diagnostic(BaseModel):
 
 
 RunStatus = Literal["queued", "running", "completed", "failed", "interrupted"]
+Engine = Literal["deterministic", "llm"]
 
 
 class RunRequestSpec(BaseModel):
     suite: str
     model: str
-    engine: Literal["deterministic", "llm"]
+    engine: Engine
     grader: str | None
     k: int
     scaffold: str
     seed: int
+
+
+class CatalogSuite(BaseModel):
+    name: str
+    label: str
+    org: str
+    kind: Literal["builtin", "user"]
+    questions: int
+    claims: int
+    editable: bool
+
+
+class CatalogModel(BaseModel):
+    id: str
+    label: str
+    provider: str
+    connected: bool
+
+
+class CatalogProvider(BaseModel):
+    id: str
+    label: str
+    connected: bool
+    fields: list[str]
+
+
+class CatalogScorer(BaseModel):
+    engine: Engine
+    version: str
+
+
+class Defaults(BaseModel):
+    engine: Engine = "deterministic"
+    suite: str = "starter"
+    k: int = 3
+    scaffold: str = "baseline"
+    seed: int = 0
+
+
+class Catalog(BaseModel):
+    suites: list[CatalogSuite]
+    models: list[CatalogModel]
+    providers: list[CatalogProvider]
+    scorers: list[CatalogScorer]
+    scaffolds: list[str]
+    defaults: Defaults
+
+
+class RunSpec(RunRequestSpec):
+    """The request as a user writes it: RunRequestSpec plus defaults and input bounds.
+    Shape only — the grader/engine and suite rules are runner.plan's blockers."""
+
+    suite: str = "starter"
+    engine: Engine = "deterministic"
+    grader: str | None = None
+    k: int = Field(3, ge=1, le=10)
+    scaffold: str = "baseline"
+    seed: int = Field(0, ge=0)
+
+
+class Blocker(BaseModel):
+    code: Literal[
+        "unknown_suite",
+        "not_connected",
+        "grader_required",
+        "grader_not_allowed",
+        "self_grading",
+        "unknown_scaffold",
+        "unknown_provider",
+    ]
+    message: str
+    fix: str | None
+
+
+class Plan(BaseModel):
+    ready: bool
+    blockers: list[Blocker]
+    diagnostics: list[str]
+    # RunSpec (not the looser RunRequestSpec — that stays for Run.request's historical
+    # echo): the resolved request always comes from a validated RunSpec, so keeping its
+    # k/seed bounds in this schema too documents that the echoed values are in range.
+    request: RunSpec
+    suite: CatalogSuite | None
+    provider: str | None
+    scorer_version: str | None
 
 
 class Verdict(BaseModel):

@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 from tessera import paths
 from tessera.api import (
     routes_blueprints,
+    routes_catalog,
     routes_experiments,
     routes_meta,
     routes_preflight,
@@ -51,7 +52,6 @@ _DEFAULT_LOG_DIRS = {
     "examples": Path(str(resources.files("tessera.data") / "examples")),
     "logs": Path("logs"),
 }
-_DEFAULT_BLUEPRINT_DIR = Path("blueprints")
 _DEFAULT_RUNS_DB = Path("runs.db")
 _DEFAULT_IMPORT_DIR = Path("imports")
 
@@ -139,7 +139,7 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.state.eval_runner = eval_runner
     app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
-    app.state.blueprint_dir = blueprint_dir or _DEFAULT_BLUEPRINT_DIR
+    app.state.blueprint_dir = blueprint_dir or paths.suites_dir()
     app.state.import_dir = import_dir or (
         Path(app.state.run_store.db_path).parent / _DEFAULT_IMPORT_DIR
     )
@@ -169,6 +169,12 @@ def create_app(eval_runner=default_eval_runner, run_store: RunStore | None = Non
     app.include_router(routes_meta.router)
     app.include_router(routes_blueprints.router)
     app.include_router(routes_reports.router)
+    # Registration order doesn't matter today: routes_runs.py's dynamic segment is
+    # GET-only (/api/runs/{job_id}), and dry-run is POST-only, so FastAPI/Starlette's
+    # method+path matching can never confuse the two regardless of order. Kept ahead of
+    # routes_runs anyway — if a POST /api/runs/{job_id} handler is ever added, a literal
+    # "/api/runs/dry-run" route only stays unambiguous while it precedes the dynamic one.
+    app.include_router(routes_catalog.router)
     app.include_router(routes_runs.router)
     app.include_router(routes_providers.router)
     # New routers append AFTER every pre-existing one, by convention (keeps this list's

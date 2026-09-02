@@ -3,40 +3,19 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 
 from tessera.api import blueprint_store
 from tessera.api import responses as R
+from tessera.catalog import published_models  # re-exported: existing importers use this path
 
 router = APIRouter()
 
 # Models with published single-model leaderboard rows. This provenance set is the
 # ONE source the UI reads via GET /api/models, so it cannot drift within the app.
-_PUBLISHED_MODELS = [
-    "anthropic/claude-sonnet-4-6",
-    "openai/gpt-4o",
-    "anthropic/claude-opus-4-8",
-    "anthropic/claude-haiku-4-5",
-    "openai/gpt-4o-mini",
-    "ollama/qwen3.5:latest",
-    "anthropic/claude-fable-5",
-    "anthropic/claude-sonnet-5",
-]
 _LEADERBOARD = Path("docs/leaderboard.rows.json")
-
-
-def published_models() -> list[str]:
-    """Resolve the published set shared by /api/models and the launcher setup."""
-    env = os.environ.get("TESSERA_MODELS", "")
-    models = [model.strip() for model in env.split(",") if model.strip()]
-    return models or _PUBLISHED_MODELS
-
-
-# The default discovery collector still imports the prior private name from app.py.
-# Keep that out-of-scope caller working until it can move to the public helper.
 
 
 @router.get("/api/orgs", response_model=list[str])

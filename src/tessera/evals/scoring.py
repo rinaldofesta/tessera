@@ -68,6 +68,8 @@ def is_refusal(completion: str) -> bool:
 # both engines share the deterministic provenance signal).
 _SCORER_VERSION_DET = "det-4"
 _SCORER_VERSION_LLM = "llm-2"
+# Public vocabulary consumed by the catalog without duplicating scorer revisions.
+SCORER_VERSIONS = {"deterministic": _SCORER_VERSION_DET, "llm": _SCORER_VERSION_LLM}
 
 # Last 'ANSWER: ...' line wins — models self-correct (inspect's own pattern convention).
 # Tolerates markdown dressing (**ANSWER:**, '- ANSWER:', 'Final ANSWER:') so dressed

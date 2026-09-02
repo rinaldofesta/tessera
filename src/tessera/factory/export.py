@@ -1,14 +1,17 @@
 # src/tessera/factory/export.py
-"""Freeze a variant + its answer key to JSON. Exporting into the API-served `blueprints/`
-store IS the reveal of a holdout seed (the blueprint becomes runnable by name and visible
-in /api/orgs); do not export a still-withheld seed there. See ADR-0008."""
+"""Freeze a variant + its answer key to JSON. Exporting into the API-served suites
+store (tessera.paths.suites_dir(), $TESSERA_BLUEPRINT_DIR if set) IS the reveal of a
+holdout seed (the blueprint becomes runnable by name and visible in /api/orgs); do not
+export a still-withheld seed there. See ADR-0008."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
+from tessera import paths
 from tessera.factory.generate import generate_variant
 from tessera.factory.schema import FACTORY_VERSION
 
@@ -43,11 +46,17 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     exp = sub.add_parser("export", help="freeze a variant + answer key to JSON")
     exp.add_argument("--seed", type=int, required=True)
-    exp.add_argument("--out", default="blueprints/",
-                     help="output dir (default blueprints/ — note: this REVEALS the seed)")
+    # No static default: the API-served store moved to paths.suites_dir() (or
+    # $TESSERA_BLUEPRINT_DIR, same override tessera.orgs._store_dir() honors) — a
+    # baked-in "blueprints/" default would reveal into a directory the server no
+    # longer reads.
+    exp.add_argument("--out", default=None,
+                     help="output dir (default: the API-served suites store — "
+                          "note: this REVEALS the seed)")
     args = parser.parse_args()
     if args.command == "export":
-        bp_path, ans_path = export_variant(args.seed, args.out)
+        out = args.out or os.environ.get("TESSERA_BLUEPRINT_DIR") or str(paths.suites_dir())
+        bp_path, ans_path = export_variant(args.seed, out)
         print(f"wrote {bp_path}\nwrote {ans_path}")
 
 
