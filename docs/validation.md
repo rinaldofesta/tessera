@@ -1,16 +1,16 @@
 # Transfer analyzer
 
-`tessera-validate-transfer` computes the public synthetic-to-real analysis without reading
+`python -m research.transfer.cli` computes the public synthetic-to-real analysis without reading
 prompts, documents, transcripts, CRM records, or candidate records. Its input contains one
 collapsed score per task and configuration for each suite.
 
 The complete seven-configuration worked example is
-[`examples/validation-study.example.json`](../examples/validation-study.example.json). CI
-runs it through the installed command:
+[`examples/validation-study.example.json`](../examples/validation-study.example.json). Run it
+from a Tessera source checkout:
 
 ```bash
-tessera-validate-transfer examples/validation-study.example.json -o result.md
-tessera-validate-transfer examples/validation-study.example.json --json -o result.json
+python -m research.transfer.cli examples/validation-study.example.json -o result.md
+python -m research.transfer.cli examples/validation-study.example.json --json -o result.json
 ```
 
 Exit status 2 means the study or rendered result violates the analysis contract. Status 1

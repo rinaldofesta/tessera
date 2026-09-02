@@ -17,7 +17,7 @@ def test_round_trip_preserves_blueprint(tmp_path):
 def test_list_seeds_builtin_orgs(tmp_path):
     rows = bs.list_blueprints(tmp_path)
     by_id = {r["id"]: r for r in rows}
-    assert {"toy", "your"} <= set(by_id)
+    assert {"toy", "meridian"} <= set(by_id)
     assert by_id["toy"]["claims"] > 0 and by_id["toy"]["probes"] > 0
 
 

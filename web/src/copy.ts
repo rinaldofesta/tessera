@@ -9,18 +9,14 @@ export const SHELL_COPY = {
   newEvaluation: "New evaluation",
   navLabel: "Primary navigation",
   navItems: {
-    home: "Home",
     runs: "Runs",
-    compare: "Compare",
-    experiments: "Experiments",
     suites: "Test suites",
     providers: "Providers",
-    leaderboard: "Leaderboard",
   },
   apiConnected: "API connected",
   apiDisconnected: "API disconnected",
   apiOriginHint: "The backend this app is talking to",
-  shortcuts: "Keyboard: 1–6 switch views",
+  shortcuts: "Keyboard: 1–3 switch views",
   help: "Help & docs",
 } as const;
 
@@ -49,93 +45,6 @@ export const CONFLICT: Record<string, { label: string; behavior: "answer" | "ref
 
 export const conflictLabel = (key: string) => CONFLICT[key]?.label ?? key;
 
-// ----- redesign PR3: compare view -----
-
-/** Persistent per-selection colors — assigned by selection order, max 8 selections. */
-export const COMPARE_PALETTE = [
-  "#8b93ff", "#4ade80", "#fbbf24", "#f87171",
-  "#67e8f9", "#f9a8d4", "#fb923c", "#a3e635",
-] as const;
-
-export const COMPARE_COPY = {
-  eyebrow: "Compare",
-  title: "Evidence, side by side",
-  subtitle:
-    "pick up to 8 finished evaluations — each keeps its color while selected. The first pick is the baseline every other run is compared against.",
-  tabAdHoc: "ad-hoc",
-  tabExperiments: "experiments",
-  rail: "evaluations",
-  railEmpty: "no evaluations indexed yet — finished runs appear here automatically",
-  interventions: {
-    model: "model",
-    scaffold: "scaffold",
-    harness: "harness",
-    grader: "grader",
-    engine: "scoring engine",
-    org: "test suite",
-    seed: "dataset seed",
-    k: "repeat count",
-  },
-  maxSelected: (n: number) => `up to ${n} selections`,
-  baselineTag: "baseline",
-  challengerTag: "challenger",
-  intervention: "intended change",
-  needTwo: "select at least two evaluations to compare",
-  controlled: "Controlled comparison",
-  controlledDetail: (intervention: string, changed: string) =>
-    `intended change: ${intervention}. Changed: ${changed || "nothing"} — no undeclared drift.`,
-  drift: "Protocol drift detected",
-  driftDetail: (challenger: string, dims: string) => `${challenger}: unexpected ${dims}`,
-  gapPanel: "the gap",
-  gapPanelSub: "mean − pass^k, in percentage points",
-  metricTabs: {
-    reliability: "reliability",
-    average: "average",
-    accuracy: "accuracy",
-    provenance: "provenance",
-    refusal: "refusal",
-  },
-  metricByCategory: "by question type",
-  metricOverall: "overall, per evaluation",
-  significance: "paired outcomes — probe × repeat",
-  significanceCols: {
-    category: "question type",
-    matched: "paired n",
-    aWins: "baseline only passes",
-    bWins: "challenger only passes",
-    p: "exact p",
-  },
-  unmatched: (n: number, list: string) => `${n} unmatched observation(s): ${list}`,
-  importButton: "Import .eval",
-  importHint: "inspect once, then explicitly add it to the evaluation library",
-  importInspecting: (name: string) => `local — ${name}`,
-  importAdd: "add to library",
-  importAdding: "adding…",
-  importClose: "close",
-  importFailed: (detail: string) => `upload failed: ${detail}`,
-  detail: "receipt & diagnostics",
-  protocolFingerprint: "protocol fingerprint",
-  executionFingerprint: "execution fingerprint",
-  effectiveModel: "effective model",
-  notReported: "not reported",
-  duration: (s: string) => `${s}s`,
-  durationLabel: "duration",
-  billedCost: "billed cost",
-  runtime: "runtime",
-  tokensUsed: "tokens used",
-  signatures: "failure signatures",
-  noSignatures: "no recorded failure signatures",
-  frictionTitle: (arm: string, model: string) => `${arm} friction — ${model}`,
-  forkExperiment: "fork as controlled experiment",
-  exportHtml: "Export HTML",
-  exportJson: "Export JSON",
-  exportTitle: (evaluations: number) => `tessera — comparison of ${evaluations} evaluations`,
-  exportHeading: "tessera — comparison",
-  pairHeading: (challenger: string) => `baseline vs ${challenger}`,
-  exportFailed: (detail: string) => `export failed: ${detail}`,
-  loadFailed: (what: string, detail: string) => `${what}: ${detail}`,
-} as const;
-
 export const engineLabel = (engine: string) =>
   engine === "llm" ? "ai grader" : engine === "deterministic" ? "fixed rules" : engine;
 
@@ -144,13 +53,11 @@ export const engineLabel = (engine: string) =>
 export const DATASET_LABELS: Record<string, string> = {
   toy: "Toy starter",
   meridian: "Meridian",
-  your: "Your organization",
 };
 
 export const DATASET_DESCRIPTIONS: Record<string, string> = {
   toy: "tiny 2-account starter — the fastest way to see a full run",
   meridian: "the 22-question benchmark behind the public leaderboard",
-  your: "template — copy it to describe your own organization",
 };
 
 export const LAUNCHER_COPY = {
@@ -399,88 +306,6 @@ export const RUN_HISTORY_COPY = {
   archivedBadge: "archived",
   showArchived: "show archived",
   archiveFailed: "couldn't change the archive flag",
-  compareSelected: "Compare selected →",
-} as const;
-
-export const DASHBOARD_COPY = {
-  eyebrow: "Home",
-  title: "The reliability program at a glance",
-  subtitle: "latest score, the gap over time, and recent runs",
-  latestReliability: "latest reliability",
-  latestAverage: "latest average",
-  averageSubtitle: "success rate",
-  runsTotal: "runs total",
-  completed: "completed",
-  errored: (n: number) => `${n} errored`,
-  noCompleted: "no completed runs",
-  trendTitle: "the gap over time",
-  trendSubtitle: "pass^k vs mean per run, oldest → newest — the amber band is the fragility",
-  legendReliability: "reliability (pass^k)",
-  legendAverage: "average success rate",
-  emptyTitle: "no runs recorded yet",
-  emptyBody: "history and trends appear after the first live eval",
-  emptyCta: "Run the first eval",
-  recentTitle: (shown: number, total: number) =>
-    total > shown ? `recent runs (${shown} of ${total})` : `recent runs (${total})`,
-  openRuns: "open run history →",
-} as const;
-
-export const LEADERBOARD_COPY = {
-  eyebrow: "Leaderboard",
-  title: "Public reliability results",
-  subtitle:
-    "generated from the committed manifest — the repo file is the source of truth, this view just renders it",
-  protocol: (org: string, k: number, scorer: string) => `${org} · pass^${k} · scorer ${scorer}`,
-  scaffoldTag: (s: string) => `scaffold: ${s}`,
-  seedTag: (n: number) => `seed ${n}`,
-  harnessTag: (h: string) => `harness: ${h}`,
-  canonical: "View the canonical markdown",
-  empty: "the manifest has no rows yet",
-  loadFailed: (detail: string) => `couldn't load the leaderboard: ${detail}`,
-} as const;
-
-export const EXPERIMENTS_COPY = {
-  error: (detail: string) => detail,
-  defaultName: "model contrast",
-  createTitle: "new controlled experiment",
-  preflightUnchecked: "not checked",
-  preflightReady: (model: string | null | undefined) => `ready · ${model ?? "identity unreported"}`,
-  experimentName: "experiment name",
-  testSuite: "test suite",
-  intendedChange: "one intended change",
-  model: "model",
-  refusalScaffold: "refusal scaffold",
-  baselineModel: "baseline model",
-  modelUnderTest: "model under test",
-  challengerModel: "challenger model",
-  paidCheck: "paid capability check",
-  checking: "checking…",
-  repeats: "independent run repeats",
-  costCeiling: "cost ceiling (optional USD)",
-  noCeiling: "no ceiling",
-  checkHint: "capability checks are optional and make a small paid call; listing a model alone does not prove tool support",
-  starting: "starting…",
-  runCells: (n: number) => `run ${n} cells`,
-  experiments: (n: number) => `experiments (${n})`,
-  cells: (done: number, total: number) => `${done}/${total} cells`,
-  costUnknown: "cost unknown",
-  noExperiments: "no experiments yet",
-  matrix: (name: string) => `matrix — ${name}`,
-  resume: "resume missing cells",
-  compare: "compare with baseline",
-  status: "status",
-  cellCount: "cells",
-  cost: "cost",
-  unknown: "unknown",
-  baseline: "baseline",
-  noBaseline: "—",
-  pairedResult: "paired experiment result",
-  pairedObservations: "paired observations",
-  baselineOnly: "baseline only passes",
-  challengerOnly: "challenger only passes",
-  exactP: "exact p",
-  pairedRepeats: (repeats: number[], dimensions: string[]) =>
-    `paired independent repeats: ${repeats.join(", ")}; changed dimensions: ${dimensions.join(", ")}`,
 } as const;
 
 // ----- redesign PR2: scorecard + export vocabulary -----

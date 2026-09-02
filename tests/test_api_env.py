@@ -3,16 +3,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from tessera.api.app import create_app
-from tessera.api.run_store import RunStore
 
 
 def _app(tmp_path: Path, env_file: Path):
     return create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: None,
-        log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=env_file,
     )
 
@@ -50,10 +46,3 @@ def test_constructing_the_app_reads_no_file(tmp_path):
     missing = tmp_path / "definitely-absent" / ".env"
     app = _app(tmp_path, missing)                # must not raise
     assert app.state.env_file == missing.resolve()
-
-
-def test_the_runner_no_longer_loads_dotenv_itself():
-    import inspect
-
-    from tessera.api import runner
-    assert "load_dotenv" not in inspect.getsource(runner)

@@ -1,9 +1,9 @@
 """Redaction for error text that gets stored and returned.
 
-Lives in its own module so both the producer (runner.py) and the storage boundary
-(run_store.py) can apply it. Storage scrubs too, deliberately: a future caller that
-forgets to scrub would otherwise reopen the leak this exists to close — the same
-argument that makes env_writer validate its own inputs.
+Lives in its own module so every producer can apply one consistent policy before error
+text reaches durable storage or an API response. A future caller that forgets to scrub
+would otherwise reopen the leak this exists to close — the same argument that makes
+env_writer validate its own inputs.
 
 Redaction is idempotent, so scrubbing twice is harmless.
 """
@@ -33,7 +33,7 @@ _USERINFO_RE = re.compile(r"(?P<scheme>[a-zA-Z][\w+.-]{0,15}://)[^/\s]*@")
 _AUTH_HEADER_RE = re.compile(r"(?i)(authorization:\s*)\S.*")
 # Env vars whose NAME says the value is a secret. Name-based on purpose: it needs no
 # knowledge of any provider's token format, and it covers providers this codebase has
-# never heard of — which matters because RunRequest.model is free text by design, so a
+# never heard of — which matters because RunSpec.model is free text by design, so a
 # run can target any inspect_ai provider.
 _SECRET_ENV_NAME = re.compile(r"(?i)key|token|secret|password|credential")
 _MIN_REDACTABLE = 8      # below this a "secret" is likely a flag, and would mangle prose
@@ -87,7 +87,7 @@ def scrub_error(message: str) -> str:
 
     Provider errors routinely embed the request URL, and a base URL may embed
     credentials — so this runs before anything reaches the database, the API, or the
-    logs. The tests assert the result against tessera.credential_scan.
+    logs. The tests assert the result against their independent credential scanner.
 
     Takes the formatted string rather than the exception, deliberately: the two runner
     call sites format differently and both shapes are API-visible. Scrubbing is a filter,
@@ -95,7 +95,7 @@ def scrub_error(message: str) -> str:
 
     Not a general credential detector: a secret that is neither in a URL, nor in an auth
     header, nor in this process's environment passes through. Closing that would mean
-    re-implementing credential_scan's patterns as span matchers, and credential_scan
+    re-implementing the test scanner's patterns as span matchers, while the scanner
     reports locations and kinds, not spans — it is the right test oracle and the wrong
     redactor. Two configured secrets that partially overlap (neither a substring of the
     other) can also leave a fragment; that needs two overlapping real credentials, which

@@ -1,5 +1,4 @@
-"""Key-free tests for the FastAPI app. Logs are fabricated on disk with write_eval_log;
-the live-run path uses an injected fake runner + inline scheduler — no model calls."""
+"""Key-free FastAPI tests with an injected runner and inline scheduler."""
 
 import json
 from pathlib import Path
@@ -7,7 +6,6 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from tessera.api.app import create_app
-from tessera.api.run_store import RunStore
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
@@ -38,12 +36,6 @@ async def _inline_schedule(coro):
     await coro
 
 
-def _write(dir_path: Path, name: str, log) -> None:
-    from inspect_ai.log import write_eval_log
-    dir_path.mkdir(parents=True, exist_ok=True)
-    write_eval_log(log, str(dir_path / name))
-
-
 def _folder_eval(**kwargs):
     location = str(Path(kwargs["log_dir"]) / "inspect-output.eval")
     task_args = kwargs["task_args"]
@@ -62,18 +54,12 @@ def _folder_eval(**kwargs):
     return log
 
 
-def _client(tmp_path, *, eval_runner=None, folder_eval_runner=None, discovery_cache=None):
-    examples = tmp_path / "examples"
-    logs = tmp_path / "logs"
-    _write(examples, "first-contact.eval", _eval_log([_answer("q1", 1)]))
+def _client(tmp_path, *, folder_eval_runner=None, discovery_cache=None):
     app = create_app(
         home=tmp_path / "home",
-        eval_runner=eval_runner or (lambda req: _eval_log([_answer("q1", 1)])),
         folder_eval_runner=folder_eval_runner or _folder_eval,
-        log_dirs={"examples": examples, "logs": logs},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=tmp_path / ".env",
         # A stub by default: the real cache probes localhost:11434 and scans
         # ~/.cache/huggingface, which would make this suite neither network-free nor
@@ -81,80 +67,6 @@ def _client(tmp_path, *, eval_runner=None, folder_eval_runner=None, discovery_ca
         discovery_cache=discovery_cache or _stub_cache(),
     )
     return TestClient(app)
-
-
-def test_list_logs_returns_pinned_example(tmp_path):
-    r = _client(tmp_path).get("/api/logs")
-    assert r.status_code == 200
-    ids = [x["id"] for x in r.json()]
-    assert "examples:first-contact" in ids
-    meta = next(x for x in r.json() if x["id"] == "examples:first-contact")
-    assert meta["model"] == "anthropic/claude-sonnet-4-6" and meta["engine"] == "llm"
-    assert meta["grader"] == "openai/gpt-4o" and meta["k"] == 3
-
-
-def test_get_report_by_id(tmp_path):
-    r = _client(tmp_path).get("/api/logs/examples:first-contact/report")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["header"]["model"] == "anthropic/claude-sonnet-4-6"
-    assert body["overall"]["pass_k_rate"] == 1.0
-    assert body["probes"][0]["probe_id"] == "q1"
-
-
-def test_get_report_unknown_id_404(tmp_path):
-    assert _client(tmp_path).get("/api/logs/examples:nope/report").status_code == 404
-
-
-def test_get_report_rejects_path_traversal(tmp_path):
-    assert _client(tmp_path).get("/api/logs/examples:..%2f..%2fsecret/report").status_code == 404
-
-
-def test_default_log_dirs_keep_bundled_example_aliases():
-    from tessera.api.app import _DEFAULT_LOG_DIRS
-    from tessera.api.routes_reports import _resolve, logs_in
-
-    stems = [stem for stem, _ in logs_in(_DEFAULT_LOG_DIRS["examples"])]
-    assert stems == ["first-contact", "gpt-4o"]
-    resolved = _resolve(_DEFAULT_LOG_DIRS, "examples:first-contact")
-    assert resolved is not None and resolved.name == "log.eval"
-    assert _resolve(_DEFAULT_LOG_DIRS, "examples:../first-contact") is None
-
-
-def test_logs_in_prefers_the_folder_layout_when_a_stem_has_both(tmp_path):
-    """A directory holding both `foo.eval` and `foo/log.eval` must not list the same
-    id twice — and whichever `logs_in` lists must be what `_resolve` returns."""
-    from tessera.api.routes_reports import _resolve, logs_in
-
-    (tmp_path / "foo.eval").write_bytes(b"flat")
-    (tmp_path / "foo").mkdir()
-    (tmp_path / "foo" / "log.eval").write_bytes(b"folder")
-
-    listed = logs_in(tmp_path)
-
-    assert [stem for stem, _ in listed] == ["foo"]
-    resolved = _resolve({"examples": tmp_path}, "examples:foo")
-    assert resolved == dict(listed)["foo"]
-    assert resolved.read_bytes() == b"folder"
-
-
-def test_default_api_log_source_lists_package_examples(tmp_path):
-    app = create_app(
-        home=tmp_path / "home",
-        eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
-        schedule=_inline_schedule,
-        blueprint_dir=tmp_path / "blueprints",
-        run_store=RunStore(tmp_path / "runs.db"),
-        env_file=tmp_path / ".env",
-        discovery_cache=_stub_cache(),
-    )
-
-    response = TestClient(app).get("/api/logs")
-
-    assert response.status_code == 200
-    assert {row["id"] for row in response.json()} >= {
-        "examples:first-contact", "examples:gpt-4o",
-    }
 
 
 def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
@@ -171,7 +83,7 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
     state.update({"status": "running", "owner": None})
     state_path.write_text(json.dumps(state), encoding="utf-8")
     app = create_app(
-        home=home, run_store=RunStore(tmp_path / "runs.db"),
+        home=home,
         blueprint_dir=tmp_path / "blueprints", env_file=tmp_path / ".env",
         discovery_cache=_stub_cache(),
     )
@@ -181,27 +93,6 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
 
     assert app.state.runs.get(record.id).data["status"] == "interrupted"
     assert record.id in caplog.text
-
-
-def test_upload_report(tmp_path):
-    log_path = tmp_path / "uploaded.eval"
-    from inspect_ai.log import write_eval_log
-    write_eval_log(_eval_log([_answer("q1", 1)]), str(log_path))
-    with open(log_path, "rb") as fh:
-        r = _client(tmp_path).post("/api/reports", files={"file": ("u.eval", fh, "application/octet-stream")})
-    assert r.status_code == 200 and r.json()["overall"]["pass_k_rate"] == 1.0
-
-
-def test_upload_foreign_log_400(tmp_path):
-    from inspect_ai.log import EvalSample, write_eval_log
-    from inspect_ai.scorer import Score
-    foreign = EvalSample(id="x", epoch=1, input="q", target="",
-                         metadata={}, scores={"other": Score(value="C", metadata={"foo": 1})})
-    log_path = tmp_path / "foreign.eval"
-    write_eval_log(_eval_log([foreign]), str(log_path))
-    with open(log_path, "rb") as fh:
-        r = _client(tmp_path).post("/api/reports", files={"file": ("f.eval", fh, "application/octet-stream")})
-    assert r.status_code == 400
 
 
 def test_list_orgs(tmp_path):
@@ -358,8 +249,6 @@ def test_every_api_route_declares_a_response_model(tmp_path):
     from fastapi.routing import APIRoute
 
     from tessera.api.app import create_app
-    from tessera.api.run_store import RunStore
-
     def api_routes(node):
         # Walk recursively via original_router: newer FastAPI keeps included routers as
         # lazy _IncludedRouter entries instead of flattening their routes into
@@ -371,8 +260,7 @@ def test_every_api_route_declares_a_response_model(tmp_path):
             elif (inner := getattr(route, "original_router", None)) is not None:
                 yield from api_routes(inner)
 
-    app = create_app(home=tmp_path / "home", run_store=RunStore(tmp_path / "runs.db"),
-                     blueprint_dir=tmp_path / "bp")
+    app = create_app(home=tmp_path / "home", blueprint_dir=tmp_path / "bp")
     exempt = {"/api/runs/{run_id}/events"}        # SSE stream, not JSON
     checked = [r for r in api_routes(app) if r.path.startswith("/api/") and r.path not in exempt]
     assert checked, "found no /api/ routes to check — the guard is inert, not passing"
@@ -454,7 +342,7 @@ def test_unknown_job_404(tmp_path):
     assert _client(tmp_path).get("/api/runs/deadbeef").status_code == 404
 
 
-def test_runs_history_and_trends_after_a_run(tmp_path):
+def test_runs_history_after_a_run(tmp_path):
     client = _client(tmp_path)
     created = client.post("/api/runs", json={"model": "ollama/test"}).json()
     hist = client.get("/api/runs").json()
@@ -462,14 +350,12 @@ def test_runs_history_and_trends_after_a_run(tmp_path):
     assert run["status"] == "completed" and run["verdict"]["pass_k_rate"] == 1.0
     assert run["request"]["suite"] == "starter" and run["request"]["model"] == "ollama/test"
     assert all(row["report"] is None and row["receipt"] is None for row in hist)
-    assert client.get("/api/trends").json() == []  # legacy sqlite trends are untouched
 
 
 def test_run_persists_across_restart_same_home(tmp_path):
     run_id = _client(tmp_path).post("/api/runs", json={"model": "ollama/test"}).json()["id"]
     fresh = create_app(
-        home=tmp_path / "home", run_store=RunStore(tmp_path / "fresh.db"),
-        blueprint_dir=tmp_path / "bp2", log_dirs={}, schedule=_inline_schedule,
+        home=tmp_path / "home", blueprint_dir=tmp_path / "bp2", schedule=_inline_schedule,
     )
     got = TestClient(fresh).get(f"/api/runs/{run_id}").json()
     assert got["status"] == "completed" and got["report"]["overall"]["pass_k_rate"] == 1.0
@@ -518,27 +404,6 @@ def test_run_import_rejects_an_unreadable_log(tmp_path):
     assert response.json()["detail"].startswith("cannot read log:")
 
 
-def test_folder_and_sqlite_report_serialization_parity(tmp_path):
-    from tessera.api.schemas import RunRequest
-    from tessera.report.serialize import report_to_dict
-
-    captured = {}
-
-    def runner(**kwargs):
-        captured["log"] = _folder_eval(**kwargs)
-        return captured["log"]
-
-    client = _client(tmp_path, folder_eval_runner=runner)
-    run_id = client.post("/api/runs", json={"model": "ollama/test"}).json()["id"]
-    folder_report = client.get(f"/api/runs/{run_id}").json()["report"]
-    expected = report_to_dict(captured["log"])
-
-    sqlite = RunStore(tmp_path / "parity.db")
-    job_id = sqlite.create(RunRequest(model="ollama/test", judge="deterministic"))
-    sqlite.complete(job_id, expected)
-    assert folder_report == expected == sqlite.get(job_id)["report"]
-
-
 # ----- Datasets (blueprints) -----
 
 def test_blueprints_list_seeded_and_get(tmp_path):
@@ -574,17 +439,6 @@ def test_blueprint_with_bad_prose_template_is_a_400_not_500(tmp_path):
     # the write paths reject it with a 400 (never a 500)
     created = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
     assert created.status_code == 400
-
-
-def test_resolve_rejects_unknown_source_empty_stem_and_traversal(tmp_path):
-    # the log resolver's guard branches (the blueprint-store twin is parametrised; this is
-    # its untested counterpart): unknown source, empty stem, and a traversal stem all -> None
-    from tessera.api.routes_reports import _resolve
-    log_dirs = {"results": tmp_path}
-    assert _resolve(log_dirs, "bogus:abc") is None          # unknown source
-    assert _resolve(log_dirs, "results:") is None           # empty stem
-    assert _resolve(log_dirs, "results") is None            # no ':' -> empty stem
-    assert _resolve(log_dirs, "results:../../../etc/passwd") is None   # no traversal
 
 
 def test_blueprint_preview_returns_artifacts(tmp_path):
@@ -660,11 +514,8 @@ def _stub_cache(models=(), statuses=None):
 def _client_with_cache(tmp_path, cache):
     return TestClient(create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: _eval_log([_answer("q1", 1)]),
-        log_dirs={"logs": tmp_path / "logs"},
         schedule=_inline_schedule,
         blueprint_dir=tmp_path / "blueprints",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=tmp_path / ".env",
         discovery_cache=cache,
     ))

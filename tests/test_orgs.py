@@ -1,4 +1,6 @@
-"""The org registry: named blueprints selectable via the task / API."""
+"""Tests for bundled organizations and the editable suite store."""
+
+from importlib import resources
 
 import pytest
 
@@ -8,7 +10,7 @@ from tessera.orgs import _store_dir, get_blueprint, org_names
 
 def test_registry_lists_builtins():
     names = org_names()
-    assert "toy" in names and "your" in names
+    assert names == ["meridian", "toy"]
 
 
 def test_default_store_is_the_tessera_home_suites_directory(tmp_path, monkeypatch):
@@ -19,14 +21,15 @@ def test_default_store_is_the_tessera_home_suites_directory(tmp_path, monkeypatc
 
 
 def test_get_blueprint_returns_valid_blueprints():
-    for name in ("toy", "your"):
+    for name in ("toy", "meridian"):
         bp = get_blueprint(name)
         assert isinstance(bp, Blueprint) and bp.claims and bp.probes
 
 
-def test_your_org_template_covers_every_conflict_type():
+def test_starter_template_covers_every_conflict_type():
     # The scaffold must demonstrate all four behaviors so a user has one of each to copy.
-    bp = get_blueprint("your")
+    template = resources.files("tessera.data").joinpath("templates", "suite.json")
+    bp = Blueprint.model_validate_json(template.read_text(encoding="utf-8"))
     assert {p.conflict_type for p in bp.probes} == set(ConflictType)
 
 
@@ -37,7 +40,7 @@ def test_unknown_org_raises():
 
 @pytest.mark.parametrize("evil", ["../secret", "../../etc/passwd", "a/b", "", ".hidden", "x/../y"])
 def test_get_blueprint_rejects_path_traversal(evil, monkeypatch, tmp_path):
-    # `name` reaches here from RunRequest.org (user-controlled) — must not escape the store.
+    # `name` reaches here from RunSpec.suite (user-controlled) — must not escape the store.
     monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
     with pytest.raises(ValueError):
         get_blueprint(evil)

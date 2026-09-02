@@ -1,11 +1,9 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from tests.helpers.credential_scan import find_credential_like_values
 
 from tessera.api.app import create_app
-from tessera.api.run_store import RunStore
-from tessera.api.schemas import RunRequest
-from tessera.credential_scan import find_credential_like_values
 
 SENTINEL = "sk-" + "S3NT1NEL" * 4
 
@@ -21,12 +19,9 @@ def _no_eval(**_kwargs):
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: None,
         folder_eval_runner=_no_eval,
         schedule=_inline_schedule,
-        log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=tmp_path / ".env",
     ))
 
@@ -83,6 +78,7 @@ def test_a_model_only_request_uses_deterministic_defaults(tmp_path):
 
 
 def test_run_request_scaffolds_are_supported_by_the_task():
+    from tessera.contract import RunSpec
     from tessera.evals.task import _SCAFFOLDS
 
-    assert RunRequest.model_fields["scaffold"].default in _SCAFFOLDS
+    assert RunSpec.model_fields["scaffold"].default in _SCAFFOLDS

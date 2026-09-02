@@ -3,16 +3,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from tessera.api.app import create_app
-from tessera.api.run_store import RunStore
 
 
 def _client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(
         home=tmp_path / "home",
-        eval_runner=lambda req: None,
-        log_dirs={"logs": tmp_path / "logs"},
         blueprint_dir=tmp_path / "bp",
-        run_store=RunStore(tmp_path / "runs.db"),
         env_file=tmp_path / ".env",
     ))
 
@@ -96,20 +92,3 @@ def test_run_summaries_include_archived_false_by_default(tmp_path):
     assert response.status_code == 200
     row = next(item for item in response.json() if item["id"] not in {"first-contact", "gpt-4o"})
     assert row["archived"] is False
-
-
-def test_archived_done_run_is_absent_from_trends(tmp_path):
-    # /api/trends still reads the legacy sqlite store (routes_runs.trends uses
-    # app.state.run_store, not the folder store _done_run writes to above) — archive a
-    # sqlite-backed run directly so this actually exercises finished()'s archived filter
-    # instead of trivially passing because the folder store never feeds trends at all.
-    from tessera.api.schemas import RunRequest
-
-    client = _client(tmp_path)
-    sqlite_store = client.app.state.run_store
-    job_id = sqlite_store.create(RunRequest(model="ollama/test", judge="deterministic"))
-    sqlite_store.complete(job_id, {"overall": {"pass_k_rate": 1.0, "mean_rate": 1.0}})
-
-    sqlite_store.set_archived(job_id, True)
-
-    assert client.get("/api/trends").json() == []

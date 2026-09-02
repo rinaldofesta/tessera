@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from tessera.cli import app
 from tessera.report.leaderboard import (
     LOG_DERIVED_FIELDS,
     _is_safe_repo_relative_path,
@@ -18,6 +20,11 @@ from tessera.report.leaderboard import (
 )
 
 _REPO = Path(__file__).resolve().parents[1]
+_RUNNER = CliRunner()
+
+
+def _leaderboard(*args: str):
+    return _RUNNER.invoke(app, ["leaderboard", *args])
 
 
 def _report(model="anthropic/claude-sonnet-4-6", org="meridian", k=3,
@@ -158,7 +165,6 @@ def _write_eval_log(path):
 def test_cli_extract_stamps_a_repo_relative_path_and_digest(tmp_path, monkeypatch):
     # --extract must stamp a REPO-RELATIVE path (ADR-0012), even when run from a non-root
     # cwd with a relative arg — otherwise --verify (run from root) can't resolve it.
-    from tessera.report.cli import leaderboard_main
     (tmp_path / ".git").mkdir()
     logdir = tmp_path / "logs" / "leaderboard"
     logdir.mkdir(parents=True)
@@ -166,7 +172,8 @@ def test_cli_extract_stamps_a_repo_relative_path_and_digest(tmp_path, monkeypatc
     (tmp_path / "docs").mkdir()
     monkeypatch.chdir(tmp_path / "docs")
     out = tmp_path / "row.json"
-    assert leaderboard_main(["--extract", "../logs/leaderboard/run.eval", "-o", str(out)]) == 0
+    result = _leaderboard("extract", "../logs/leaderboard/run.eval", "-o", str(out))
+    assert result.exit_code == 0
     row = json.loads(out.read_text())[0]
     assert row["model"] == "anthropic/claude-sonnet-4-6" and row["scorer_version"] == "det-4"
     assert row["log"]["path"] == "logs/leaderboard/run.eval"   # repo-relative, not ../…
@@ -175,12 +182,12 @@ def test_cli_extract_stamps_a_repo_relative_path_and_digest(tmp_path, monkeypatc
 
 
 def test_cli_manifest_writes_markdown(tmp_path):
-    from tessera.report.cli import leaderboard_main
     manifest = {"rows": leaderboard_rows([_report()]), "exhibitions": [_exhibition()]}
     mpath = tmp_path / "rows.json"
     mpath.write_text(json.dumps(manifest))
     out = tmp_path / "leaderboard.md"
-    assert leaderboard_main(["--manifest", str(mpath), "-o", str(out)]) == 0
+    result = _leaderboard("render", "--manifest", str(mpath), "-o", str(out))
+    assert result.exit_code == 0
     md = out.read_text()
     assert "## Out-of-protocol exhibitions" in md and "det-4" in md
 
@@ -242,61 +249,60 @@ def _backed_manifest(tmp_path, mutate=None):
 
 
 def test_verify_passes_when_the_log_reproduces_the_row(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path)
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
-    assert "verified 1/1" in capsys.readouterr().out
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 0
+    assert "verified 1/1" in result.stdout
 
 
 def test_verify_flags_a_hand_edited_metric(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path, mutate=lambda r: r.update(pass_k_rate=0.99))
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
-    assert "pass_k_rate" in capsys.readouterr().err
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 2
+    assert "pass_k_rate" in result.stderr
 
 
 def test_verify_ignores_a_hand_edited_label(tmp_path):
     # label is authored metadata, not log-derived: editing it must NOT fail verification.
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path, mutate=lambda r: r.update(label="Sonnet 4.6 (baseline)"))
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
+    assert _leaderboard("verify", "--manifest", str(m)).exit_code == 0
 
 
 def test_verify_flags_a_tampered_digest(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path, mutate=lambda r: r["log"].update(sha256="0" * 64))
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
-    assert "sha256" in capsys.readouterr().err
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 2
+    assert "sha256" in result.stderr
 
 
 def test_verify_flags_a_missing_log(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path,
                          mutate=lambda r: r["log"].update(path="logs/leaderboard/nope.eval"))
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
-    assert "not found" in capsys.readouterr().err
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 2
+    assert "not found" in result.stderr
 
 
 def test_verify_rejects_a_path_traversal(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = _backed_manifest(tmp_path, mutate=lambda r: r["log"].update(path="../../etc/passwd"))
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 2
-    assert "unsafe" in capsys.readouterr().err.lower()
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 2
+    assert "unsafe" in result.stderr.lower()
 
 
 def test_verify_treats_null_log_as_unbacked_not_a_failure(tmp_path, capsys):
-    from tessera.report.cli import leaderboard_main
     m = tmp_path / "rows.json"
     m.write_text(json.dumps({"rows": leaderboard_rows([_report()])}))   # rows carry no log
-    assert leaderboard_main(["--manifest", str(m), "--verify"]) == 0
-    out = capsys.readouterr().out
+    result = _leaderboard("verify", "--manifest", str(m))
+    assert result.exit_code == 0
+    out = result.stdout
     assert "0/1" in out and "1 unbacked" in out
 
 
 def test_verify_requires_a_manifest(capsys):
-    from tessera.report.cli import leaderboard_main
-    assert leaderboard_main(["--verify"]) == 2
-    assert "requires --manifest" in capsys.readouterr().err
+    result = _leaderboard("verify")
+    assert result.exit_code == 2
+    assert "requires --manifest" in result.stderr
 
 
 # --- harness as a displayed comparability axis (ADR-0011) --------------------------

@@ -2,9 +2,9 @@
 # Regenerate the API contract artifacts: openapi.json + web/src/api-types.gen.ts.
 # CI re-runs this and fails on `git diff` — commit both files whenever the API changes.
 #
-# The schema dump runs from a scratch cwd, never the repo root: a web/dist present at
-# cwd would add the SPA catch-all route to the schema — a route a fresh CI checkout
-# doesn't have, i.e. guaranteed false drift.
+# The schema dump runs from a scratch cwd so nothing cwd-relative can leak into the
+# schema. (The SPA catch-all is excluded from the schema outright — a built web/dist
+# must never change openapi.json.)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

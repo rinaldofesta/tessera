@@ -73,8 +73,8 @@ def _builtin_suites(suites_dir: Path) -> list[dict]:
 
 
 def _user_suites(directory: Path) -> list[dict]:
-    # blueprint_store.seed_from_orgs() materializes every builtin ORGS example (toy,
-    # your, meridian, ...) into this SAME directory the moment the Datasets page is
+    # blueprint_store.seed_from_orgs() materializes every builtin ORGS example into
+    # this SAME directory the moment the Datasets page is
     # opened (GET /api/blueprints), so those files are not distinct user suites — they
     # are editable copies of orgs BUILTIN_SUITES already exposes. Without this filter
     # a seeded 'meridian.json' collides with the builtin 'meridian' suite name and

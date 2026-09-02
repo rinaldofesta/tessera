@@ -77,7 +77,7 @@ Read the index before changing anything load-bearing.
   trend comparisons partition on it. A semantics change without a bump corrupts
   every published number.
 - **Purity invariants are tested.** `src/tessera/report/` modules must not import
-  `inspect_ai` (only `log_adapter.py` and `cli.py` may — there is a test that
+  `inspect_ai` (only `log_adapter.py` may — there is a test that
   parses the AST). The compiler is deterministic and pure.
 - **The benchmark protocol is frozen per row** (ADR-0006): deterministic engine,
   k=3, full probe set, the baseline scaffold, the authored org (seed 0), no
@@ -93,10 +93,10 @@ Read the index before changing anything load-bearing.
 ## Adding an org / dataset
 
 An org is a **Blueprint**: claims (atomic facts, one per silo) + probes (questions
-with expected behavior). Start from `src/tessera/examples/your_org.py` (the starter
-template) or `src/tessera/examples/meridian_org.py` (the gold standard: ≥5 probes per conflict
+with expected behavior). Run `tessera init NAME` for an editable starter or use
+`src/tessera/examples/meridian_org.py` as the gold standard: ≥5 probes per conflict
 type, both resolution rules, authority probes where the binding doc is *older* than
-the CRM row, anti-prior values, no template shortcuts). Offline gates in
+the CRM row, anti-prior values, no template shortcuts. Offline gates in
 `tests/test_meridian_org.py` show what a benchmark-grade org must pin. Validators
 in `src/tessera/models.py` enforce coherence (refuse ⇒ no answer, resolvable ⇒
 resolution_rule, void ⇒ no references).

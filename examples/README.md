@@ -12,7 +12,7 @@ The Inspect logs now live in package data as complete, read-only run folders:
 |---|---|---|
 | `first-contact-report.md` | The Markdown report rendered from that log, committed verbatim. | README links; its sha256 is pinned by the receipt |
 | `first-contact.receipt.json` | The publication receipt: sha256 of the log and the report, git revision of the run, toy-org blueprint and compiled-artifact digests, review notes. | `tests/test_pinned_examples.py` checks every digest against the files |
-| `validation-study.example.json` | Input for the transfer-validation analyzer (ADR-0013): Tessera scores next to real-task scores for a handful of configs. | CI quickstart, `tests/test_validation_analysis.py` |
+| `validation-study.example.json` | Input for the transfer-validation analyzer (ADR-0013): Tessera scores next to real-task scores for a handful of configs. | `tests/research/test_validation_analysis.py` |
 
 Reproduce the report from the log with no API key:
 
@@ -20,5 +20,5 @@ Reproduce the report from the log with no API key:
 uv run tessera-report src/tessera/data/examples/first-contact/log.eval
 ```
 
-Suites (the org blueprints — `toy`, `meridian`, `your_org`) live in
-`src/tessera/examples/`; see the README section "Bring your own data".
+The bundled `toy` and `meridian` suites live in `src/tessera/examples/`; create an
+editable suite with `tessera init NAME`. See the README section "Bring your own data".

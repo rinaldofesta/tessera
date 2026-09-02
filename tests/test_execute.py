@@ -50,17 +50,25 @@ def _writing_eval(**kwargs):
 
 
 def test_execute_completes_into_run_folder_and_restores_environment(tmp_path):
+    from tessera.report.serialize import report_to_dict
+
     store = RunStore(tmp_path / "home", examples=tmp_path / "examples")
     record = store.create(_spec())
     env = {"TESSERA_OUT": "before", "TESSERA_BLUEPRINT_DIR": "suites-before"}
+    captured = {}
+
+    def runner(**kwargs):
+        captured["log"] = _writing_eval(**kwargs)
+        return captured["log"]
 
     result = execute(
         record, _spec(), store=store, suites_dir=tmp_path / "suites",
-        eval_fn=_writing_eval, env=env,
+        eval_fn=runner, env=env,
     )
 
     run_dir = Path(record.dir)
     assert result["status"] == "completed" and result["ok"] is True, result["error"]
+    assert result["report"] == report_to_dict(captured["log"])
     assert env == {"TESSERA_OUT": "before", "TESSERA_BLUEPRINT_DIR": "suites-before"}
     assert {"log.eval", "report.json", "receipt.json", "report.md", "run.json"} <= {
         path.name for path in run_dir.iterdir()

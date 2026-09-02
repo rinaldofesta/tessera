@@ -74,7 +74,6 @@ def save_provider(provider_id: str, body: ProviderUpdate, request: Request):
 
     def invalidate() -> None:
         request.app.state.discovery_cache.invalidate()
-        request.app.state.preflight_cache.invalidate()
 
     env_writer.apply_updates(request.app.state.env_file, updates, invalidate=invalidate)
     return _view(provider_id)

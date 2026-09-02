@@ -16,7 +16,7 @@ from tessera.examples import ORGS
 from tessera.factory.generate import generate_variant
 from tessera.models import Blueprint
 
-# org/blueprint name must be a safe identifier — `name` is user-controlled (RunRequest.org
+# org/blueprint name must be a safe identifier — `name` is user-controlled (RunSpec.suite
 # flows here via the eval task), so this guards the JSON-store lookup against path traversal.
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 

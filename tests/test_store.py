@@ -391,7 +391,36 @@ def test_import_log_marks_the_run_failed_instead_of_leaving_it_queued_forever(tm
     (run_dir,) = (tmp_path / "runs").iterdir()
     record = store.get(run_dir.name)
     assert record.data["status"] == "failed"
-    assert record.data["error"] == "boom"
+    # Scrubbed like runner.py's catch-all (type name + message): defense in depth
+    # at the boundary that persists the text, in case a future exception carries a
+    # credential a caller forgot to redact.
+    assert record.data["error"] == "RuntimeError: boom"
+
+
+def test_import_log_redacts_a_credential_even_when_the_failure_carries_one(tmp_path, monkeypatch):
+    # Defense in depth at the boundary that persists the text: a future failure mode
+    # that puts a raw credential into its exception message must not be able to reopen
+    # the leak just because it arrives via import_log's own catch-all instead of
+    # runner.py's.
+    log_path = (
+        Path(__file__).resolve().parents[1]
+        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+    )
+    store = RunStore(tmp_path)
+    monkeypatch.setenv("SOME_API_KEY", "sk-" + "P" * 30)
+    monkeypatch.setattr(
+        store_module, "receipt_from_log",
+        lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("upstream said: sk-" + "P" * 30),
+        ),
+    )
+
+    with pytest.raises(RuntimeError):
+        store.import_log(log_path)
+
+    (run_dir,) = (tmp_path / "runs").iterdir()
+    record = store.get(run_dir.name)
+    assert "sk-" + "P" * 30 not in record.data["error"]
 
 
 def test_reconcile_skips_a_run_that_becomes_unreadable_mid_sweep(tmp_path, monkeypatch):

@@ -1,9 +1,11 @@
-"""Key-free tests for the leaderboard generator (report.leaderboard + the CLI in
-report.cli). The pure module consumes report_to_dict-shaped dicts; only the CLI test
+"""Key-free tests for the leaderboard generator (report.leaderboard + tessera CLI).
+The pure module consumes report_to_dict-shaped dicts; only the CLI test
 fabricates an EvalLog on disk — no model calls, no network."""
 
 import pytest
+from typer.testing import CliRunner
 
+from tessera.cli import app
 from tessera.report.leaderboard import leaderboard_rows, render_leaderboard
 
 
@@ -154,13 +156,14 @@ def _fabricated_eval_log():
 def test_cli_writes_markdown_from_eval_logs(tmp_path):
     from inspect_ai.log import write_eval_log
 
-    from tessera.report.cli import leaderboard_main
-
     p = tmp_path / "run.eval"
     write_eval_log(_fabricated_eval_log(), str(p))
 
     out = tmp_path / "leaderboard.md"
-    rc = leaderboard_main([str(p), "--label", "sonnet-smoke", "-o", str(out)])
-    assert rc == 0
+    result = CliRunner().invoke(
+        app,
+        ["leaderboard", "render", str(p), "--label", "sonnet-smoke", "-o", str(out)],
+    )
+    assert result.exit_code == 0
     md = out.read_text()
     assert "sonnet-smoke" in md and "det-4" in md and "Results as of" in md

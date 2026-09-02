@@ -1,6 +1,6 @@
 """Pure JSON serialization of a Tessera report. No inspect_ai, no I/O.
 
-Mirrors `report.cli._build_report` exactly, but returns a JSON-native dict instead of
+Builds the same scorecard data consumed by the Markdown renderer, but returns a JSON-native dict
 Markdown so the API and the Markdown scorecard never diverge. The category order, the
 `flaky` flag, and the per-failure `missing` set are computed identically to `render.py`.
 """
@@ -47,7 +47,7 @@ def _probe_to_dict(p: ProbeReliability) -> dict:
 
 
 def report_to_dict(log) -> dict:
-    """Same pipeline as cli._build_report, serialized to a JSON-native dict."""
+    """Build the scorecard pipeline as a JSON-native dictionary."""
     # Lazy: this is the only line here that needs inspect_ai, and every CLI verb that
     # never touches a raw log (history, catalog, connect, …) should start without it.
     from tessera.report.log_adapter import eval_log_to_records

@@ -1,19 +1,12 @@
 """FastAPI app: the Tessera Reliability Explorer API.
 
-Endpoints
-  GET  /api/logs                 list pinned (examples/) + run (logs/) .eval files
-  GET  /api/logs/{id}/report     full report JSON for one log
-  POST /api/reports              upload an .eval, get report JSON back
-  GET  /api/orgs · /api/models   vocabulary for the Run form (orgs, model choices)
-  *    /api/blueprints…          dataset CRUD + validate + compile-preview (key-free)
-  POST /api/runs                 start a gated live eval run
-  GET  /api/runs[/{job_id}]      history / poll one run (+ /events for SSE)
-  GET  /api/trends               time-ordered pass^k series for the dashboard
+Endpoints include launcher vocabulary, provider configuration, dataset authoring,
+folder-backed runs, the offline catalog, and paired run comparisons.
 
-Handlers live in routes_meta / routes_blueprints / routes_reports / routes_runs and
-read their injected seams via request.app.state. Every JSON endpoint declares a
-response_model (see responses.py) — the OpenAPI schema they produce is the contract
-web/src/api-types.gen.ts is generated from.
+Handlers live in focused route modules and read their injected seams via
+request.app.state. Every JSON endpoint declares a response_model (see responses.py) —
+the OpenAPI schema they produce is the contract web/src/api-types.gen.ts is generated
+from.
 """
 
 from __future__ import annotations
@@ -34,28 +27,12 @@ from tessera import paths
 from tessera.api import (
     routes_blueprints,
     routes_catalog,
-    routes_experiments,
+    routes_comparisons,
     routes_meta,
-    routes_preflight,
     routes_providers,
-    routes_reports,
     routes_runs,
-    routes_workbench,
 )
-from tessera.api.preflight import PreflightCache, default_preflight_runner
-from tessera.api.run_store import RunStore as SqliteRunStore
-from tessera.api.runner import default_eval_runner
-from tessera.api.workbench_store import WorkbenchStore
 from tessera.store import RunStore
-
-# The bundled examples are run folders (<stem>/log.eval); routes_reports.logs_in lists
-# both that layout and flat <stem>.eval files, so the "examples:first-contact" ids hold.
-_DEFAULT_LOG_DIRS = {
-    "examples": Path(str(resources.files("tessera.data") / "examples")),
-    "logs": Path("logs"),
-}
-_DEFAULT_RUNS_DB = Path("runs.db")
-_DEFAULT_IMPORT_DIR = Path("imports")
 
 
 def _resolve_env_file(env_file: Path | None) -> Path:
@@ -117,13 +94,9 @@ def lesson_path() -> Path:
     return Path(tessera.__file__).parents[2] / "docs" / "tessera-lesson.html"
 
 
-def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None = None,
-               log_dirs: dict[str, Path] | None = None, schedule=_background_schedule,
-               blueprint_dir: Path | None = None, env_file: Path | None = None,
-               discovery_cache=None, workbench_store: WorkbenchStore | None = None,
-               import_dir: Path | None = None, preflight_runner=default_preflight_runner,
-               preflight_cache: PreflightCache | None = None,
-               home: Path | None = None, folder_eval_runner=None) -> FastAPI:
+def create_app(home: Path | None = None, folder_eval_runner=None,
+               schedule=_background_schedule, blueprint_dir: Path | None = None,
+               env_file: Path | None = None, discovery_cache=None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -140,7 +113,6 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
             logging.getLogger("tessera").info(
                 "reconciled interrupted runs: %s", ", ".join(interrupted),
             )
-        app.state.workbench_store.recover_interrupted()
         # Say at startup which configured providers cannot actually run: a key without
         # its SDK fails mid-eval with a bare ModuleNotFoundError, long after the
         # launcher promised the model. Discovery marks the models too; this is the
@@ -164,23 +136,15 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
         yield
 
     app = FastAPI(title="Tessera Reliability Explorer", lifespan=lifespan)
-    app.state.run_store = run_store or SqliteRunStore(_DEFAULT_RUNS_DB)
     app.state.runs = RunStore(home or paths.home())
     app.state.folder_eval_runner = folder_eval_runner
-    app.state.workbench_store = workbench_store or WorkbenchStore(app.state.run_store.db_path)
-    app.state.eval_runner = eval_runner
-    app.state.log_dirs = log_dirs or _DEFAULT_LOG_DIRS
     app.state.schedule = schedule
     app.state.blueprint_dir = blueprint_dir or paths.suites_dir()
-    app.state.import_dir = import_dir or (
-        Path(app.state.run_store.db_path).parent / _DEFAULT_IMPORT_DIR
-    )
     app.state.env_file = _resolve_env_file(env_file)
     # Injected like every other dependency: the default reaches the network and the
     # filesystem, so tests must be able to supply a deterministic one or the
     # key-free/network-free invariant is only aspirational.
     app.state.discovery_cache = discovery_cache or _build_discovery_cache()
-    app.state.preflight_cache = preflight_cache or PreflightCache(preflight_runner)
 
     @app.exception_handler(RequestValidationError)
     def _sanitized_validation_error(request: Request, exc: RequestValidationError):
@@ -200,17 +164,11 @@ def create_app(eval_runner=default_eval_runner, run_store: SqliteRunStore | None
     # registration order no longer leaks into openapi.json.
     app.include_router(routes_meta.router)
     app.include_router(routes_blueprints.router)
-    app.include_router(routes_reports.router)
     # Catalog precedes runs by convention; dry-run is POST while the dynamic run route is GET.
     app.include_router(routes_catalog.router)
     app.include_router(routes_runs.router)
     app.include_router(routes_providers.router)
-    # New routers append AFTER every pre-existing one, by convention (keeps this list's
-    # diff small) — harmless either way, since openapi.json is dumped with sorted keys
-    # (scripts/gen-types.sh) and does not depend on registration order.
-    app.include_router(routes_workbench.router)
-    app.include_router(routes_preflight.router)
-    app.include_router(routes_experiments.router)
+    app.include_router(routes_comparisons.router)
 
     _mount_learn(app)
     _mount_spa(app)
@@ -245,7 +203,9 @@ def _mount_spa(app: FastAPI, dist: Path | None = None) -> None:
     if assets.exists():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
-    @app.get("/{full_path:path}")
+    # Not part of the API contract: whether a bundle is present must not change
+    # openapi.json (the checkout may have web/dist built; CI's contract job does not).
+    @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
         # Never let the SPA fallback swallow unmatched API routes — keep their 404s honest.
         if full_path.startswith("api/") or full_path == "api":

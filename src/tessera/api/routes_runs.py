@@ -1,4 +1,4 @@
-"""Folder-backed live runs plus the legacy sqlite dashboard trends endpoint."""
+"""Folder-backed live run routes."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from pathlib import Path
 import anyio
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
-from tessera.api import responses as R
 from tessera.api.schemas import ArchiveRequest
 from tessera.api.scrub import scrub_error
 from tessera.contract import Run, RunSpec
@@ -125,30 +124,3 @@ async def run_events(run_id: str, request: Request):
                 return
             await asyncio.sleep(1)
     return StreamingResponse(gen(), media_type="text/event-stream")
-
-
-@router.get("/api/trends", response_model=list[R.TrendPoint])
-def trends(request: Request, org: str | None = None, model: str | None = None,
-           engine: str | None = None):
-    """Time-ordered series across finished runs (optionally filtered) for the dashboard:
-    pass^k/mean overall, per-conflict pass^k, and the three axes."""
-    out = []
-    for row in request.app.state.run_store.finished():
-        if org and row["org"] != org:
-            continue
-        if model and row["model"] != model:
-            continue
-        if engine and row["judge"] != engine:
-            continue
-        rep = row["report"]
-        if not rep:
-            continue
-        out.append({
-            "id": row["id"], "created_at": row["created_at"],
-            "model": row["model"], "org": row["org"], "engine": row["judge"],
-            "pass_k_rate": rep["overall"]["pass_k_rate"],
-            "mean_rate": rep["overall"]["mean_rate"],
-            "categories": {c["key"]: c["pass_k_rate"] for c in rep["categories"]},
-            "axes": rep["axes"],
-        })
-    return out

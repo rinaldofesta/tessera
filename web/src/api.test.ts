@@ -77,4 +77,20 @@ describe("run API adapter", () => {
       message: "provider is not connected; suite is unknown", status: 422,
     });
   });
+
+  it("posts folder-run comparison refs with the new request vocabulary", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await api.compareRuns("first-contact", "gpt-4o", "model");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/comparisons", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ a: "first-contact", b: "gpt-4o", intervention: "model" }),
+    });
+  });
 });

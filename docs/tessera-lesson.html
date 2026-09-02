@@ -476,8 +476,8 @@ const MODULES = [
 { title:"Authoring guide", html:`
   <span class="kicker">Module 5 — the authoring guide</span>
   <h2>How to actually write claims &amp; probes</h2>
-  <p>This is the hands-on manual for the <b>datasets</b> view (and for <code>your_org.py</code> if
-  you prefer Python). The hard rules at the bottom are enforced by the live validator; the recipes
+  <p>This is the hands-on manual for the <b>datasets</b> view and suites created with
+  <code>tessera init</code>. The hard rules at the bottom are enforced by the live validator; the recipes
   encode the conventions that make a probe measure what you intend.</p>
 
   <h3>Anatomy — click any field</h3>
@@ -697,7 +697,7 @@ const MODULES = [
   <p>Two paths, both shipping today:</p>
   <div class="grid c2">
     <div class="card"><b>🖱️ In the UI (no code)</b><br><span class="muted">Open the <b>Datasets</b> view, author Claims and Probes with live validation and a compiled-world preview, save — the blueprint immediately appears in the <b>Run</b> view's dataset picker. The <code>initech</code> org in your store was authored exactly this way; module 5 is the field-by-field manual.</span></div>
-    <div class="card"><b>🐍 In Python</b><br><span class="muted">Copy <code>src/tessera/examples/your_org.py</code> (a heavily commented starter), register it in the org registry, then run with <code>-T org=your</code>.</span></div>
+    <div class="card"><b>⌨️ From the CLI</b><br><span class="muted">Run <code>tessera init acme</code>, edit the generated suite, validate it, then launch it with <code>tessera run --suite acme --model …</code>.</span></div>
   </div>
   <div class="callout"><b>The durable idea (the "two tiers").</b> Generating test cases is getting
   cheap. The lasting value is the <b>standard</b>: deciding what "reliable enough" means for your

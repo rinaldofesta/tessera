@@ -195,7 +195,7 @@ def test_openai_obviously_non_evaluable_models_are_removed_from_a_live_listing()
 
 
 def test_no_response_field_can_carry_the_key_back():
-    from tessera.credential_scan import find_credential_like_values
+    from tests.helpers.credential_scan import find_credential_like_values
     result = discover_cloud(_StubClient(payload={"data": []}), env={"OPENAI_API_KEY": "sk-" + "a" * 32})
     payload = [m.__dict__ for m in result.models] + [{"detail": result.detail}]
     assert find_credential_like_values(payload) == []

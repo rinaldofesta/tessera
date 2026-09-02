@@ -32,6 +32,7 @@ from pathlib import Path
 import psutil
 
 from tessera.api.receipts import receipt_from_log
+from tessera.api.scrub import scrub_error
 from tessera.catalog import suite_name_for_org
 from tessera.errors import SpecError, TesseraError
 from tessera.report.render import render_markdown
@@ -472,7 +473,10 @@ class RunStore:
                 # The run directory already exists (queued). Leave it discoverable and
                 # marked failed rather than an orphaned "queued" run with no error that
                 # reconcile() never touches (it only ever acts on "running" runs).
-                self.mark_failed(record.id, str(exc))
+                # Scrubbed like every other persisted error: this is the durability
+                # boundary, and defense in depth means it must not trust every caller
+                # (or code path added later) to have scrubbed the message already.
+                self.mark_failed(record.id, scrub_error(f"{type(exc).__name__}: {exc}"))
                 raise
 
     @staticmethod

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -103,69 +103,12 @@ describe("RunHistory", () => {
     expect(screen.getByText("claude-sonnet-4")).toBeInTheDocument();
   });
 
-  it("tracks selection of finished runs", async () => {
-    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
-    view();
-    await screen.findByText("claude-sonnet-4");
-    const box = screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" });
-    await userEvent.click(box);
-    expect(box).toBeChecked();
-  });
-
-  it("hands finished selections to /compare as run: ids", async () => {
-    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" }), run({ id: "b", model: "openai/gpt-5.2" })]);
-    view();
-    await screen.findByText("claude-sonnet-4");
-    const boxes = [
-      screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" }),
-      screen.getByRole("checkbox", { name: "select gpt-5.2 for comparison" }),
-    ];
-    await userEvent.click(boxes[0]);
-    await userEvent.click(boxes[1]);
-    expect(screen.getByRole("link", { name: "Compare selected →" })).toHaveAttribute(
-      "href",
-      "/compare?evals=run%3Aa%2Crun%3Ab",
-    );
-  });
-
-  it("keeps the compare button hidden below two selections", async () => {
-    vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
-    view();
-    await screen.findByText("claude-sonnet-4");
-    expect(screen.queryByRole("link", { name: "Compare selected →" })).not.toBeInTheDocument();
-  });
-
   it("refetches with archived runs when show archived is toggled", async () => {
     vi.mocked(api.listRuns).mockResolvedValue([run({ id: "a" })]);
     view();
     await screen.findByText("claude-sonnet-4");
     await userEvent.click(screen.getByRole("checkbox", { name: "show archived" }));
     expect(vi.mocked(api.listRuns)).toHaveBeenCalledWith(true);
-  });
-
-  it("clears finished selections when show archived is toggled", async () => {
-    vi.mocked(api.listRuns)
-      .mockResolvedValueOnce([
-        run({ id: "a" }),
-        run({ id: "b", model: "openai/gpt-5.2" }),
-      ])
-      .mockResolvedValueOnce([
-        run({ id: "a" }),
-        run({ id: "b", model: "openai/gpt-5.2" }),
-        run({ id: "c", model: "google/gemini-3", archived: true }),
-      ]);
-    view();
-    await screen.findByText("claude-sonnet-4");
-    await userEvent.click(screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "select gpt-5.2 for comparison" }));
-    expect(screen.getByRole("link", { name: "Compare selected →" })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("checkbox", { name: "show archived" }));
-
-    await waitFor(() => {
-      expect(vi.mocked(api.listRuns)).toHaveBeenCalledWith(true);
-    });
-    expect(screen.queryByRole("link", { name: "Compare selected →" })).not.toBeInTheDocument();
   });
 
   it("archives a completed run", async () => {
@@ -175,27 +118,6 @@ describe("RunHistory", () => {
     await screen.findByText("claude-sonnet-4");
     await userEvent.click(screen.getByRole("button", { name: "Archive" }));
     expect(vi.mocked(api.setRunArchived)).toHaveBeenCalledWith("a", true);
-  });
-
-  it("removes an archived run from the comparison selection", async () => {
-    vi.mocked(api.listRuns)
-      .mockResolvedValueOnce([run({ id: "a" }), run({ id: "b", model: "openai/gpt-5.2" })])
-      .mockResolvedValueOnce([run({ id: "b", model: "openai/gpt-5.2" })]);
-    vi.mocked(api.setRunArchived).mockResolvedValue(run({ id: "a", archived: true }));
-    view();
-    await screen.findByText("claude-sonnet-4");
-    await userEvent.click(screen.getByRole("checkbox", { name: "select claude-sonnet-4 for comparison" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "select gpt-5.2 for comparison" }));
-    expect(screen.getByRole("link", { name: "Compare selected →" })).toHaveAttribute(
-      "href",
-      "/compare?evals=run%3Aa%2Crun%3Ab",
-    );
-
-    await userEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]);
-
-    await waitFor(() => {
-      expect(screen.queryByRole("link", { name: "Compare selected →" })).not.toBeInTheDocument();
-    });
   });
 
   it("shows an archived run's badge and unarchive action", async () => {

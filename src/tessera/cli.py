@@ -30,6 +30,16 @@ from tessera.errors import (
     TesseraError,
 )
 from tessera.report.compare import compare_reports
+from tessera.report.leaderboard import (
+    _is_safe_repo_relative_path,
+    _repo_relative,
+    _sha256_file,
+    extract_rows,
+    render_leaderboard,
+    render_manifest,
+    row_metric_mismatches,
+)
+from tessera.report.models import ReportError
 from tessera.report.render import render_markdown
 from tessera.report.serialize import report_to_dict
 from tessera.runner import execute, plan, run_result_payload
@@ -218,15 +228,10 @@ def ui(
 ) -> None:
     """Launch the local Tessera UI or check that it is ready."""
     from tessera.api.app import create_app, ui_dist
-    from tessera.api.run_store import RunStore as SqliteRunStore
 
     if check:
         home = paths.home()
-        # An in-memory run store: --check only reads app.state.env_file below and never
-        # touches the store, so building the real SqliteRunStore(Path("runs.db")) would
-        # leave a stray runs.db behind in whatever directory this "read-only" check
-        # happens to run from.
-        checked_app = create_app(home=home, run_store=SqliteRunStore(":memory:"))
+        checked_app = create_app(home=home)
         bundle_dir = ui_dist()
         bundle = bundle_dir / "index.html" if bundle_dir is not None else None
         env_file = checked_app.state.env_file
@@ -309,9 +314,11 @@ def init_suite(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Create an editable suite from the starter authoring template."""
-    from tessera import orgs
+    from importlib import resources
+
     from tessera.api import blueprint_store
     from tessera.catalog import BUILTIN_SUITES, SUITE_ALIASES
+    from tessera.models import Blueprint
 
     reserved = {*BUILTIN_SUITES, *SUITE_ALIASES}
     if not _SUITE_NAME.fullmatch(name):
@@ -329,7 +336,8 @@ def init_suite(
         # later becomes a no-op once the directory already exists) — `init` can be the
         # very first command a new user runs, so it must harden the directory itself.
         paths.ensure_home()
-        template = orgs.get_blueprint("your", store_dir=context.suites_dir)
+        template_file = resources.files("tessera.data").joinpath("templates", "suite.json")
+        template = Blueprint.model_validate_json(template_file.read_text(encoding="utf-8"))
         blueprint_store.save_blueprint(context.suites_dir, name, template)
     except blueprint_store.BlueprintStoreError as exc:
         raise SpecError(str(exc)) from None
@@ -408,57 +416,175 @@ def validate(
     typer.echo(f"ok: {name} ({question_count} questions, {claim_count} claims)")
 
 
-def _leaderboard_exit(argv: list[str]) -> None:
-    from tessera.report.cli import leaderboard_main
+def _leaderboard_error(message: str) -> None:
+    typer.echo(message, err=True)
+    raise typer.Exit(code=2)
 
-    result = leaderboard_main(argv)
-    if result:
-        raise typer.Exit(code=result)
+
+def _emit_leaderboard(text: str, out: Path | None) -> None:
+    if out is not None:
+        out.write_text(text, encoding="utf-8")
+    elif text.endswith("\n"):
+        sys.stdout.write(text)
+    else:
+        typer.echo(text)
+
+
+def _read_manifest(path: Path) -> dict:
+    try:
+        with path.open(encoding="utf-8") as handle:
+            return json.load(handle)
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        _leaderboard_error(f"cannot read manifest: {path} ({scrub_error(str(exc))})")
+
+
+def _find_repo_root(start: Path) -> Path:
+    original = Path(os.path.abspath(start))
+    directory = original
+    while True:
+        if (directory / ".git").exists():
+            return directory
+        if directory.parent == directory:
+            return original
+        directory = directory.parent
+
+
+def _read_leaderboard_reports(logs: list[Path]) -> list[dict]:
+    from tessera.report.log_adapter import read_log
+
+    reports = []
+    for path in logs:
+        try:
+            reports.append(report_to_dict(read_log(path)))
+        except (FileNotFoundError, OSError, ValueError) as exc:
+            _leaderboard_error(f"cannot read log: {path} ({scrub_error(str(exc))})")
+        except ReportError as exc:
+            _leaderboard_error(scrub_error(str(exc)))
+    return reports
+
+
+def _verify_leaderboard(manifest: dict, manifest_path: Path) -> int:
+    """Re-derive every backed row and preserve the manifest tool's 0/2 contract."""
+    from tessera.report.log_adapter import read_log
+
+    repo_root = _find_repo_root(Path(os.path.dirname(os.path.abspath(manifest_path))))
+    rows = manifest.get("rows", [])
+    backed, unbacked, failures = 0, 0, []
+    for row in rows:
+        log = row.get("log")
+        label = row.get("label") or row.get("model") or "?"
+        if log is None:
+            unbacked += 1
+            continue
+        path = log.get("path") if isinstance(log, dict) else None
+        sha = log.get("sha256") if isinstance(log, dict) else None
+        if not path or not sha or not _is_safe_repo_relative_path(path):
+            failures.append(f"{label}: malformed or unsafe log reference ({path!r})")
+            continue
+        absolute_path = repo_root / path
+        if not absolute_path.is_file():
+            failures.append(f"{label}: committed log not found at {path}")
+            continue
+        if _sha256_file(str(absolute_path)) != sha:
+            failures.append(f"{label}: sha256 does not match the committed {path}")
+            continue
+        try:
+            derived = extract_rows([report_to_dict(read_log(absolute_path))])[0]
+        except (ReportError, ValueError, OSError) as exc:
+            failures.append(f"{label}: cannot re-derive from {path} ({exc})")
+            continue
+        mismatches = row_metric_mismatches(row, derived)
+        if mismatches:
+            failures.append(f"{label}: {path} does not reproduce {', '.join(mismatches)}")
+            continue
+        backed += 1
+    summary = (
+        f"verified {backed}/{len(rows)} rows against a committed log; "
+        f"{unbacked} unbacked (log: null)"
+    )
+    if failures:
+        for failure in failures:
+            typer.echo(f"FAIL {failure}", err=True)
+        typer.echo(summary, err=True)
+        return 2
+    typer.echo(summary)
+    return 0
 
 
 @leaderboard_app.command("render")
 @_guard
 def leaderboard_render(
-    manifest: Path = typer.Option(Path("docs/leaderboard.rows.json"), "--manifest"),
+    logs: list[Path] | None = typer.Argument(None, metavar="LOGS..."),
+    manifest: Path | None = typer.Option(None, "--manifest"),
+    label: list[str] | None = typer.Option(None, "--label"),
+    note: list[str] | None = typer.Option(None, "--note"),
     out: Path | None = typer.Option(None, "--out", "-o"),
     title: str | None = typer.Option(None, "--title"),
 ) -> None:
-    """Render the committed leaderboard manifest as Markdown."""
-    argv = ["--manifest", str(manifest)]
-    if out is not None:
-        argv.extend(["--out", str(out)])
-    if title is not None:
-        argv.extend(["--title", title])
-    _leaderboard_exit(argv)
+    """Render a leaderboard manifest or one or more evaluation logs as Markdown."""
+    if manifest is not None:
+        loaded = _read_manifest(manifest)
+        rendered_manifest = {**loaded, "title": title} if title is not None else loaded
+        try:
+            rendered = render_manifest(rendered_manifest)
+        except (ValueError, KeyError) as exc:
+            _leaderboard_error(str(exc))
+        _emit_leaderboard(rendered, out)
+        return
+    if not logs:
+        _leaderboard_error("provide one or more .eval logs, or --manifest <file>")
+    reports = _read_leaderboard_reports(logs)
+    try:
+        rendered = render_leaderboard(
+            reports,
+            labels=label or [],
+            notes=note or [],
+            title=title,
+        )
+    except ValueError as exc:
+        _leaderboard_error(str(exc))
+    _emit_leaderboard(rendered, out)
 
 
 @leaderboard_app.command("extract")
 @_guard
 def leaderboard_extract(
-    logs: list[Path] = typer.Argument(..., metavar="LOGS..."),
+    logs: list[Path] | None = typer.Argument(None, metavar="LOGS..."),
     label: list[str] | None = typer.Option(None, "--label"),
     note: list[str] | None = typer.Option(None, "--note"),
     out: Path | None = typer.Option(None, "--out", "-o"),
 ) -> None:
     """Extract manifest rows from one or more committed evaluation logs (prints JSON
     rows to paste into docs/leaderboard.rows.json; stamps are repo-relative to cwd)."""
-    argv = ["--extract", *(str(log) for log in logs)]
-    for value in label or []:
-        argv.extend(["--label", value])
-    for value in note or []:
-        argv.extend(["--note", value])
-    if out is not None:
-        argv.extend(["--out", str(out)])
-    _leaderboard_exit(argv)
+    if not logs:
+        _leaderboard_error("provide one or more .eval logs")
+    reports = _read_leaderboard_reports(logs)
+    repo_root = _find_repo_root(Path.cwd())
+    rows = extract_rows(reports, labels=label or [], notes=note or [])
+    for index, row in enumerate(rows):
+        log_path = logs[index]
+        try:
+            relative_path = _repo_relative(os.path.abspath(log_path), str(repo_root))
+        except ValueError as exc:
+            _leaderboard_error(str(exc))
+        row["log"] = {
+            "path": relative_path,
+            "sha256": _sha256_file(str(log_path)),
+        }
+    _emit_leaderboard(json.dumps(rows, indent=2), out)
 
 
 @leaderboard_app.command("verify")
 @_guard
 def leaderboard_verify(
-    manifest: Path = typer.Option(..., "--manifest"),
+    manifest: Path | None = typer.Option(None, "--manifest"),
 ) -> None:
     """Verify every log-backed row in a leaderboard manifest."""
-    _leaderboard_exit(["--manifest", str(manifest), "--verify"])
+    if manifest is None:
+        _leaderboard_error("--verify requires --manifest <file>")
+    result = _verify_leaderboard(_read_manifest(manifest), manifest)
+    if result:
+        raise typer.Exit(code=result)
 
 
 @app.command()
@@ -884,20 +1010,20 @@ leaderboard_alias = typer.Typer(
 )
 def _leaderboard_alias(context: typer.Context) -> None:
     """Deprecated tessera-leaderboard entry point."""
-    from tessera.report.cli import leaderboard_main
-
     click.echo(
         "tessera-leaderboard is deprecated — use: tessera leaderboard …",
         err=True,
     )
-    # Delegate straight to the legacy argparse entry point instead of re-detecting
-    # --extract/--verify and re-dispatching to a `tessera leaderboard <subcommand>`:
-    # that translation only forwards each subcommand's own flags (e.g. `render` has no
-    # positional LOGS/--label/--note), so a still-valid legacy invocation like
-    # `tessera-leaderboard logs/a.eval logs/b.eval --label X --label Y` (docs/delegation.md)
-    # broke with a Click UsageError. leaderboard_main already parses the full legacy
-    # surface and returns the right exit code.
-    result = leaderboard_main(list(context.args))
+    arguments = list(context.args)
+    if "--verify" in arguments:
+        subcommand = "verify"
+        arguments.remove("--verify")
+    elif "--extract" in arguments:
+        subcommand = "extract"
+        arguments.remove("--extract")
+    else:
+        subcommand = "render"
+    result = _invoke_app(["leaderboard", subcommand, *arguments])
     if result:
         raise typer.Exit(code=result)
 
