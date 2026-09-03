@@ -50,6 +50,8 @@ tessera ui                            # the same thing in the browser
 
 There is no `--key` flag. The key goes to `~/.tessera/.env` (mode 0600, home 0700) and is never printed. `tessera run` exits 0 when the run completed, whether or not the verdict is "reliable"; exit 1 is reserved for a threshold you asked for (`--min-pass-k 0.9`).
 
+Local models need no key. Ollama works as soon as the daemon runs: pick or type `ollama/<tag>`. MLX, vLLM and any other OpenAI-compatible server need their URL once, `tessera connect mlx --base-url http://localhost:8090/v1`, and the model is typed as `openai-api/mlx/<repo>`. The Connect page of the app has the same three cards; `tessera guide models` has the long version.
+
 ![The Run view: the form reads "Ask claude-sonnet-4-6 the Starter questions, 3 times each."](https://raw.githubusercontent.com/rinaldofesta/tessera/main/docs/assets/run.png)
 
 The form is a sentence. Everything else (grading engine, grader model, scaffold, seed) is under Advanced and off by default: deterministic grading, suite `starter`, 3 repeats.
@@ -110,7 +112,7 @@ The standard (taxonomy, claims, probes, expected behaviour) is human-owned. The 
 - [`docs/adr/`](docs/adr/): fourteen decisions on record, from the response-model contract (0002) to this release (0014).
 - [`docs/roadmap.md`](docs/roadmap.md) and [`docs/related-work.md`](docs/related-work.md): where it is going and where it sits among the MCP benchmarks.
 - [`docs/extending-silos.md`](docs/extending-silos.md): a third silo type from your own package; [`docs/README.md`](docs/README.md) indexes the rest.
-- `tessera guide`: the same material inside the terminal, five topics.
+- `tessera guide`: the same material inside the terminal, six topics.
 
 ## Development
 

@@ -18,6 +18,9 @@ export function ConnectCard({ provider, onConnected }: ConnectCardProps) {
   const field = provider.fields[0];
   const fieldId = field?.id ?? "api_key";
   const isUrl = fieldId === "base_url";
+  const noKeyNeeded = provider.connected && !field?.required;
+  const hint = CONNECT_COPY.hints[provider.id];
+  const urlPlaceholder = CONNECT_COPY.urlPlaceholders[provider.id];
   const envVar = field?.env_var;  // shown only as a tooltip — a name, never a value
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -44,10 +47,10 @@ export function ConnectCard({ provider, onConnected }: ConnectCardProps) {
       <div className="flex items-center justify-between gap-3">
         <strong>{provider.label}</strong>
         <Badge variant="outline" className={provider.connected ? "border-verdict-reliable/50 text-verdict-reliable" : "text-faint"}>
-          {provider.connected ? CONNECT_COPY.connected : isUrl ? CONNECT_COPY.url : CONNECT_COPY.pasteKey}
+          {noKeyNeeded ? CONNECT_COPY.noKeyNeeded : provider.connected ? CONNECT_COPY.connected : isUrl ? CONNECT_COPY.url : CONNECT_COPY.pasteKey}
         </Badge>
       </div>
-      {isUrl && <p className="text-xs text-faint">{CONNECT_COPY.mlxHint}</p>}
+      {hint && <p className="text-xs text-faint">{hint}</p>}
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={save}>
         <div className="grid flex-1 gap-1.5">
           <Label htmlFor={`connect-${provider.id}`} className="sr-only">
@@ -58,7 +61,7 @@ export function ConnectCard({ provider, onConnected }: ConnectCardProps) {
             type={isUrl ? "url" : "password"}
             autoComplete="off"
             title={envVar}
-            placeholder={isUrl ? CONNECT_COPY.urlPlaceholder : CONNECT_COPY.keyPlaceholder}
+            placeholder={isUrl ? urlPlaceholder : CONNECT_COPY.keyPlaceholder}
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />

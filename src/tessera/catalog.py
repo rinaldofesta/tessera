@@ -28,7 +28,6 @@ _PUBLISHED_MODELS = [
     "anthropic/claude-opus-4-8",
     "anthropic/claude-haiku-4-5",
     "openai/gpt-4o-mini",
-    "ollama/qwen3.5:latest",
     "anthropic/claude-fable-5",
     "anthropic/claude-sonnet-5",
 ]

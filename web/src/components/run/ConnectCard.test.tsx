@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 const provider: CatalogProvider = {
-  id: "openai", label: "OpenAI", connected: false, fields: [{ id: "api_key", env_var: "OPENAI_API_KEY" }],
+  id: "openai", label: "OpenAI", connected: false, fields: [{ id: "api_key", env_var: "OPENAI_API_KEY", required: true }],
 };
 const details = {
   id: "openai", configured: false,
@@ -38,5 +38,31 @@ describe("ConnectCard", () => {
     expect(onConnected).toHaveBeenCalledOnce();
     expect(input).toHaveValue("");
     expect(screen.queryByText("secret-value")).not.toBeInTheDocument();
+  });
+
+  it("shows the no-key state, hint, and default URL for Ollama", () => {
+    const ollama: CatalogProvider = {
+      id: "ollama", label: "Ollama (local)", connected: true,
+      fields: [{ id: "base_url", env_var: "OLLAMA_BASE_URL", required: false }],
+    };
+
+    render(<ConnectCard provider={ollama} onConnected={vi.fn()} />);
+
+    expect(screen.getByText("no key needed")).toBeInTheDocument();
+    expect(screen.getByText(/Runs against http:\/\/localhost:11434 by default/)).toBeInTheDocument();
+    expect(screen.getByLabelText("base URL — Ollama (local)")).toHaveAttribute("placeholder", "http://localhost:11434/v1");
+  });
+
+  it("shows the URL state and server hint for an unconnected MLX server", () => {
+    const mlx: CatalogProvider = {
+      id: "mlx", label: "MLX or another OpenAI-compatible server", connected: false,
+      fields: [{ id: "base_url", env_var: "MLX_BASE_URL", required: true }],
+    };
+
+    render(<ConnectCard provider={mlx} onConnected={vi.fn()} />);
+
+    expect(screen.getByText("URL")).toBeInTheDocument();
+    expect(screen.getByText(/Start the server \(for example mlx_lm.server/)).toBeInTheDocument();
+    expect(screen.getByLabelText("base URL — MLX or another OpenAI-compatible server")).toHaveAttribute("placeholder", "http://localhost:8090/v1");
   });
 });

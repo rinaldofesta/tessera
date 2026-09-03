@@ -16,4 +16,4 @@ Start with the field guide, then go as deep as the question needs.
 | [`adr/`](adr/) | Fourteen decisions on record, one file each. |
 | [`tessera-lesson.html`](tessera-lesson.html) | The interactive lesson the app serves at `/learn`. |
 
-The same material, shorter, is inside the CLI: `tessera guide` lists five topics. Coding agents get the operating contract in [`../AGENTS.md`](../AGENTS.md) and the skills under [`../skills/`](../skills/).
+The same material, shorter, is inside the CLI: `tessera guide` lists six topics. Coding agents get the operating contract in [`../AGENTS.md`](../AGENTS.md) and the skills under [`../skills/`](../skills/).

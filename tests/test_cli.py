@@ -198,6 +198,7 @@ def test_guide_every_topic_loads_and_agents_is_real():
 
     assert [topic["name"] for topic in topics()] == [
         "start",
+        "models",
         "conflicts",
         "suites",
         "reading",
@@ -216,6 +217,7 @@ def test_guide_list_json_and_unknown_topic():
     assert listed.exit_code == 0
     assert [topic["name"] for topic in payload["topics"]] == [
         "start",
+        "models",
         "conflicts",
         "suites",
         "reading",
@@ -232,17 +234,25 @@ def test_guide_defaults_to_start_in_json():
     assert "tessera report first-contact" in payload["text"]
 
 
-def test_guide_human_list_has_exactly_five_topic_lines():
+def test_guide_human_list_has_exactly_six_topic_lines():
     result = RUNNER.invoke(app, ["guide", "--list"])
 
     assert result.exit_code == 0
     assert [line.split(" — ", 1)[0] for line in result.stdout.splitlines()] == [
         "start",
+        "models",
         "conflicts",
         "suites",
         "reading",
         "agents",
     ]
+
+
+def test_guide_models_renders_title():
+    result = RUNNER.invoke(app, ["guide", "models"])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("# Connecting a model\n")
 
 
 def test_init_validate_and_custom_suite_dry_run():
@@ -557,6 +567,20 @@ def test_connect_stdin_saves_without_disclosing_key():
     assert "ANTHROPIC_API_KEY=" in env_file.read_text(encoding="utf-8")
     assert secret not in result.stdout + result.stderr
     assert "anthropic  Anthropic  connected" in catalog_result.stdout
+
+
+def test_connect_ollama_base_url_json():
+    result = RUNNER.invoke(
+        app,
+        ["connect", "ollama", "--base-url", "http://h:11434/v1", "--json"],
+    )
+
+    payload = _json(result)
+    env_file = Path(os.environ["TESSERA_HOME"]) / ".env"
+    assert result.exit_code == 0
+    assert payload["ok"] is True and payload["probe"] is None
+    assert payload["provider"]["id"] == "ollama"
+    assert env_file.read_text() == 'OLLAMA_BASE_URL="http://h:11434/v1"\n'
 
 
 def test_connect_rejects_control_characters():

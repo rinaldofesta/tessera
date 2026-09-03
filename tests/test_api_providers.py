@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -42,6 +43,45 @@ def test_writing_a_key_persists_it_and_reports_configured_without_echoing(tmp_pa
     assert SENTINEL not in r.text
     assert r.json()["configured"] is True
     assert SENTINEL in (tmp_path / ".env").read_text()      # it really was written
+
+
+def test_writing_mlx_url_adds_the_inspect_ai_placeholder(tmp_path, monkeypatch):
+    monkeypatch.delenv("MLX_BASE_URL", raising=False)
+    monkeypatch.delenv("MLX_API_KEY", raising=False)
+
+    r = _client(tmp_path).put(
+        "/api/providers/mlx", json={"base_url": "http://localhost:8090/v1"},
+    )
+
+    assert r.status_code == 200
+    env = (tmp_path / ".env").read_text()
+    assert 'MLX_BASE_URL="http://localhost:8090/v1"' in env
+    assert 'MLX_API_KEY="local"' in env
+
+
+def test_writing_mlx_url_does_not_overwrite_a_preset_api_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("MLX_BASE_URL", raising=False)
+    monkeypatch.setenv("MLX_API_KEY", "user-set-key")
+
+    r = _client(tmp_path).put(
+        "/api/providers/mlx", json={"base_url": "http://localhost:8090/v1"},
+    )
+
+    assert r.status_code == 200
+    assert os.environ["MLX_API_KEY"] == "user-set-key"
+    assert "MLX_API_KEY" not in (tmp_path / ".env").read_text()
+
+
+def test_writing_optional_ollama_url_is_supported(tmp_path, monkeypatch):
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+
+    r = _client(tmp_path).put(
+        "/api/providers/ollama", json={"base_url": "http://host:11434/v1"},
+    )
+
+    assert r.status_code == 200
+    assert r.json()["configured"] is True
+    assert (tmp_path / ".env").read_text() == 'OLLAMA_BASE_URL="http://host:11434/v1"\n'
 
 
 def test_writing_never_claims_a_readiness_it_did_not_observe(tmp_path):

@@ -174,6 +174,7 @@ class CatalogModel(BaseModel):
 class CatalogProviderField(BaseModel):
     id: str        # "api_key" | "base_url"
     env_var: str   # the variable connect writes — a name, never a value
+    required: bool = True  # False: optional (a local server's URL when it is not the default)
 
 
 class CatalogProvider(BaseModel):

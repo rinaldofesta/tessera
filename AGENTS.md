@@ -38,6 +38,8 @@ Connect a key through standard input so it never appears in argv:
 printf '%s' "$KEY" | tessera connect anthropic --key-stdin
 ```
 
+Ollama needs no connect step; use `ollama/<tag>`. For MLX, vLLM, and other OpenAI-compatible servers, run `tessera connect mlx --base-url URL` and use `openai-api/mlx/<repo>`. Run `tessera guide models` for the long form.
+
 Never echo keys. Do not put a key in a command argument, file under version control, log, report, or agent response.
 
 ## Working rules

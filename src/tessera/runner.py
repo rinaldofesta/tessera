@@ -196,7 +196,12 @@ def plan(
     suites_dir: Path | None = None,
 ) -> dict:
     """Return an offline execution plan whose blockers explain how to make it ready."""
-    from tessera.api.providers import is_configured, provider_for_model
+    from tessera.api.providers import (
+        FIELD_BASE_URL,
+        is_configured,
+        is_connectable,
+        provider_for_model,
+    )
     from tessera.evals.scoring import SCORER_VERSIONS
     from tessera.evals.task import _SCAFFOLDS
 
@@ -219,11 +224,16 @@ def plan(
             "message": f"unknown provider for model '{request.model}'",
             "fix": None,
         })
-    elif provider_spec.needs_credentials and not is_configured(provider_spec, env):
+    elif is_connectable(provider_spec) and not is_configured(provider_spec, env):
+        fix = f"tessera connect {provider_id}"
+        if any(
+            field.id == FIELD_BASE_URL and field.required for field in provider_spec.fields
+        ):
+            fix += " --base-url <url>"
         blockers.append({
             "code": "not_connected",
             "message": f"provider '{provider_id}' is not connected",
-            "fix": f"tessera connect {provider_id}",
+            "fix": fix,
         })
 
     if request.engine == "llm" and not request.grader:

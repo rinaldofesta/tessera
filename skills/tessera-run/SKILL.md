@@ -19,6 +19,8 @@ description: Run a Tessera reliability evaluation and read the verdict
    printf '%s' "$KEY" | tessera connect anthropic --key-stdin
    ```
 
+   Ollama needs no connect step; use `ollama/<tag>`. For MLX, vLLM, and other OpenAI-compatible servers, run `tessera connect mlx --base-url URL` and use `openai-api/mlx/<repo>`. Run `tessera guide models` for the long form.
+
 3. Run the same request without `--dry-run`:
 
    ```sh

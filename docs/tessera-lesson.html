@@ -696,8 +696,15 @@ const MODULES = [
   <h3>Testing your own company</h3>
   <p>Two paths, both shipping today:</p>
   <div class="grid c2">
-    <div class="card"><b>🖱️ In the UI (no code)</b><br><span class="muted">Open the <b>Datasets</b> view, author Claims and Probes with live validation and a compiled-world preview, save — the blueprint immediately appears in the <b>Run</b> view's dataset picker. The <code>initech</code> org in your store was authored exactly this way; module 5 is the field-by-field manual.</span></div>
+    <div class="card"><b>🖱️ In the UI (no code)</b><br><span class="muted">In the <b>Run</b> view open the suite selector and choose <b>Make your own suite</b>: five plain-language recipes, live validation, Save. The suite is a JSON file in <code>~/.tessera/suites/</code> and appears in the selector at once; module 5 is the field-by-field manual.</span></div>
     <div class="card"><b>⌨️ From the CLI</b><br><span class="muted">Run <code>tessera init acme</code>, edit the generated suite, validate it, then launch it with <code>tessera run --suite acme --model …</code>.</span></div>
+  </div>
+  <h3>Connecting a model</h3>
+  <p>Three cases, all on the <b>Connect</b> page of the app and in <code>tessera guide models</code>:</p>
+  <div class="grid c3">
+    <div class="card"><b>☁️ Cloud provider</b><br><span class="muted">Anthropic, OpenAI, Google, Groq, Mistral, xAI, OpenRouter: paste a key once. The Run view asks for it inline the first time you pick one of their models; <code>tessera connect anthropic</code> does the same with a hidden prompt. The key lands in <code>~/.tessera/.env</code> and is never shown again.</span></div>
+    <div class="card"><b>🦙 Ollama</b><br><span class="muted">Nothing to connect. Start the daemon (<code>ollama serve</code>) and type the model as <code>ollama/&lt;tag&gt;</code>. Tessera talks to <code>localhost:11434</code>; paste a URL on the Ollama card only if it runs elsewhere.</span></div>
+    <div class="card"><b>🖥️ MLX, vLLM, any OpenAI-compatible server</b><br><span class="muted">Start the server (<code>mlx_lm.server --model &lt;repo&gt; --port 8090</code>), paste its base URL on the MLX card or run <code>tessera connect mlx --base-url http://localhost:8090/v1</code>, then type the model as <code>openai-api/mlx/&lt;repo&gt;</code>. Tessera also writes the placeholder key the client library insists on.</span></div>
   </div>
   <div class="callout"><b>The durable idea (the "two tiers").</b> Generating test cases is getting
   cheap. The lasting value is the <b>standard</b>: deciding what "reliable enough" means for your

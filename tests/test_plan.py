@@ -40,6 +40,27 @@ def test_not_connected_blocker_has_exact_fix(tmp_path, monkeypatch):
     }]
 
 
+def test_plan_ollama_has_no_not_connected_blocker(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+
+    result = plan({"model": "ollama/x"}, env={}, suites_dir=tmp_path)
+
+    assert "not_connected" not in {blocker["code"] for blocker in result["blockers"]}
+    assert result["ready"] is True
+
+
+def test_plan_mlx_base_url_blocker_has_connect_fix(tmp_path, monkeypatch):
+    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+
+    result = plan({"model": "openai-api/mlx/x"}, env={}, suites_dir=tmp_path)
+
+    assert result["blockers"] == [{
+        "code": "not_connected",
+        "message": "provider 'mlx' is not connected",
+        "fix": "tessera connect mlx --base-url <url>",
+    }]
+
+
 def test_toy_alias_is_ready_with_diagnostic(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
 

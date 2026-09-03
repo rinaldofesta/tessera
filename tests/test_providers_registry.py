@@ -27,6 +27,7 @@ def test_mlx_needs_only_a_base_url_because_it_is_a_local_server():
     spec = PROVIDERS["mlx"]
     assert {f.id: f.env_var for f in spec.fields} == {"base_url": "MLX_BASE_URL"}
     assert all(f.required for f in spec.fields)
+    assert spec.companions == (("MLX_API_KEY", "local"),)
 
 
 def test_configured_fields_reports_each_requirement_separately():
@@ -38,11 +39,19 @@ def test_configured_fields_reports_each_requirement_separately():
 
 def test_ollama_needs_no_credentials_and_is_configured_with_an_empty_env():
     spec = PROVIDERS["ollama"]
-    assert spec.needs_credentials is False
-    assert spec.fields == ()
+    assert [(field.id, field.env_var, field.required) for field in spec.fields] == [
+        ("base_url", "OLLAMA_BASE_URL", False),
+    ]
     assert is_configured(spec, {}) is True
 
 
 def test_blank_environment_values_do_not_count_as_configured():
     spec = PROVIDERS["openai"]
     assert is_configured(spec, {"OPENAI_API_KEY": "   "}) is False
+
+
+def test_mlx_is_not_configured_until_its_companion_key_exists():
+    # A hand-edited env file with only the URL must not pass a dry-run (inspect_ai needs the key).
+    spec = PROVIDERS["mlx"]
+    assert is_configured(spec, {"MLX_BASE_URL": "http://localhost:8090/v1"}) is False
+    assert is_configured(spec, {"MLX_BASE_URL": "http://localhost:8090/v1", "MLX_API_KEY": "local"}) is True

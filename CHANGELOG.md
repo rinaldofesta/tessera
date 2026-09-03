@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A credential-safe catalog and offline dry-run planning before any model call.
 - A three-view Run, Reports, and Connect web UI with light mode, bundled into the wheel.
 - Packaging for publication on PyPI as `tessera-eval`.
+- Ollama and MLX (or any OpenAI-compatible server) as first-class cards on the Connect
+  page and in `tessera connect`; a `tessera guide models` topic explains the three cases.
 
 ### Changed
 
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `toy` is a deprecated suite alias for `starter`; the underlying protocol org remains `toy`.
 - User-authored suites now live in `~/.tessera/suites`.
 - The API contract is capped at 16 paths and centered on `/api/catalog` and `/api/runs`.
+- `ollama/qwen3.5:latest` left the default model list; local models are typed by id.
 
 ### Removed
 
@@ -40,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Connecting MLX also writes the placeholder `MLX_API_KEY` that inspect_ai's
+  OpenAI-compatible client requires, so MLX runs no longer fail at model initialisation.
 - The stale scaffold literal that prevented the API from launching supported scaffolds.
 - Import-time creation of `runs.db`.
 - Default state, suite, run, environment-file, and result paths depending on the current

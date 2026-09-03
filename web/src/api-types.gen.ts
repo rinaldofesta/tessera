@@ -374,6 +374,11 @@ export interface components {
             env_var: string;
             /** Id */
             id: string;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
         };
         /** CatalogScorer */
         CatalogScorer: {

@@ -75,7 +75,7 @@ export const RUN_COPY = {
   suiteLabel: "suite",
   repeatsLabel: "times each",
   customModel: "Type a model id…",
-  customModelPlaceholder: "provider/model",
+  customModelPlaceholder: "anthropic/…, ollama/<tag>, openai-api/mlx/<repo>",
   customSuite: "Make your own suite…",
   advanced: "Advanced — grading, grader, scaffold, seed",
   engine: "grading engine",
@@ -96,17 +96,24 @@ export const RUN_COPY = {
 
 export const CONNECT_COPY = {
   title: "Connect a model",
-  subtitle: "Credentials stay on this machine and are never shown again.",
+  subtitle: "Credentials stay on this machine and are never shown again. Cloud providers need a key; Ollama needs only a running daemon; MLX and other OpenAI-compatible servers need their URL.",
   connected: "connected",
+  noKeyNeeded: "no key needed",
   pasteKey: "paste a key",
   url: "URL",
   apiKey: "API key",
   baseUrl: "base URL",
   keyPlaceholder: "paste the key",
-  urlPlaceholder: "http://localhost:8080/v1",
+  urlPlaceholders: {
+    ollama: "http://localhost:11434/v1",
+    mlx: "http://localhost:8090/v1",
+  } as Partial<Record<string, string>>,
   save: "Save",
   saving: "Saving…",
-  mlxHint: "Ollama, MLX, vLLM — paste the base URL; models are typed by id",
+  hints: {
+    ollama: "Runs against http://localhost:11434 by default. Paste a URL only if your Ollama runs elsewhere. Models are typed as ollama/<tag>.",
+    mlx: "Start the server (for example mlx_lm.server --model <repo> --port 8090) and paste its base URL. Models are typed as openai-api/mlx/<repo>. vLLM and other OpenAI-compatible servers work the same way.",
+  } as Partial<Record<string, string>>,
 } as const;
 
 export const REPORT_COPY = {
