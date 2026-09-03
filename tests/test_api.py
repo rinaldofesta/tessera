@@ -90,7 +90,7 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
     assert record.id in caplog.text
 
 
-def test_default_published_models_match_single_model_leaderboard(monkeypatch):
+def test_default_published_models_match_cloud_single_model_leaderboard(monkeypatch):
     from tessera.catalog import published_models
 
     monkeypatch.delenv("TESSERA_MODELS", raising=False)
@@ -99,6 +99,7 @@ def test_default_published_models_match_single_model_leaderboard(monkeypatch):
     expected = {
         row["model"] for row in rows
         if row.get("harness", "single") == "single"
+        and not row["model"].startswith("ollama/")
     }
     assert set(published_models()) == expected
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
 
 import pytest
 
 from tessera.errors import SpecError
-from tessera.providers import connect, probe
+from tessera.providers import connect, connection_state, probe
 
 
 def test_connect_writes_key_securely_and_returns_only_state(tmp_path, monkeypatch):
@@ -20,7 +21,9 @@ def test_connect_writes_key_securely_and_returns_only_state(tmp_path, monkeypatc
     assert stat.S_IMODE(env_file.stat().st_mode) == 0o600
     assert result == {
         "id": "anthropic", "label": "Anthropic", "connected": True,
-        "fields": [{"id": "api_key", "env_var": "ANTHROPIC_API_KEY"}],
+        "fields": [{
+            "id": "api_key", "env_var": "ANTHROPIC_API_KEY", "required": True,
+        }],
     }
     assert secret not in json.dumps(result)
 
@@ -30,17 +33,63 @@ def test_connect_rejects_invalid_key(tmp_path):
         connect("anthropic", api_key="first\nsecond", env_file=tmp_path / ".env")
 
 
-def test_mlx_accepts_base_url_only(tmp_path, monkeypatch):
+def test_connect_mlx_writes_base_url_and_placeholder_api_key(tmp_path, monkeypatch):
     monkeypatch.delenv("MLX_BASE_URL", raising=False)
+    monkeypatch.delenv("MLX_API_KEY", raising=False)
     env_file = tmp_path / ".env"
 
     result = connect("mlx", base_url="http://127.0.0.1:8080/v1", env_file=env_file)
 
     assert result["connected"] is True
-    assert result["fields"] == [{"id": "base_url", "env_var": "MLX_BASE_URL"}]
-    assert "MLX_BASE_URL=" in env_file.read_text()
+    assert result["fields"] == [{
+        "id": "base_url", "env_var": "MLX_BASE_URL", "required": True,
+    }]
+    assert 'MLX_BASE_URL="http://127.0.0.1:8080/v1"' in env_file.read_text()
+    assert 'MLX_API_KEY="local"' in env_file.read_text()
     with pytest.raises(SpecError, match="does not accept: api_key"):
         connect("mlx", api_key="not-supported", env_file=env_file)
+
+
+def test_connect_mlx_does_not_overwrite_preset_api_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("MLX_BASE_URL", raising=False)
+    monkeypatch.setenv("MLX_API_KEY", "user-set-key")
+    env_file = tmp_path / ".env"
+
+    connect("mlx", base_url="http://127.0.0.1:8080/v1", env_file=env_file)
+
+    assert os.environ["MLX_API_KEY"] == "user-set-key"
+    assert "MLX_API_KEY" not in env_file.read_text()
+
+
+def test_connect_ollama_writes_optional_base_url(tmp_path, monkeypatch):
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    env_file = tmp_path / ".env"
+
+    result = connect("ollama", base_url="http://host:11434/v1", env_file=env_file)
+
+    assert result["connected"] is True
+    assert result["fields"] == [{
+        "id": "base_url", "env_var": "OLLAMA_BASE_URL", "required": False,
+    }]
+    assert env_file.read_text() == 'OLLAMA_BASE_URL="http://host:11434/v1"\n'
+
+
+def test_connection_state_includes_local_server_fields():
+    providers = {row["id"]: row for row in connection_state({})}
+
+    assert providers["ollama"] == {
+        "id": "ollama", "label": "Ollama (local)", "connected": True,
+        "fields": [{
+            "id": "base_url", "env_var": "OLLAMA_BASE_URL", "required": False,
+        }],
+    }
+    assert providers["mlx"] == {
+        "id": "mlx", "label": "MLX or another OpenAI-compatible server",
+        "connected": False,
+        "fields": [{
+            "id": "base_url", "env_var": "MLX_BASE_URL", "required": True,
+        }],
+    }
 
 
 def test_connect_rejects_unknown_provider(tmp_path):

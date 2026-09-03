@@ -8,7 +8,7 @@ from pathlib import Path
 import tessera
 from tessera.errors import SpecError
 
-_TOPICS = ("start", "conflicts", "suites", "reading", "agents")
+_TOPICS = ("start", "models", "conflicts", "suites", "reading", "agents")
 
 
 def _topic_text(name: str) -> str:

@@ -9,6 +9,7 @@ UI and one write target one variable.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -28,7 +29,7 @@ class ProviderSpec:
     id: str
     fields: tuple[ProviderField, ...]
     model_prefixes: tuple[str, ...]
-    needs_credentials: bool
+    companions: tuple[tuple[str, str], ...] = ()
 
 
 def _key_only(provider_id: str, env_var: str, *prefixes: str) -> ProviderSpec:
@@ -36,7 +37,6 @@ def _key_only(provider_id: str, env_var: str, *prefixes: str) -> ProviderSpec:
         id=provider_id,
         fields=(ProviderField(FIELD_API_KEY, env_var, required=True),),
         model_prefixes=prefixes,
-        needs_credentials=True,
     )
 
 
@@ -55,11 +55,15 @@ PROVIDERS: dict[str, ProviderSpec] = {
         id="mlx",
         fields=(ProviderField(FIELD_BASE_URL, "MLX_BASE_URL", required=True),),
         model_prefixes=("openai-api/mlx/",),
-        # This flag controls Connect-view inclusion; MLX still needs its URL configured.
-        needs_credentials=True,
+        # inspect_ai otherwise raises `PrerequisiteError: Unable to initialise mlx client`.
+        # Local OpenAI-compatible servers ignore the placeholder key value.
+        companions=(("MLX_API_KEY", "local"),),
     ),
     "ollama": ProviderSpec(
-        id="ollama", fields=(), model_prefixes=("ollama/",), needs_credentials=False,
+        id="ollama",
+        fields=(ProviderField(FIELD_BASE_URL, "OLLAMA_BASE_URL", required=False),),
+        model_prefixes=("ollama/",),
+        # inspect_ai defaults to http://localhost:11434/v1, so an unset URL never blocks a run.
     ),
 }
 
@@ -87,5 +91,31 @@ def configured_fields(spec: ProviderSpec, env: Mapping[str, str]) -> dict[str, b
 
 
 def is_configured(spec: ProviderSpec, env: Mapping[str, str]) -> bool:
+    """Every required field is set, and so is every companion the client library insists on.
+
+    A hand-written env file with `MLX_BASE_URL` but no `MLX_API_KEY` would pass a dry-run and
+    fail at model construction; counting companions here routes it to the `connect` fix instead."""
     states = configured_fields(spec, env)
-    return all(states[field.id] for field in spec.fields if field.required)
+    return (
+        all(states[field.id] for field in spec.fields if field.required)
+        and all(env.get(variable) for variable, _ in spec.companions)
+    )
+
+
+def is_connectable(spec: ProviderSpec) -> bool:
+    """Whether a provider has any configuration surface at all (a `tessera connect` target)."""
+    return bool(spec.fields)
+
+
+def companion_updates(
+    spec: ProviderSpec, submitted: Mapping[str, str], env: Mapping[str, str] = os.environ,
+) -> dict[str, str]:
+    """Placeholder variables to write alongside a base URL, skipping any the user already set.
+
+    `submitted` is the field-id -> raw-value mapping the caller validated (the same shape
+    `connect()`/`save_provider()` already build): companions only apply when a base URL was
+    part of THIS write, so callers can merge the result in unconditionally.
+    """
+    if FIELD_BASE_URL not in submitted:
+        return {}
+    return {variable: value for variable, value in spec.companions if not env.get(variable)}

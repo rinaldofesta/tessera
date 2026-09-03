@@ -9,7 +9,13 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from tessera import env_writer, paths
-from tessera.api.providers import FIELD_BASE_URL, PROVIDERS, is_configured
+from tessera.api.providers import (
+    FIELD_BASE_URL,
+    PROVIDERS,
+    companion_updates,
+    is_configured,
+    is_connectable,
+)
 from tessera.api.scrub import scrub_error
 from tessera.contract import CatalogProvider
 from tessera.errors import SpecError
@@ -17,7 +23,8 @@ from tessera.errors import SpecError
 PROVIDER_LABELS = {
     "anthropic": "Anthropic", "openai": "OpenAI", "openrouter": "OpenRouter",
     "google": "Google", "groq": "Groq", "mistral": "Mistral", "xai": "xAI",
-    "mlx": "MLX (local server)",
+    "ollama": "Ollama (local)",
+    "mlx": "MLX or another OpenAI-compatible server",
 }
 
 
@@ -27,7 +34,8 @@ def _provider_row(provider_id: str, env: Mapping[str, str]) -> dict:
         id=spec.id,
         label=PROVIDER_LABELS.get(provider_id, provider_id),
         connected=is_configured(spec, env),
-        fields=[{"id": field.id, "env_var": field.env_var} for field in spec.fields],
+        fields=[{"id": field.id, "env_var": field.env_var, "required": field.required}
+                for field in spec.fields],
     ).model_dump()
 
 
@@ -36,7 +44,7 @@ def connection_state(env: Mapping[str, str] = os.environ) -> list[dict]:
     return [
         _provider_row(provider_id, env)
         for provider_id, spec in sorted(PROVIDERS.items())
-        if spec.needs_credentials
+        if is_connectable(spec)
     ]
 
 
@@ -53,7 +61,7 @@ def connect(
     `invalidate` runs after the write lands so a long-lived caller can refresh any
     configuration-derived state it owns."""
     spec = PROVIDERS.get(provider_id)
-    if spec is None or not spec.needs_credentials:
+    if spec is None or not is_connectable(spec):
         raise SpecError(f"unknown provider: {provider_id}")
 
     allowed = {field.id: field.env_var for field in spec.fields}
@@ -79,6 +87,8 @@ def connect(
             updates[allowed[field_id]] = validated
     except env_writer.EnvValueError as exc:
         raise SpecError(str(exc)) from None
+
+    updates = {**companion_updates(spec, submitted), **updates}
 
     if env_file is None:
         paths.ensure_home()

@@ -20,7 +20,7 @@ from typer.core import TyperGroup
 
 from tessera import __version__, paths, providers
 from tessera import catalog as catalog_module
-from tessera.api.providers import FIELD_API_KEY, PROVIDERS
+from tessera.api.providers import FIELD_API_KEY, PROVIDERS, is_connectable
 from tessera.api.scrub import scrub_error
 from tessera.errors import (
     ExitCode,
@@ -871,8 +871,8 @@ def connect(
     provider_spec = PROVIDERS.get(provider)
     if provider_spec is None:
         raise SpecError(f"unknown provider: {provider}")
-    if not provider_spec.needs_credentials:
-        raise SpecError(f"provider '{provider}' does not use a stored credential")
+    if not is_connectable(provider_spec):
+        raise SpecError(f"provider '{provider}' does not use stored configuration")
     field_ids = {field.id for field in provider_spec.fields}
     if base_url is not None and "base_url" not in field_ids:
         raise SpecError("provider does not accept: base_url")

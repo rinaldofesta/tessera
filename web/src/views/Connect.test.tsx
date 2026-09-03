@@ -12,8 +12,9 @@ const catalog: Catalog = {
   defaults: { engine: "deterministic", suite: "starter", k: 3, scaffold: "baseline", seed: 0 },
   suites: [], models: [], scorers: [], scaffolds: ["baseline"],
   providers: [
-    { id: "openai", label: "OpenAI", connected: false, fields: [{ id: "api_key", env_var: "OPENAI_API_KEY" }] },
-    { id: "mlx", label: "OpenAI-compatible server", connected: false, fields: [{ id: "base_url", env_var: "MLX_BASE_URL" }] },
+    { id: "openai", label: "OpenAI", connected: false, fields: [{ id: "api_key", env_var: "OPENAI_API_KEY", required: true }] },
+    { id: "ollama", label: "Ollama (local)", connected: true, fields: [{ id: "base_url", env_var: "OLLAMA_BASE_URL", required: false }] },
+    { id: "mlx", label: "MLX or another OpenAI-compatible server", connected: false, fields: [{ id: "base_url", env_var: "MLX_BASE_URL", required: true }] },
   ],
 };
 const details = [
@@ -31,13 +32,15 @@ beforeEach(() => {
 });
 
 describe("Connect", () => {
-  it("renders catalog rows and saves without displaying credentials or env vars", async () => {
+  it("lists Ollama and MLX cards and saves without displaying credentials or env vars", async () => {
     vi.mocked(api.saveProvider).mockResolvedValue(details[0]);
     render(<MemoryRouter><Connect /></MemoryRouter>);
 
     expect(await screen.findByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("OpenAI-compatible server")).toBeInTheDocument();
-    expect(screen.getByText(/Ollama, MLX, vLLM/)).toBeInTheDocument();
+    expect(screen.getByText("Ollama (local)")).toBeInTheDocument();
+    expect(screen.getByText("MLX or another OpenAI-compatible server")).toBeInTheDocument();
+    expect(screen.getByLabelText("base URL — Ollama (local)")).toBeInTheDocument();
+    expect(screen.getByLabelText("base URL — MLX or another OpenAI-compatible server")).toBeInTheDocument();
     const key = screen.getByLabelText("API key — OpenAI");
     expect(key).toHaveAttribute("title", "OPENAI_API_KEY");
     expect(screen.queryByText("OPENAI_API_KEY")).not.toBeInTheDocument();

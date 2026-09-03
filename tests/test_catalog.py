@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from tessera.api import blueprint_store
-from tessera.catalog import DEFAULTS, build_catalog, resolve_suite
+from tessera.catalog import DEFAULTS, build_catalog, published_models, resolve_suite
 from tessera.contract import Catalog
 from tessera.errors import SpecError
 from tessera.evals.scoring import SCORER_VERSIONS
@@ -80,6 +80,12 @@ def test_models_and_provider_connections_reflect_environment(tmp_path, monkeypat
     assert next(p for p in catalog["providers"] if p["id"] == "anthropic")["connected"]
 
 
+def test_default_catalog_models_do_not_publish_ollama_entry(monkeypatch):
+    monkeypatch.delenv("TESSERA_MODELS", raising=False)
+
+    assert all(not model.startswith("ollama/") for model in published_models())
+
+
 def test_providers_expose_only_field_ids_and_never_values(tmp_path, monkeypatch):
     monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
     secret = "secret-sentinel-value"
@@ -88,8 +94,12 @@ def test_providers_expose_only_field_ids_and_never_values(tmp_path, monkeypatch)
         env={"ANTHROPIC_API_KEY": secret}, suites_dir=tmp_path,
     )["providers"]
 
-    assert next(p for p in providers if p["id"] == "anthropic")["fields"] == [{"id": "api_key", "env_var": "ANTHROPIC_API_KEY"}]
-    assert next(p for p in providers if p["id"] == "mlx")["fields"] == [{"id": "base_url", "env_var": "MLX_BASE_URL"}]
+    assert next(p for p in providers if p["id"] == "anthropic")["fields"] == [{
+        "id": "api_key", "env_var": "ANTHROPIC_API_KEY", "required": True,
+    }]
+    assert next(p for p in providers if p["id"] == "mlx")["fields"] == [{
+        "id": "base_url", "env_var": "MLX_BASE_URL", "required": True,
+    }]
     assert secret not in json.dumps(providers)
 
 

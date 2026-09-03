@@ -14,7 +14,14 @@ from pydantic import BaseModel, ConfigDict
 
 from tessera import env_writer
 from tessera.api import responses as R
-from tessera.api.providers import FIELD_BASE_URL, PROVIDERS, configured_fields, is_configured
+from tessera.api.providers import (
+    FIELD_BASE_URL,
+    PROVIDERS,
+    companion_updates,
+    configured_fields,
+    is_configured,
+    is_connectable,
+)
 
 router = APIRouter()
 
@@ -45,13 +52,13 @@ def _view(provider_id: str) -> dict:
 
 @router.get("/api/providers", response_model=list[R.Provider])
 def list_providers():
-    return [_view(pid) for pid in sorted(PROVIDERS) if PROVIDERS[pid].needs_credentials]
+    return [_view(pid) for pid in sorted(PROVIDERS) if is_connectable(PROVIDERS[pid])]
 
 
 @router.put("/api/providers/{provider_id}", response_model=R.Provider)
 def save_provider(provider_id: str, body: ProviderUpdate, request: Request):
     spec = PROVIDERS.get(provider_id)
-    if spec is None or not spec.needs_credentials:
+    if spec is None or not is_connectable(spec):
         raise HTTPException(404, "unknown provider")
 
     allowed = {field.id: field.env_var for field in spec.fields}
@@ -71,6 +78,8 @@ def save_provider(provider_id: str, body: ProviderUpdate, request: Request):
             updates[allowed[field_id]] = validated
     except env_writer.EnvValueError as exc:
         raise HTTPException(422, str(exc)) from None      # `from None`: no value in the chain
+
+    updates = {**companion_updates(spec, submitted), **updates}
 
     env_writer.apply_updates(request.app.state.env_file, updates, invalidate=lambda: None)
     return _view(provider_id)

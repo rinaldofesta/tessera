@@ -16,7 +16,7 @@ const catalog: Catalog = {
     { id: "x/model", label: "Model", provider: "x", connected: true },
     { id: "grader/model", label: "Grader", provider: "x", connected: true },
   ],
-  providers: [{ id: "x", label: "Provider X", connected: true, fields: [{ id: "api_key", env_var: "X_KEY" }] }],
+  providers: [{ id: "x", label: "Provider X", connected: true, fields: [{ id: "api_key", env_var: "X_KEY", required: true }] }],
   scorers: [{ engine: "deterministic", version: "det-4" }], scaffolds: ["baseline"],
 };
 const ready = (request: RunSpec = runFixture().request): Plan => ({ blockers: [], diagnostics: [], provider: "x", ready: true, request: { ...request, grader: request.grader ?? null }, scorer_version: "det-4", suite: catalog.suites[0] });

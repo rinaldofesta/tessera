@@ -297,6 +297,11 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
           }
         },
         "required": [

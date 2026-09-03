@@ -67,7 +67,7 @@ beforeEach(() => {
     defaults: { engine: "deterministic", suite: "starter", k: 3, scaffold: "baseline", seed: 0 },
     suites: [builtin, userSuite],
     models: [{ id: "x/model", label: "Model", provider: "x", connected: true }],
-    providers: [{ id: "x", label: "Provider X", connected: true, fields: [{ id: "api_key", env_var: "X_KEY" }] }],
+    providers: [{ id: "x", label: "Provider X", connected: true, fields: [{ id: "api_key", env_var: "X_KEY", required: true }] }],
     scorers: [{ engine: "deterministic", version: "det-4" }],
     scaffolds: ["baseline"],
   };
