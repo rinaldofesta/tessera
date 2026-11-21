@@ -1,17 +1,17 @@
 cff-version: 1.2.0
-message: "If you use Tessera, please cite it as below."
-title: "Tessera: an open methodology and generator for enterprise AI-agent reliability evals"
+message: "If you use Evalogy, please cite it as below."
+title: "Evalogy: an open methodology and generator for enterprise AI-agent reliability evals"
 type: software
 authors:
   - family-names: Festa
     given-names: Rinaldo
-repository-code: "https://github.com/rinaldofesta/tessera"
-url: "https://github.com/rinaldofesta/tessera"
+repository-code: "https://github.com/rinaldofesta/evalogy"
+url: "https://github.com/rinaldofesta/evalogy"
 version: "0.3.0"
 license:
   - Apache-2.0
   - CC-BY-4.0
-date-released: "2026-09-02"
+date-released: "2026-11-21"
 keywords:
   - ai-agents
   - evals

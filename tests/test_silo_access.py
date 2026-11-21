@@ -1,8 +1,8 @@
 import pytest
 
-from tessera.compiler import compile_blueprint
-from tessera.examples.toy_org import build_toy_blueprint
-from tessera.silos.access import crm_lookup_record, docs_get_file, docs_search
+from evalogy.compiler import compile_blueprint
+from evalogy.examples.toy_org import build_toy_blueprint
+from evalogy.silos.access import crm_lookup_record, docs_get_file, docs_search
 
 
 @pytest.fixture

@@ -1,12 +1,12 @@
 # tests/test_factory_consumption.py
 import pytest
 
-from tessera.factory.generate import generate_variant
-from tessera.orgs import get_blueprint
+from evalogy.factory.generate import generate_variant
+from evalogy.orgs import get_blueprint
 
 
 def test_default_seed_is_unchanged_meridian():
-    from tessera.examples.meridian_org import build_meridian_blueprint
+    from evalogy.examples.meridian_org import build_meridian_blueprint
     assert get_blueprint("meridian") == build_meridian_blueprint()
 
 
@@ -26,6 +26,6 @@ def test_seed_zero_preserves_store_fallback_path():
 
 def test_task_accepts_seed():
     # build the task object with a seed; offline, no model call
-    from tessera.evals.task import tessera_probes
-    t = tessera_probes(org="meridian", k=1, seed=5)
+    from evalogy.evals.task import evalogy_probes
+    t = evalogy_probes(org="meridian", k=1, seed=5)
     assert t.dataset is not None

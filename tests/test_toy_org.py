@@ -1,5 +1,5 @@
-from tessera.examples.toy_org import build_toy_blueprint
-from tessera.models import Blueprint
+from evalogy.examples.toy_org import build_toy_blueprint
+from evalogy.models import Blueprint
 
 
 def test_toy_blueprint_is_valid_and_covers_four_scenarios():

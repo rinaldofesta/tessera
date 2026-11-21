@@ -179,19 +179,19 @@ def _intervals_disjoint(first: Sequence[float], second: Sequence[float]) -> bool
 
 def _decisive_pairs(
     ids: Sequence[str],
-    tessera_scores: Sequence[float],
+    evalogy_scores: Sequence[float],
     real_scores: Sequence[float],
-    tessera_intervals: Sequence[Sequence[float]],
+    evalogy_intervals: Sequence[Sequence[float]],
     real_intervals: Sequence[Sequence[float]],
 ) -> dict[str, Any]:
     pairs = []
     concordant = 0
     for i, j in combinations(range(len(ids)), 2):
         # "On both suites" is intentional: one disjoint interval pair is insufficient.
-        if not (_intervals_disjoint(tessera_intervals[i], tessera_intervals[j])
+        if not (_intervals_disjoint(evalogy_intervals[i], evalogy_intervals[j])
                 and _intervals_disjoint(real_intervals[i], real_intervals[j])):
             continue
-        same_order = _sign(tessera_scores[i] - tessera_scores[j]) == _sign(
+        same_order = _sign(evalogy_scores[i] - evalogy_scores[j]) == _sign(
             real_scores[i] - real_scores[j])
         concordant += int(same_order)
         pairs.append({"left": ids[i], "right": ids[j], "concordant": same_order})
@@ -235,7 +235,7 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(study, dict):
         raise StudyError("study input must be a JSON object")
     study_id = _identifier(_required(study, "study_id"), "study_id")
-    tessera_task_ids = _task_ids(
+    evalogy_task_ids = _task_ids(
         _required(study, "tessera_task_ids"), "tessera_task_ids")
     real_task_ids = _task_ids(_required(study, "real_task_ids"), "real_task_ids")
     configs = _required(study, "configs")
@@ -243,7 +243,7 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
         raise StudyError("the frozen panel must contain 7 to 10 configurations")
 
     ids: list[str] = []
-    tessera_tasks: list[tuple[float, ...]] = []
+    evalogy_tasks: list[tuple[float, ...]] = []
     real_tasks: list[tuple[float, ...]] = []
     for index, config in enumerate(configs):
         if not isinstance(config, dict):
@@ -252,8 +252,8 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
         if config_id in ids:
             raise StudyError(f"duplicate configuration id: {config_id}")
         ids.append(config_id)
-        tessera_tasks.append(_task_scores(
-            config.get("tessera_task_scores"), tessera_task_ids,
+        evalogy_tasks.append(_task_scores(
+            config.get("tessera_task_scores"), evalogy_task_ids,
             f"configs[{index}].tessera_task_scores",
         ))
         real_tasks.append(_task_scores(
@@ -273,30 +273,30 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise StudyError("bootstrap.seed must be an integer")
 
-    tessera_point = [_mean(scores) for scores in tessera_tasks]
+    evalogy_point = [_mean(scores) for scores in evalogy_tasks]
     real_point = [_mean(scores) for scores in real_tasks]
-    point_tau = kendall_tau_b(tessera_point, real_point)
+    point_tau = kendall_tau_b(evalogy_point, real_point)
     if point_tau is None:
         raise StudyError("the point ranking has no variance on at least one suite")
 
     rng = random.Random(seed)
-    tessera_draws: list[list[float]] = [[] for _ in ids]
+    evalogy_draws: list[list[float]] = [[] for _ in ids]
     real_draws: list[list[float]] = [[] for _ in ids]
     tau_draws: list[float] = []
-    n_tessera = len(tessera_tasks[0])
+    n_evalogy = len(evalogy_tasks[0])
     n_real = len(real_tasks[0])
     for _ in range(draws):
-        tessera_indices = [rng.randrange(n_tessera) for _ in range(n_tessera)]
+        evalogy_indices = [rng.randrange(n_evalogy) for _ in range(n_evalogy)]
         real_indices = [rng.randrange(n_real) for _ in range(n_real)]
-        tessera_sample = [
-            _mean([scores[i] for i in tessera_indices]) for scores in tessera_tasks
+        evalogy_sample = [
+            _mean([scores[i] for i in evalogy_indices]) for scores in evalogy_tasks
         ]
         real_sample = [_mean([scores[i] for i in real_indices]) for scores in real_tasks]
-        for i, score in enumerate(tessera_sample):
-            tessera_draws[i].append(score)
+        for i, score in enumerate(evalogy_sample):
+            evalogy_draws[i].append(score)
         for i, score in enumerate(real_sample):
             real_draws[i].append(score)
-        tau = kendall_tau_b(tessera_sample, real_sample)
+        tau = kendall_tau_b(evalogy_sample, real_sample)
         if tau is not None:
             tau_draws.append(tau)
 
@@ -309,22 +309,22 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
 
     lower_bound = _percentile(tau_draws, 0.05)
     gate_passed, claim = _claim_language(point_tau, lower_bound)
-    tessera_intervals = [[_percentile(values, 0.025), _percentile(values, 0.975)]
-                         for values in tessera_draws]
+    evalogy_intervals = [[_percentile(values, 0.025), _percentile(values, 0.975)]
+                         for values in evalogy_draws]
     real_intervals = [[_percentile(values, 0.025), _percentile(values, 0.975)]
                       for values in real_draws]
-    top_tessera = _top_three(ids, tessera_point)
+    top_evalogy = _top_three(ids, evalogy_point)
     top_real = _top_three(ids, real_point)
 
     config_results = []
-    tessera_ranks = {row["config_id"]: row["rank"] for row in _rank_rows(ids, tessera_point)}
+    evalogy_ranks = {row["config_id"]: row["rank"] for row in _rank_rows(ids, evalogy_point)}
     real_ranks = {row["config_id"]: row["rank"] for row in _rank_rows(ids, real_point)}
     for i, config_id in enumerate(ids):
         config_results.append({
             "id": config_id,
             "tessera": {
-                "score": tessera_point[i], "rank": tessera_ranks[config_id],
-                "interval_95": tessera_intervals[i],
+                "score": evalogy_point[i], "rank": evalogy_ranks[config_id],
+                "interval_95": evalogy_intervals[i],
             },
             "real": {
                 "score": real_point[i], "rank": real_ranks[config_id],
@@ -344,17 +344,17 @@ def analyze_study(study: dict[str, Any]) -> dict[str, Any]:
         "bootstrap": {
             "draws": draws, "valid_tau_draws": len(tau_draws), "seed": seed,
         },
-        "task_counts": {"tessera": len(tessera_task_ids), "real": len(real_task_ids)},
+        "task_counts": {"tessera": len(evalogy_task_ids), "real": len(real_task_ids)},
         "top_three": {
-            "tessera": top_tessera,
+            "tessera": top_evalogy,
             "real": top_real,
-            "overlap": len(set(top_tessera) & set(top_real)),
-            "tessera_boundary_tie": _boundary_tie(tessera_point),
+            "overlap": len(set(top_evalogy) & set(top_real)),
+            "tessera_boundary_tie": _boundary_tie(evalogy_point),
             "real_boundary_tie": _boundary_tie(real_point),
             "tie_break": "config_id natural ascending",
         },
         "decisive_pair_concordance": _decisive_pairs(
-            ids, tessera_point, real_point, tessera_intervals, real_intervals),
+            ids, evalogy_point, real_point, evalogy_intervals, real_intervals),
         "dropped": dropped,
     }
 

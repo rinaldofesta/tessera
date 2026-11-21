@@ -1,6 +1,6 @@
-# Contributing to Tessera
+# Contributing to Evalogy
 
-Thank you for considering it. Tessera measures whether AI agents can be trusted on
+Thank you for considering it. Evalogy measures whether AI agents can be trusted on
 fragmented enterprise knowledge — so the bar for its own code is the same one it
 holds agents to: **verified, traceable, honest about limitations.** This guide tells
 you how to contribute without fighting the repo.
@@ -8,7 +8,7 @@ you how to contribute without fighting the repo.
 ## TL;DR
 
 ```bash
-git clone https://github.com/rinaldofesta/tessera && cd tessera
+git clone https://github.com/rinaldofesta/evalogy && cd evalogy
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/python -m pytest          # the whole suite: key-free and offline
 ```
@@ -26,7 +26,7 @@ In order:
 2. **Critiques of the metric definitions** — especially provenance and refusal
    scoring. If you believe a grade is wrong, use the *scoring dispute* issue
    template with a transcript: the scorer's verdicts are adjudicated from evidence,
-   and documented limitations (see the bottom of `src/tessera/evals/scoring.py`)
+   and documented limitations (see the bottom of `src/evalogy/evals/scoring.py`)
    are revisited when the evidence shows they bite real behavior.
 3. **Realistic fragmentation patterns** the generator should model (how knowledge
    actually scatters and contradicts itself across CRMs, wikis, tickets).
@@ -37,10 +37,10 @@ In order:
    [docs/adr/0006](docs/adr/0006-meridian-and-the-leaderboard-protocol.md)).
    Every 0/3 probe gets adjudicated from its transcript before the row ships. The table
    itself is generated — never hand-edit `docs/leaderboard.md`: commit the run's `.eval`
-   under `logs/leaderboard/`, run `tessera leaderboard extract logs/leaderboard/<run>.eval`
+   under `logs/leaderboard/`, run `evalogy leaderboard extract logs/leaderboard/<run>.eval`
    to get the row's JSON (its `log` stamped `{path, sha256}`), merge it into
-   `docs/leaderboard.rows.json`, regenerate with `tessera leaderboard render --manifest`,
-   and confirm with `tessera leaderboard verify --manifest`.
+   `docs/leaderboard.rows.json`, regenerate with `evalogy leaderboard render --manifest`,
+   and confirm with `evalogy leaderboard verify --manifest`.
    CI fails on drift (ADR-0010) and re-derives every log-backed row from its committed log
    (ADR-0012). A row with `log: null` is allowed but unbacked — attach the log to make it
    verifiable.
@@ -48,13 +48,13 @@ In order:
 ## Development setup
 
 - Python ≥ 3.10 (CI runs the suite + a web build + a contract-drift check).
-- `pip install -e ".[dev]"` gives you the eval; `tessera` is the command, alongside the
-  FastAPI/SPA product (`tessera ui`).
+- `pip install -e ".[dev]"` gives you the eval; `evalogy` is the command, alongside the
+  FastAPI/SPA product (`evalogy ui`).
 - The web UI lives in `web/` (React + Vite + TS): `cd web && npm install && npm run build`.
-- A live eval run is the only thing that needs keys. `tessera connect anthropic` writes
-  `ANTHROPIC_API_KEY` to `~/.tessera/.env` (or `$TESSERA_HOME/.env`, or the file named by
-  `TESSERA_ENV_FILE`; for a checkout, `TESSERA_ENV_FILE=.env` keeps the old behavior).
-  Then `tessera run --model anthropic/claude-sonnet-4-6 --k 2`.
+- A live eval run is the only thing that needs keys. `evalogy connect anthropic` writes
+  `ANTHROPIC_API_KEY` to `~/.evalogy/.env` (or `$EVALOGY_HOME/.env`, or the file named by
+  `EVALOGY_ENV_FILE`; for a checkout, `EVALOGY_ENV_FILE=.env` keeps the old behavior).
+  Then `evalogy run --model anthropic/claude-sonnet-4-6 --k 2`.
 
 ## House rules (the ones that will bite you if skipped)
 
@@ -76,16 +76,16 @@ Read the index before changing anything load-bearing.
   versioned (`det-4` / `llm-2` today); reports publish the version per row and
   trend comparisons partition on it. A semantics change without a bump corrupts
   every published number.
-- **Purity invariants are tested.** `src/tessera/report/` modules must not import
+- **Purity invariants are tested.** `src/evalogy/report/` modules must not import
   `inspect_ai` (only `log_adapter.py` may — there is a test that
   parses the AST). The compiler is deterministic and pure.
 - **The benchmark protocol is frozen per row** (ADR-0006): deterministic engine,
   k=3, full probe set, the baseline scaffold, the authored org (seed 0), no
   model-specific prompt tuning. Comparability guards are executable —
-  `tessera leaderboard render` refuses mixed scorer_version/org/k/scaffold/seed.
+  `evalogy leaderboard render` refuses mixed scorer_version/org/k/scaffold/seed.
 - **`harness` is a displayed axis, not a guard** (ADR-0011): it labels how a row's
   model calls were dispatched. Canonical values are **`single`** (a lone model — the
-  default, and what every `tessera_probes` run is) and **`ensemble`** (a multi-agent
+  default, and what every `evalogy_probes` run is) and **`ensemble`** (a multi-agent
   configuration). Use exactly those two strings, not `moa`/`MoA`/etc. An ensemble ranks
   in the table only if it still matches every guarded dimension; it is shown with the
   `harness` column disclosed.
@@ -93,12 +93,12 @@ Read the index before changing anything load-bearing.
 ## Adding an org / dataset
 
 An org is a **Blueprint**: claims (atomic facts, one per silo) + probes (questions
-with expected behavior). Run `tessera init NAME` for an editable starter or use
-`src/tessera/examples/meridian_org.py` as the gold standard: ≥5 probes per conflict
+with expected behavior). Run `evalogy init NAME` for an editable starter or use
+`src/evalogy/examples/meridian_org.py` as the gold standard: ≥5 probes per conflict
 type, both resolution rules, authority probes where the binding doc is *older* than
 the CRM row, anti-prior values, no template shortcuts. Offline gates in
 `tests/test_meridian_org.py` show what a benchmark-grade org must pin. Validators
-in `src/tessera/models.py` enforce coherence (refuse ⇒ no answer, resolvable ⇒
+in `src/evalogy/models.py` enforce coherence (refuse ⇒ no answer, resolvable ⇒
 resolution_rule, void ⇒ no references).
 
 ## Pull requests
@@ -123,7 +123,7 @@ resolution_rule, void ⇒ no references).
 ## Releasing
 
 1. Bump the version in `pyproject.toml`, `CITATION.cff`, and
-   `src/tessera/__init__.py`, and update the citation release date.
+   `src/evalogy/__init__.py`, and update the citation release date.
 2. Move the release notes from Unreleased into a dated `CHANGELOG.md` section.
 3. Tag the release as `vX.Y.Z` and push the tag. The `release` workflow verifies the
    version and tests, builds the distributions, and creates the GitHub Release.

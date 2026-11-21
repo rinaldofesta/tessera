@@ -690,6 +690,8 @@ export interface components {
         ReceiptRuntime: {
             /** Effective Models */
             effective_models: string[];
+            /** Evalogy Version */
+            evalogy_version: string | null;
             /** Git Dirty */
             git_dirty: boolean | null;
             /** Git Revision */
@@ -700,8 +702,6 @@ export interface components {
             reported_model: string;
             /** Requested Model */
             requested_model: string;
-            /** Tessera Version */
-            tessera_version: string | null;
         };
         /** ReceiptTiming */
         ReceiptTiming: {

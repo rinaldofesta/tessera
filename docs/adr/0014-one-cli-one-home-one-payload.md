@@ -18,20 +18,20 @@ could exercise different artifacts.
 
 ## Decision
 
-1. **One command.** `src/tessera/cli.py` owns the supported `tessera` command and its verbs.
+1. **One command.** `src/evalogy/cli.py` owns the supported `tessera` command and its verbs.
    The old report, leaderboard, and API names are temporary deprecated aliases; the variant
    and transfer scripts are removed.
-2. **One home and folder store.** `src/tessera/paths.py` resolves state under `~/.tessera`
+2. **One home and folder store.** `src/evalogy/paths.py` resolves state under `~/.tessera`
    (or `TESSERA_HOME`), with user suites in `suites/` and one directory per run in `runs/`.
-   `src/tessera/store.py` defines the durability contract: atomic sibling writes followed by
+   `src/evalogy/store.py` defines the durability contract: atomic sibling writes followed by
    rename and directory fsync, per-run locked transitions, artifacts before the final
    `run.json`, and reconciliation of interrupted work. A completed state therefore implies
    its artifacts are present.
-3. **One run payload.** `src/tessera/contract.py` and `src/tessera/runner.py` define the
+3. **One run payload.** `src/evalogy/contract.py` and `src/evalogy/runner.py` define the
    ADR-0002 payload used by CLI, API, and UI. `ok` reports operational completion, never
    reliability; `verdict` carries reliability, while requested thresholds appear as an
    explicit `gate` and have their own exit status.
-4. **One vocabulary.** `src/tessera/catalog.py` is the only catalog for suites, models,
+4. **One vocabulary.** `src/evalogy/catalog.py` is the only catalog for suites, models,
    providers, scorers, scaffolds, and defaults. Both `tessera catalog` and
    `/api/catalog` expose it, and dry-run planning resolves requests through it.
 5. **Defaults change without changing the protocol identity.** The default engine is
@@ -45,7 +45,7 @@ could exercise different artifacts.
 7. **One distribution.** The PyPI project is `tessera-eval`, and the wheel contains the web
    bundle and the `tessera` entry point.
 8. **Secrets do not enter argv.** `tessera connect` accepts keys through a hidden prompt or
-   `--key-stdin`; `src/tessera/env_writer.py` persists them to the protected home file.
+   `--key-stdin`; `src/evalogy/env_writer.py` persists them to the protected home file.
 
 ## Consequences
 

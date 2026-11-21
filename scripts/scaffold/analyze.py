@@ -17,11 +17,11 @@ from collections import defaultdict
 
 from inspect_ai.log import read_eval_log
 
-from tessera.report.aggregate import aggregate_by, overall_pass_k_rate, reduce_by_probe
-from tessera.report.leaderboard import _pct as fmt  # the leaderboard's rate formatter
-from tessera.report.log_adapter import eval_log_to_records
-from tessera.report.models import CANONICAL_ORDER, ReportError
-from tessera.report.stats import exact_mcnemar_p, format_p, mcnemar_counts
+from evalogy.report.aggregate import aggregate_by, overall_pass_k_rate, reduce_by_probe
+from evalogy.report.leaderboard import _pct as fmt  # the leaderboard's rate formatter
+from evalogy.report.log_adapter import eval_log_to_records
+from evalogy.report.models import CANONICAL_ORDER, ReportError
+from evalogy.report.stats import exact_mcnemar_p, format_p, mcnemar_counts
 
 ARMS = ("baseline", "refusal_aware")
 # H1₂'s two disjoint subsets (ADR-0009 §3). The split is by expected behavior, which

@@ -6,6 +6,6 @@ export function summaryText(run: Run): string {
   return [
     run.verdict.sentence,
     `pass^${run.request.k} ${pct(run.verdict.pass_k_rate)} · mean ${pct(run.verdict.mean_rate)} · ${run.request.suite} · ${run.request.model} · ${run.request.k} repeats`,
-    `tessera report ${run.id}`,
+    `evalogy report ${run.id}`,
   ].join("\n");
 }

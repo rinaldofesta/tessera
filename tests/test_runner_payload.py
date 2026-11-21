@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from tessera.contract import Run
-from tessera.runner import run_result_payload
-from tessera.store import RunStore
+import json
+
+from evalogy.contract import Run
+from evalogy.runner import run_result_payload
+from evalogy.store import RunRecord, RunStore
 
 
 def _first_contact_record(tmp_path):
@@ -58,3 +60,18 @@ def test_payload_round_trips_through_contract(tmp_path):
     payload = run_result_payload(_first_contact_record(tmp_path), min_pass_k=1.0)
 
     assert Run.model_validate(payload).model_dump() == payload
+
+
+def test_stored_receipt_reads_legacy_version_and_preserves_execution_hash(tmp_path):
+    record = _first_contact_record(tmp_path)
+    receipt = json.loads(record.dir.joinpath("receipt.json").read_text())
+    runtime = receipt["runtime"]
+    runtime.pop("evalogy_version", None)
+    runtime["tessera_version"] = "0.2.0"
+    (tmp_path / "receipt.json").write_text(json.dumps(receipt))
+
+    payload = run_result_payload(RunRecord(record.id, tmp_path, record.data))
+
+    assert payload["receipt"]["runtime"]["evalogy_version"] == "0.2.0"
+    assert "tessera_version" not in payload["receipt"]["runtime"]
+    assert payload["receipt"]["execution_hash"] == receipt["execution_hash"]

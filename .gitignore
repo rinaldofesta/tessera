@@ -13,7 +13,7 @@ dist/
 .ruff_cache/
 
 # Compiler output / synthetic orgs
-/tmp/tessera/
+/tmp/evalogy/
 *.local
 
 # Blueprint store (user-authored datasets, runtime data)
@@ -25,7 +25,7 @@ runs.db
 web/node_modules/
 web/*.tsbuildinfo
 # The SPA bundle Vite writes into the package for the wheel (built in CI, never committed)
-src/tessera/data/web/
+src/evalogy/data/web/
 
 # Inspect logs (kept local) — except the holdout commitment + reveal, which are the
 # published half of the ADR-0008 pre-registration protocol (docs/scaffold.md links them).
@@ -41,7 +41,7 @@ logs/scaffold/holdout/*
 # ...but keep the pinned demo logs the showcase depends on
 !examples/*.eval
 # ...and the bundled example runs that ship inside the wheel
-!src/tessera/data/examples/**/*.eval
+!src/evalogy/data/examples/**/*.eval
 # ...and the committed leaderboard logs that back manifest rows (ADR-0012). Two ignores to
 # beat here — the logs/* directory rule AND the global *.eval above — so re-include the
 # directory first (star-then-negate), then re-include *.eval AFTER the global ignore so

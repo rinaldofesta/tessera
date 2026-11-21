@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from tessera.runner import run_result_payload
-from tessera.store import RunStore
-from tessera.verdict import counts_of, sentence, trouble_spot
+from evalogy.runner import run_result_payload
+from evalogy.store import RunStore
+from evalogy.verdict import counts_of, sentence, trouble_spot
 
 
 def _report(probes: list[tuple[bool, float, str]]) -> dict:

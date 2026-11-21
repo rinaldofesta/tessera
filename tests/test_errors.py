@@ -1,11 +1,11 @@
 import pytest
 
-from tessera.errors import (
+from evalogy.errors import (
+    EvalogyError,
     ExitCode,
     GateFailed,
     NotConnectedError,
     SpecError,
-    TesseraError,
 )
 
 
@@ -21,7 +21,7 @@ def test_exit_code_values_are_stable():
     (GateFailed, ExitCode.GATE_FAILED),
     (NotConnectedError, ExitCode.NOT_CONNECTED),
     (SpecError, ExitCode.SPEC_ERROR),
-    (TesseraError, ExitCode.RUNTIME_ERROR),
+    (EvalogyError, ExitCode.RUNTIME_ERROR),
 ])
 def test_error_subclasses_carry_their_exit_code(error, code):
     assert error("message").exit_code is code

@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from tests.helpers.credential_scan import find_credential_like_values
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 SENTINEL = "sk-" + "S3NT1NEL" * 4
 

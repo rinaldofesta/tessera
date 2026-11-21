@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 status=0
 while IFS= read -r url; do
-  path="${url#https://raw.githubusercontent.com/rinaldofesta/tessera/main/}"
+  path="${url#https://raw.githubusercontent.com/rinaldofesta/evalogy/main/}"
   [ -f "$path" ] || { echo "MISSING $path (referenced as $url)"; status=1; }
-done < <(grep -oE 'https://raw\.githubusercontent\.com/rinaldofesta/tessera/main/[^) "]+' README.md | sort -u)
+done < <(grep -oE 'https://raw\.githubusercontent\.com/rinaldofesta/evalogy/main/[^) "]+' README.md | sort -u)
 exit $status

@@ -52,8 +52,8 @@ committed answer.
 Reproduce:
 
 ```bash
-.venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes_delegated \
+.venv/bin/inspect eval src/evalogy/evals/task.py@evalogy_probes_delegated \
   --model anthropic/claude-sonnet-4-6 -T org=meridian -T k=3 --log-dir logs
-.venv/bin/tessera leaderboard render logs/<direct>.eval logs/<delegated>.eval \
+.venv/bin/evalogy leaderboard render logs/<direct>.eval logs/<delegated>.eval \
   --label "claude-sonnet-4-6 (direct)" --label "claude-sonnet-4-6 (delegated)"
 ```

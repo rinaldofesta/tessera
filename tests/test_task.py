@@ -3,7 +3,7 @@ import inspect
 
 import pytest
 
-from tessera.evals.task import (
+from evalogy.evals.task import (
     _BASELINE_PROMPT,
     _PROMPT,
     _REFUSAL_AWARE_PROMPT,
@@ -12,9 +12,9 @@ from tessera.evals.task import (
     _SCAFFOLD_REFUSE_BASELINE,
     _SCAFFOLDS,
     _SUBMIT_DESC,
-    tessera_probes,
+    evalogy_probes,
 )
-from tessera.orgs import get_blueprint
+from evalogy.orgs import get_blueprint
 
 # The prompt that produced every published leaderboard row (docs/leaderboard.md) and
 # the B0 arm of the scaffold study (ADR-0009). If this hash moves, new "baseline" runs
@@ -50,10 +50,10 @@ def test_baseline_is_the_default_scaffold(tmp_path, monkeypatch):
     # The baseline arm must stay the default so existing det-4/k=3 logs remain the B0
     # arm and every launcher that omits -T scaffold (the leaderboard repro command, the
     # showcase API, the delegation producer) stays on the published prompt.
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
-    assert inspect.signature(tessera_probes).parameters["scaffold"].default == "baseline"
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
+    assert inspect.signature(evalogy_probes).parameters["scaffold"].default == "baseline"
     assert _SCAFFOLDS["baseline"] is _BASELINE_PROMPT
-    assert tessera_probes().dataset is not None  # builds with the default scaffold
+    assert evalogy_probes().dataset is not None  # builds with the default scaffold
 
 
 def test_refusal_aware_scaffold_names_the_taxonomy_not_the_answers():
@@ -80,38 +80,38 @@ def test_submit_desc_restates_the_shared_answer_contract():
 
 
 def test_unknown_scaffold_rejected(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
     with pytest.raises(ValueError, match="unknown scaffold") as exc:
-        tessera_probes(scaffold="nope")
+        evalogy_probes(scaffold="nope")
     # Raised `from None`: the CLI hint must not arrive buried under a KeyError chain.
     assert exc.value.__suppress_context__
 
 
 def test_task_builds_for_both_engines(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
-    assert len(tessera_probes().dataset) == 4               # default: deterministic
-    assert len(tessera_probes(judge="llm").dataset) == 4    # llm engine selected
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
+    assert len(evalogy_probes().dataset) == 4               # default: deterministic
+    assert len(evalogy_probes(judge="llm").dataset) == 4    # llm engine selected
 
 
 def test_task_epochs_and_reducer_follow_k(tmp_path, monkeypatch):
     # The task owns BOTH the epoch count and the pass_k reducer: an eval-level
     # epochs override changes the count but keeps the task's reducer, so the two
     # can silently diverge (k<3 hard-errors, k>3 mislabels) — k must build both.
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
     from inspect_ai.scorer._reducer.registry import reducer_log_names
 
-    t = tessera_probes(k=5)
+    t = evalogy_probes(k=5)
     assert t.epochs == 5
     assert reducer_log_names(t.epochs_reducer) == ["pass_k_5", "mean"]
 
 
 def test_task_k_defaults_to_3_and_accepts_cli_strings(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
-    assert tessera_probes().epochs == 3
-    assert tessera_probes(k="2").epochs == 2   # -T k=2 arrives as a string from the CLI
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
+    assert evalogy_probes().epochs == 3
+    assert evalogy_probes(k="2").epochs == 2   # -T k=2 arrives as a string from the CLI
 
 
 def test_task_rejects_k_below_1(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
     with pytest.raises(ValueError):
-        tessera_probes(k=0)
+        evalogy_probes(k=0)

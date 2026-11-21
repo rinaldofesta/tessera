@@ -15,7 +15,7 @@ from research.transfer.cli import main
 
 
 def _study(*, draws=10_000):
-    tessera_task_ids = [f"tessera-{index}" for index in range(8)]
+    evalogy_task_ids = [f"tessera-{index}" for index in range(8)]
     real_task_ids = [f"real-{index}" for index in range(10)]
     configs = []
     # Constant, separated task scores make every bootstrap ranking identifiable and
@@ -24,7 +24,7 @@ def _study(*, draws=10_000):
         configs.append({
             "id": f"config-{index}",
             "tessera_task_scores": {
-                task_id: 1 - index * 0.1 for task_id in tessera_task_ids
+                task_id: 1 - index * 0.1 for task_id in evalogy_task_ids
             },
             "real_task_scores": {
                 task_id: 0.9 - index * 0.1 for task_id in real_task_ids
@@ -32,7 +32,7 @@ def _study(*, draws=10_000):
         })
     return {
         "study_id": "transfer-2026-q4",
-        "tessera_task_ids": tessera_task_ids,
+        "tessera_task_ids": evalogy_task_ids,
         "real_task_ids": real_task_ids,
         "bootstrap": {"draws": draws, "seed": 42},
         "configs": configs,

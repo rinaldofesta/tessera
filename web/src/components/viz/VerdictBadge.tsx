@@ -6,7 +6,7 @@ export type Verdict = keyof typeof VERDICT_COPY;
 
 /** Reliability verdict from the two normalized rates.
  *  reliable: correct in every repeat. inconsistent: some repeats pass (mean > pass^k) —
- *  the flakiness Tessera exists to surface. unreliable: fails the same way every time. */
+ *  the flakiness Evalogy exists to surface. unreliable: fails the same way every time. */
 export function verdictOf(passK: number, mean: number): Verdict {
   if (passK >= 1) return "reliable";
   return mean > passK ? "inconsistent" : "unreliable";

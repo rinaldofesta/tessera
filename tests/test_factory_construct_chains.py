@@ -1,9 +1,9 @@
 # tests/test_factory_construct_chains.py
 import random
 
-from tessera.factory.construct import construct
-from tessera.factory.schema import SCHEMA, Assignment
-from tessera.models import ConflictType
+from evalogy.factory.construct import construct
+from evalogy.factory.schema import SCHEMA, Assignment
+from evalogy.models import ConflictType
 
 
 def _slot(slot_id):

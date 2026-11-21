@@ -1,4 +1,4 @@
-# Reading a Tessera scorecard
+# Reading an Evalogy scorecard
 
 A field guide for the engineer who owns an internal agent and just got a `scorecard.md`. It
 translates the metrics into the language of production incidents and postmortems.
@@ -6,7 +6,7 @@ translates the metrics into the language of production incidents and postmortems
 To generate one from any Inspect log:
 
 ```bash
-tessera report ./logs/<run>.eval        # or: tessera report latest
+evalogy report ./logs/<run>.eval        # or: evalogy report latest
 ```
 
 Every probe is scored on three axes — not just accuracy — and repeated under `pass^k`,
@@ -37,7 +37,7 @@ The `⚠ flaky` marker fires precisely when `mean > pass^k` — the capable-but-
 
 The most dangerous enterprise failure is the agent that returns the correct value *without
 doing the work to verify it*. A user-facing benchmark scores only the output string, so it
-rewards that luck. Tessera reads which sources the agent actually consulted — straight from
+rewards that luck. Evalogy reads which sources the agent actually consulted — straight from
 its real MCP tool traffic, per-field for the CRM: a claim is credited only when its field
 actually came back in the response (`det-4`) — and checks them against the compiled
 `manifest.json`.
@@ -102,7 +102,7 @@ matches:
   generator refuses to mix rows that differ on any of these, and flags non-baseline tables
   with a ⚠️ disclosure.
 - **harness** (ADR-0011) — how the run's model calls were dispatched: `single` is a lone
-  model (every `tessera_probes` run); `ensemble` is a multi-agent configuration. Unlike the
+  model (every `evalogy_probes` run); `ensemble` is a multi-agent configuration. Unlike the
   guarded dimensions above, harness does *not* gate comparability — a `single` and an
   `ensemble` run that agree on scorer/org/k/scaffold/seed ran the identical benchmark and
   rank together, with the harness shown as a column (leaderboard) or a header note

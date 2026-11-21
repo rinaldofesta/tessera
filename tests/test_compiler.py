@@ -12,8 +12,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from tessera.compiler import compile_blueprint
-from tessera.models import Blueprint, Claim
+from evalogy.compiler import compile_blueprint
+from evalogy.models import Blueprint, Claim
 
 
 def _toy_blueprint() -> Blueprint:
@@ -62,7 +62,7 @@ def test_unsafe_source_is_rejected_before_any_write(tmp_path):
     suite = _toy_blueprint().model_dump(by_alias=True)
     suite["claims"][-1]["silo"] = "../escaped"
 
-    with patch("tessera.compiler.write_artifacts") as writer:
+    with patch("evalogy.compiler.write_artifacts") as writer:
         with pytest.raises(ValidationError) as error:
             compile_blueprint(Blueprint.model_validate(suite), tmp_path / "org")
         writer.assert_not_called()
@@ -142,7 +142,7 @@ def test_intra_silo_collision_is_rejected(tmp_path):
         compile_blueprint(bp, tmp_path)
 
 
-from tessera.compiler import build_artifacts, write_artifacts
+from evalogy.compiler import build_artifacts, write_artifacts
 
 
 def test_build_artifacts_is_pure_writes_nothing(tmp_path):

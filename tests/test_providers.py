@@ -6,8 +6,8 @@ import stat
 
 import pytest
 
-from tessera.errors import SpecError
-from tessera.providers import connect, connection_state, probe
+from evalogy.errors import SpecError
+from evalogy.providers import connect, connection_state, probe
 
 
 def test_connect_writes_key_securely_and_returns_only_state(tmp_path, monkeypatch):

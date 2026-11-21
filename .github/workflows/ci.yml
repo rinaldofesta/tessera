@@ -56,7 +56,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ui-bundle
-          path: src/tessera/data/web
+          path: src/evalogy/data/web
           if-no-files-found: error
 
   # Distribution proof: the UI survives checkout -> sdist -> downstream wheel rebuild.
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ui-bundle
-          path: src/tessera/data/web
+          path: src/evalogy/data/web
       - run: uv build
       - run: uvx twine check dist/*
       - name: Rebuild and exercise the wheel from the sdist
@@ -112,25 +112,25 @@ jobs:
       - name: Verify the installed command surface and leave the checkout clean
         run: |
           checkout="$PWD"
-          export TESSERA_HOME="$(mktemp -d)"
-          T=/tmp/wheel-venv/bin/tessera
+          export EVALOGY_HOME="$(mktemp -d)"
+          T=/tmp/wheel-venv/bin/evalogy
           cd "$(mktemp -d)"
           "$T" --version
           "$T" guide --list --json
           "$T" catalog --json > /dev/null
           "$T" report first-contact | grep -q '75%'
           "$T" compare first-contact gpt-4o --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['ok'] is True"
-          "$T" run --model anthropic/claude-sonnet-4-6 --dry-run --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['ready'] is False and d['blockers'][0]['fix']=='tessera connect anthropic'"
+          "$T" run --model anthropic/claude-sonnet-4-6 --dry-run --json | python -c "import json,sys; d=json.load(sys.stdin); assert d['ready'] is False and d['blockers'][0]['fix']=='evalogy connect anthropic'"
           printf 'sk-ci-placeholder-key-000000' | "$T" connect anthropic --key-stdin
-          test "$(stat -c %a "$TESSERA_HOME/.env")" = 600
+          test "$(stat -c %a "$EVALOGY_HOME/.env")" = 600
           "$T" init demo
           "$T" validate demo
           "$T" ui --check
-          "$T" guide agents | grep -q 'tessera run'
+          "$T" guide agents | grep -q 'evalogy run'
           cd "$checkout"
-          /tmp/wheel-venv/bin/python -m tessera.factory.export --seed 42 --out /tmp/tessera-demo
-          test -s /tmp/tessera-demo/meridian-seed42.blueprint.json
-          test -s /tmp/tessera-demo/meridian-seed42.answers.json
+          /tmp/wheel-venv/bin/python -m evalogy.factory.export --seed 42 --out /tmp/evalogy-demo
+          test -s /tmp/evalogy-demo/meridian-seed42.blueprint.json
+          test -s /tmp/evalogy-demo/meridian-seed42.answers.json
           git diff --exit-code
           test -z "$(git status --porcelain)" || { git status --porcelain; exit 1; }
 
@@ -169,10 +169,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e "."
-      - run: tessera leaderboard render --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
+      - run: evalogy leaderboard render --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
       - name: Fail on leaderboard drift
         run: git diff --exit-code -- docs/leaderboard.md
       # For every row backed by a committed log (ADR-0012): re-derive it from the log and
       # fail on any digest or metric mismatch. Rows with log:null are unbacked, not failures.
       - name: Verify log-backed rows reproduce their numbers
-        run: tessera leaderboard verify --manifest docs/leaderboard.rows.json
+        run: evalogy leaderboard verify --manifest docs/leaderboard.rows.json

@@ -32,7 +32,7 @@ export function runFixture(overrides: Partial<Run> = {}): Run {
     receipt: {
       artifact: { path: "logs/run.eval", sha256: "abc" }, execution_hash: "execution", protocol_hash: "protocol",
       protocol: { blueprint_sha256: "blueprint", engine: "deterministic", epochs: 3, grader: null, harness: "single", org: "starter", scaffold: "baseline", scorer_version: "det-4", seed: 0 },
-      runtime: { effective_models: ["anthropic/claude-sonnet-4"], git_dirty: false, git_revision: "abc123", inspect_ai_version: "0.3", reported_model: "anthropic/claude-sonnet-4", requested_model: "anthropic/claude-sonnet-4", tessera_version: "0.3" },
+      runtime: { effective_models: ["anthropic/claude-sonnet-4"], git_dirty: false, git_revision: "abc123", inspect_ai_version: "0.3", reported_model: "anthropic/claude-sonnet-4", requested_model: "anthropic/claude-sonnet-4", evalogy_version: "0.3" },
       timing: { completed_at: "2026-09-02T10:01:00Z", duration_seconds: 59, started_at: "2026-09-02T10:00:01Z" },
       usage: { billed_cost: null, input_tokens: 10, output_tokens: 20, total_tokens: 30 },
     },

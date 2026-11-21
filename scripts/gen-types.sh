@@ -14,7 +14,7 @@ SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 
 (cd "$SCRATCH" && "$PY" -c \
-  "import json; from tessera.api.app import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True))" \
+  "import json; from evalogy.api.app import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True))" \
 ) > "$ROOT/openapi.json"
 
 (cd "$ROOT/web" && npm run -s gen:api)

@@ -7,7 +7,7 @@
 
 The roadmap's leaderboard needs a dataset designed for measurement. The toy org is
 a teaching artifact: with one probe per conflict type, a category rate is really
-one probe's behavior. Meridian (`src/tessera/examples/meridian_org.py`) was built
+one probe's behavior. Meridian (`src/evalogy/examples/meridian_org.py`) was built
 to benchmark spec — 10 accounts, 47 claims, 22 probes with ≥5 per conflict type,
 both resolution rules (including authority probes where the binding document is
 *older* than the CRM row, so recency actively misleads), anti-prior values, and

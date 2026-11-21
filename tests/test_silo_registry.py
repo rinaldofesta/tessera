@@ -1,12 +1,12 @@
 import pytest
 
-from tessera.silos.registry import SiloRegistry, SiloType, UnknownSiloTypeError
+from evalogy.silos.registry import SiloRegistry, SiloType, UnknownSiloTypeError
 
 
 def make_silo_type(name="wiki", tools=("wiki_search",), **kwargs):
     return SiloType(
         name=name,
-        server_module=f"tessera.mcp.{name}_server",
+        server_module=f"evalogy.mcp.{name}_server",
         tool_names=tuple(tools),
         prompt_blurb=f"a {name} silo",
         consulted=lambda tool, args, result, manifest: set(),
@@ -72,8 +72,8 @@ def _fake_ep(load_result):
 def test_entry_point_silo_type_registers(monkeypatch):
     st = make_silo_type(name="lake", tools=("search_datasets",))
     monkeypatch.setattr(
-        "tessera.silos.registry.entry_points",
-        lambda group: [_fake_ep(st)] if group == "tessera.silo_types" else [],
+        "evalogy.silos.registry.entry_points",
+        lambda group: [_fake_ep(st)] if group == "evalogy.silo_types" else [],
     )
     reg = SiloRegistry()
     assert "lake" in reg.names()
@@ -82,7 +82,7 @@ def test_entry_point_silo_type_registers(monkeypatch):
 def test_entry_point_callable_returning_list_registers(monkeypatch):
     st = make_silo_type(name="lake", tools=("search_datasets",))
     monkeypatch.setattr(
-        "tessera.silos.registry.entry_points",
+        "evalogy.silos.registry.entry_points",
         lambda group: [_fake_ep(lambda: [st])],
     )
     reg = SiloRegistry()
@@ -93,7 +93,7 @@ def test_entry_point_does_not_override_existing_name(monkeypatch):
     mine = make_silo_type(name="lake", tools=("my_tool",))
     theirs = make_silo_type(name="lake", tools=("search_datasets",))
     monkeypatch.setattr(
-        "tessera.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
+        "evalogy.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
     )
     reg = SiloRegistry()
     reg._types["lake"] = mine  # simulate earlier registration before first lookup
@@ -107,7 +107,7 @@ def test_register_and_is_registered_never_trigger_entry_point_loading(monkeypatc
         calls.append(group)
         return []
 
-    monkeypatch.setattr("tessera.silos.registry.entry_points", recorder)
+    monkeypatch.setattr("evalogy.silos.registry.entry_points", recorder)
     reg = SiloRegistry()
     reg.register(make_silo_type())
     assert reg.is_registered("wiki") is True
@@ -131,7 +131,7 @@ def _fake_broken_ep(name="broken"):
 def test_broken_entry_point_is_skipped(monkeypatch, caplog):
     good = make_silo_type(name="lake", tools=("search_datasets",))
     monkeypatch.setattr(
-        "tessera.silos.registry.entry_points",
+        "evalogy.silos.registry.entry_points",
         lambda group: [_fake_broken_ep(), _fake_ep(good)],
     )
     reg = SiloRegistry()
@@ -148,6 +148,6 @@ def test_builtin_registered_before_entry_points_wins(monkeypatch):
     reg.register(ours)  # simulates the builtin import-time registration path
 
     monkeypatch.setattr(
-        "tessera.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
+        "evalogy.silos.registry.entry_points", lambda group: [_fake_ep(theirs)]
     )
     assert reg.get("crm") is ours

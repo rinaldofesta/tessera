@@ -5,7 +5,7 @@ a published significance claim moves with it."""
 
 import pytest
 
-from tessera.report.stats import exact_mcnemar_p, format_p, mcnemar_counts
+from evalogy.report.stats import exact_mcnemar_p, format_p, mcnemar_counts
 
 
 def test_exact_p_reproduces_the_published_scaffold_study_values():

@@ -9,7 +9,7 @@ body:
       value: >
         Every published 0/3 probe was adjudicated from its transcript before its
         row shipped — disputes get the same treatment. The documented limitations
-        live at the bottom of `src/tessera/evals/scoring.py`; a dispute that shows
+        live at the bottom of `src/evalogy/evals/scoring.py`; a dispute that shows
         a limitation biting real behavior is exactly how the scorer gets hardened
         (det-5 candidates start here).
   - type: input

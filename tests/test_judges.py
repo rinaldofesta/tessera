@@ -1,4 +1,4 @@
-from tessera.evals.judges import parse_grade, parse_yes_no
+from evalogy.evals.judges import parse_grade, parse_yes_no
 
 
 def test_parse_grade_reads_c_and_i():
@@ -50,7 +50,7 @@ def test_parse_helpers_find_verdict_buried_after_verbose_reasoning():
 import asyncio
 from types import SimpleNamespace
 
-from tessera.evals.judges import accuracy_judge, refusal_judge
+from evalogy.evals.judges import accuracy_judge, refusal_judge
 
 
 class _StubGrader:

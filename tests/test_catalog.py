@@ -6,16 +6,16 @@ import sys
 
 import pytest
 
-from tessera.api import blueprint_store
-from tessera.catalog import DEFAULTS, build_catalog, published_models, resolve_suite
-from tessera.contract import Catalog
-from tessera.errors import SpecError
-from tessera.evals.scoring import SCORER_VERSIONS
-from tessera.orgs import get_blueprint
+from evalogy.api import blueprint_store
+from evalogy.catalog import DEFAULTS, build_catalog, published_models, resolve_suite
+from evalogy.contract import Catalog
+from evalogy.errors import SpecError
+from evalogy.evals.scoring import SCORER_VERSIONS
+from evalogy.orgs import get_blueprint
 
 
 def test_catalog_lists_builtin_suites_with_blueprint_counts(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     catalog = build_catalog(env={}, suites_dir=tmp_path)
 
@@ -26,7 +26,7 @@ def test_catalog_lists_builtin_suites_with_blueprint_counts(tmp_path, monkeypatc
 
 
 def test_toy_alias_resolves_to_starter_with_diagnostic(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     suite, diagnostics = resolve_suite("toy", suites_dir=tmp_path)
 
@@ -35,14 +35,14 @@ def test_toy_alias_resolves_to_starter_with_diagnostic(tmp_path, monkeypatch):
 
 
 def test_unknown_suite_names_available_suites(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     with pytest.raises(SpecError, match="unknown suite 'missing'; available: starter, meridian"):
         resolve_suite("missing", suites_dir=tmp_path)
 
 
 def test_catalog_lists_user_suite(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
     blueprint_store.save_blueprint(tmp_path, "custom", get_blueprint("toy"))
 
     custom = next(s for s in build_catalog(env={}, suites_dir=tmp_path)["suites"]
@@ -55,7 +55,7 @@ def test_catalog_lists_user_suite(tmp_path, monkeypatch):
 
 
 def test_catalog_skips_unparseable_user_suite_with_diagnostic(tmp_path, monkeypatch, caplog):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
     (tmp_path / "broken.json").write_text("not json")
 
     catalog = build_catalog(env={}, suites_dir=tmp_path)
@@ -65,9 +65,9 @@ def test_catalog_skips_unparseable_user_suite_with_diagnostic(tmp_path, monkeypa
 
 
 def test_models_and_provider_connections_reflect_environment(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
     monkeypatch.setenv(
-        "TESSERA_MODELS", "anthropic/claude-test,ollama/local,unknown/model",
+        "EVALOGY_MODELS", "anthropic/claude-test,ollama/local,unknown/model",
     )
     secret = "secret-sentinel-value"
 
@@ -81,13 +81,13 @@ def test_models_and_provider_connections_reflect_environment(tmp_path, monkeypat
 
 
 def test_default_catalog_models_do_not_publish_ollama_entry(monkeypatch):
-    monkeypatch.delenv("TESSERA_MODELS", raising=False)
+    monkeypatch.delenv("EVALOGY_MODELS", raising=False)
 
     assert all(not model.startswith("ollama/") for model in published_models())
 
 
 def test_providers_expose_only_field_ids_and_never_values(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
     secret = "secret-sentinel-value"
 
     providers = build_catalog(
@@ -104,7 +104,7 @@ def test_providers_expose_only_field_ids_and_never_values(tmp_path, monkeypatch)
 
 
 def test_scorers_defaults_and_contract_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     payload = build_catalog(env={}, suites_dir=tmp_path)
 
@@ -118,7 +118,7 @@ def test_scorers_defaults_and_contract_round_trip(tmp_path, monkeypatch):
 def test_importing_catalog_does_not_import_inspect_ai():
     code = (
         "import importlib, sys; "
-        "importlib.import_module('tessera.catalog'); "
+        "importlib.import_module('evalogy.catalog'); "
         "raise SystemExit('inspect_ai' in sys.modules)"
     )
 

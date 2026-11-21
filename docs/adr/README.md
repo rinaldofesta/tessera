@@ -22,3 +22,4 @@ The cadence: each working week closes with the ADRs for the decisions it made.
 | [0012](0012-leaderboard-rows-are-verified-against-committed-logs.md) | 2026-07-07 | Leaderboard rows are verified against committed logs | Accepted |
 | [0013](0013-preregister-synthetic-to-real-rank-transfer.md) | 2026-08-23 | Preregister synthetic-to-real rank transfer | Accepted |
 | [0014](0014-one-cli-one-home-one-payload.md) | 2026-09-02 | One CLI, one home, one payload | Accepted |
+| [0016](0016-the-project-is-renamed-evalogy.md) | 2026-11-21 | The project is renamed Evalogy | Accepted |

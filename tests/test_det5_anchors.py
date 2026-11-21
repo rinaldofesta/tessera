@@ -15,7 +15,7 @@ below has no ANSWER line, so it remains a genuine det-5 target.
 
 import pytest
 
-from tessera.evals.scoring import grade_probe
+from evalogy.evals.scoring import grade_probe
 
 
 @pytest.mark.xfail(strict=True, reason="det-5 target: match paraphrased dates")

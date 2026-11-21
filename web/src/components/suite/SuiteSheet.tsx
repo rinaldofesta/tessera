@@ -32,7 +32,7 @@ const ALIASES = new Set(["toy"]);
 const SENTINELS = new Set(["new"]);
 
 function suitePath(name: string) {
-  return `~/.tessera/suites/${name || "<name>"}.json`;
+  return `~/.evalogy/suites/${name || "<name>"}.json`;
 }
 
 /** The one place that knows how the "edit" query param opens/closes this sheet —

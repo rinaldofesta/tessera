@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 
 def _client(tmp_path):

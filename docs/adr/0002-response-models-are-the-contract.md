@@ -15,7 +15,7 @@ runtime, if at all.
 
 One contract, single-sourced from the API, enforced in both directions:
 
-1. **Every JSON route declares a `response_model`** (`src/tessera/api/responses.py`).
+1. **Every JSON route declares a `response_model`** (`src/evalogy/api/responses.py`).
    A meta-test walks the route table and fails if a route lacks one (SSE exempt).
 2. FastAPI **validates every response** against its model — so the existing key-free
    test suite doubles as a contract test suite for free.

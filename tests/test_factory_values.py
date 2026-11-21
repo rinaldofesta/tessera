@@ -2,8 +2,8 @@
 import random
 import re
 
-from tessera.factory import values
-from tessera.factory.schema import VALUE_TYPES
+from evalogy.factory import values
+from evalogy.factory.schema import VALUE_TYPES
 
 _SHAPE = {
     "money": r"^\$\d+(\.\d{2}M|k)$",

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from tessera.errors import SpecError
-from tessera.runner import plan
+from evalogy.errors import SpecError
+from evalogy.runner import plan
 
 
 def _connected_env() -> dict[str, str]:
@@ -11,7 +11,7 @@ def _connected_env() -> dict[str, str]:
 
 
 def test_ready_plan_for_connected_provider(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6"},
@@ -26,7 +26,7 @@ def test_ready_plan_for_connected_provider(tmp_path, monkeypatch):
 
 
 def test_not_connected_blocker_has_exact_fix(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6"}, env={}, suites_dir=tmp_path,
@@ -36,12 +36,12 @@ def test_not_connected_blocker_has_exact_fix(tmp_path, monkeypatch):
     assert result["blockers"] == [{
         "code": "not_connected",
         "message": "provider 'anthropic' is not connected",
-        "fix": "tessera connect anthropic",
+        "fix": "evalogy connect anthropic",
     }]
 
 
 def test_plan_ollama_has_no_not_connected_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan({"model": "ollama/x"}, env={}, suites_dir=tmp_path)
 
@@ -50,19 +50,19 @@ def test_plan_ollama_has_no_not_connected_blocker(tmp_path, monkeypatch):
 
 
 def test_plan_mlx_base_url_blocker_has_connect_fix(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan({"model": "openai-api/mlx/x"}, env={}, suites_dir=tmp_path)
 
     assert result["blockers"] == [{
         "code": "not_connected",
         "message": "provider 'mlx' is not connected",
-        "fix": "tessera connect mlx --base-url <url>",
+        "fix": "evalogy connect mlx --base-url <url>",
     }]
 
 
 def test_toy_alias_is_ready_with_diagnostic(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6", "suite": "toy"},
@@ -75,7 +75,7 @@ def test_toy_alias_is_ready_with_diagnostic(tmp_path, monkeypatch):
 
 
 def test_unknown_suite_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6", "suite": "missing"},
@@ -87,7 +87,7 @@ def test_unknown_suite_is_a_blocker(tmp_path, monkeypatch):
 
 
 def test_unknown_provider_prefix_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan({"model": "bedrock/model"}, env={}, suites_dir=tmp_path)
 
@@ -96,7 +96,7 @@ def test_unknown_provider_prefix_is_a_blocker(tmp_path, monkeypatch):
 
 
 def test_llm_without_grader_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6", "engine": "llm"},
@@ -108,7 +108,7 @@ def test_llm_without_grader_is_a_blocker(tmp_path, monkeypatch):
 
 
 def test_deterministic_grader_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6", "grader": "openai/gpt-4o"},
@@ -119,7 +119,7 @@ def test_deterministic_grader_is_a_blocker(tmp_path, monkeypatch):
 
 
 def test_self_grading_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
     model = "anthropic/claude-sonnet-4-6"
 
     result = plan(
@@ -131,7 +131,7 @@ def test_self_grading_is_a_blocker(tmp_path, monkeypatch):
 
 
 def test_unknown_scaffold_is_a_blocker(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     result = plan(
         {"model": "anthropic/claude-sonnet-4-6", "scaffold": "missing"},
@@ -143,7 +143,7 @@ def test_unknown_scaffold_is_a_blocker(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("k", [0, 11])
 def test_k_out_of_range_is_a_spec_error(k, tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_BLUEPRINT_DIR", str(tmp_path))
+    monkeypatch.setenv("EVALOGY_BLUEPRINT_DIR", str(tmp_path))
 
     with pytest.raises(SpecError):
         plan(

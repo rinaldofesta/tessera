@@ -9,9 +9,9 @@ from pathlib import Path
 import psutil
 import pytest
 
-import tessera.store as store_module
-from tessera.errors import SpecError
-from tessera.store import RunStore, _write_atomic
+import evalogy.store as store_module
+from evalogy.errors import SpecError
+from evalogy.store import RunStore, _write_atomic
 
 
 def _request() -> dict:
@@ -217,7 +217,7 @@ def test_archive_round_trip(tmp_path):
 def test_import_log_builds_a_completed_run(tmp_path):
     log_path = (
         Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+        / "src" / "evalogy" / "data" / "examples" / "first-contact" / "log.eval"
     )
 
     record = RunStore(tmp_path).import_log(log_path)
@@ -230,7 +230,7 @@ def test_import_log_builds_a_completed_run(tmp_path):
 def test_import_log_refuses_a_bundled_alias(tmp_path):
     log_path = (
         Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+        / "src" / "evalogy" / "data" / "examples" / "first-contact" / "log.eval"
     )
 
     with pytest.raises(SpecError, match="reserved by a bundled example"):
@@ -307,7 +307,7 @@ def test_reserved_ids_are_refused_even_without_an_examples_root(tmp_path):
     store = RunStore(tmp_path, examples=tmp_path / "no-examples-here")
     log_path = (
         Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+        / "src" / "evalogy" / "data" / "examples" / "first-contact" / "log.eval"
     )
 
     with pytest.raises(SpecError, match="reserved"):
@@ -377,7 +377,7 @@ def test_create_rejects_a_source_outside_the_shared_contract(tmp_path):
 def test_import_log_marks_the_run_failed_instead_of_leaving_it_queued_forever(tmp_path, monkeypatch):
     log_path = (
         Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+        / "src" / "evalogy" / "data" / "examples" / "first-contact" / "log.eval"
     )
     store = RunStore(tmp_path)
     monkeypatch.setattr(
@@ -404,7 +404,7 @@ def test_import_log_redacts_a_credential_even_when_the_failure_carries_one(tmp_p
     # runner.py's.
     log_path = (
         Path(__file__).resolve().parents[1]
-        / "src" / "tessera" / "data" / "examples" / "first-contact" / "log.eval"
+        / "src" / "evalogy" / "data" / "examples" / "first-contact" / "log.eval"
     )
     store = RunStore(tmp_path)
     monkeypatch.setenv("SOME_API_KEY", "sk-" + "P" * 30)

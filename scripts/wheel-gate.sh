@@ -42,9 +42,9 @@ uv pip install --python "$work/venv/bin/python" "${wheels[0]}"
 
 smoke_dir=$(mktemp -d)
 cd "$smoke_dir"
-export TESSERA_HOME
-TESSERA_HOME=$(mktemp -d)
-T="$work/venv/bin/tessera"
+export EVALOGY_HOME
+EVALOGY_HOME=$(mktemp -d)
+T="$work/venv/bin/evalogy"
 
 "$T" ui --check
 "$T" report first-contact --json \
@@ -54,4 +54,4 @@ T="$work/venv/bin/tessera"
 guide_list=$("$T" guide --list)
 grep -q start <<<"$guide_list"
 wheel_list=$(unzip -l "${wheels[0]}")
-grep -q 'tessera/data/web/index.html' <<<"$wheel_list"
+grep -q 'evalogy/data/web/index.html' <<<"$wheel_list"
