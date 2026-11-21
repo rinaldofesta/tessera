@@ -16,13 +16,13 @@ import pytest
 from inspect_ai.log import read_eval_log
 from tests.helpers.credential_scan import find_credential_like_values
 
-from tessera.compiler import build_artifacts
-from tessera.examples.toy_org import build_toy_blueprint
-from tessera.report.log_adapter import eval_log_to_records
-from tessera.report.serialize import report_to_dict
+from evalogy.compiler import build_artifacts
+from evalogy.examples.toy_org import build_toy_blueprint
+from evalogy.report.log_adapter import eval_log_to_records
+from evalogy.report.serialize import report_to_dict
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES = ROOT / "src" / "tessera" / "data" / "examples"
+EXAMPLES = ROOT / "src" / "evalogy" / "data" / "examples"
 PUBLIC_EXAMPLES = ROOT / "examples"
 
 

@@ -1,4 +1,4 @@
-"""Rebuild the committed metadata and reports for Tessera's bundled example runs."""
+"""Rebuild the committed metadata and reports for Evalogy's bundled example runs."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ from pathlib import Path
 
 from inspect_ai.log import read_eval_log
 
-from tessera.api.receipts import file_sha256, receipt_from_log
-from tessera.catalog import suite_name_for_org
-from tessera.report.render import render_markdown
-from tessera.report.serialize import report_to_dict
-from tessera.store import _json_bytes, _write_atomic
+from evalogy.api.receipts import file_sha256, receipt_from_log
+from evalogy.catalog import suite_name_for_org
+from evalogy.report.render import render_markdown
+from evalogy.report.serialize import report_to_dict
+from evalogy.store import _json_bytes, _write_atomic
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES_ROOT = REPO_ROOT / "src" / "tessera" / "data" / "examples"
+EXAMPLES_ROOT = REPO_ROOT / "src" / "evalogy" / "data" / "examples"
 
 
 def _display_path(path: Path) -> str:

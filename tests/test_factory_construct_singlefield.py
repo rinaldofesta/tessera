@@ -1,9 +1,9 @@
 # tests/test_factory_construct_singlefield.py
 import random
 
-from tessera.factory.construct import construct
-from tessera.factory.schema import SCHEMA, Assignment
-from tessera.models import ConflictType, ResolutionRule
+from evalogy.factory.construct import construct
+from evalogy.factory.schema import SCHEMA, Assignment
+from evalogy.models import ConflictType, ResolutionRule
 
 
 def _slot(slot_id):
@@ -49,7 +49,7 @@ def test_void_emits_no_claims():
 
 
 def test_winning_value_avoids_canonical_answer():
-    from tessera.factory.schema import CANONICAL_ANSWERS
+    from evalogy.factory.schema import CANONICAL_ANSWERS
     canon = CANONICAL_ANSWERS["q_orpheon_renewal"]
     for seed in range(1, 40):
         _, probes = construct(_slot("ans01"),

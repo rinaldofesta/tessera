@@ -2,12 +2,12 @@ import json
 
 import pytest
 
-from tessera.compiler import build_artifacts, compile_blueprint, write_artifacts
-from tessera.examples.toy_org import build_toy_blueprint
-from tessera.models import Claim
-from tessera.silos import registry as silo_types
-from tessera.silos.builtin import CRM, DOCS
-from tessera.silos.registry import SiloRegistry, SiloType
+from evalogy.compiler import build_artifacts, compile_blueprint, write_artifacts
+from evalogy.examples.toy_org import build_toy_blueprint
+from evalogy.models import Claim
+from evalogy.silos import registry as silo_types
+from evalogy.silos.builtin import CRM, DOCS
+from evalogy.silos.registry import SiloRegistry, SiloType
 
 
 def _notes_silo_type():

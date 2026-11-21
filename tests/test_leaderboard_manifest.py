@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from tessera.cli import app
-from tessera.report.leaderboard import (
+from evalogy.cli import app
+from evalogy.report.leaderboard import (
     LOG_DERIVED_FIELDS,
     _is_safe_repo_relative_path,
     _repo_relative,
@@ -155,7 +155,7 @@ def _write_eval_log(path):
                           "scorer_version": "det-4"})})
         for e in (1, 2, 3)
     ]
-    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model="anthropic/claude-sonnet-4-6",
                     config=EvalConfig(epochs=3),
                     task_args={"judge": "deterministic", "org": "meridian", "k": 3})
@@ -192,7 +192,7 @@ def test_cli_manifest_writes_markdown(tmp_path):
     assert "## Out-of-protocol exhibitions" in md and "det-4" in md
 
 
-# --- tessera-leaderboard --verify: re-derive backed rows from committed logs (ADR-0012) --
+# --- evalogy-leaderboard --verify: re-derive backed rows from committed logs (ADR-0012) --
 
 def _write_realistic_log(path):
     # Non-degenerate metrics (a passing category and a failing one, format flag set), reused
@@ -220,7 +220,7 @@ def _write_realistic_log(path):
     samples = [s("q_none", e, "none", "answer", True, "4 hours") for e in (1, 2, 3)]
     samples += [s("q_tie", e, "unresolvable", "refuse", e == 1,
                   "cannot determine" if e == 1 else "$1.5M") for e in (1, 2, 3)]
-    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model="anthropic/claude-sonnet-4-6",
                     config=EvalConfig(epochs=3),
                     task_args={"judge": "deterministic", "org": "meridian", "k": 3})
@@ -232,8 +232,8 @@ def _backed_manifest(tmp_path, mutate=None):
     # backed row (numbers derived FROM the log). `mutate` corrupts it to drive failures.
     from inspect_ai.log import read_eval_log
 
-    from tessera.report.leaderboard import _sha256_file, extract_rows
-    from tessera.report.serialize import report_to_dict
+    from evalogy.report.leaderboard import _sha256_file, extract_rows
+    from evalogy.report.serialize import report_to_dict
     (tmp_path / ".git").mkdir()
     logdir = tmp_path / "logs" / "leaderboard"
     logdir.mkdir(parents=True)

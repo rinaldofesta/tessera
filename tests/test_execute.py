@@ -7,8 +7,8 @@ from pathlib import Path
 
 from inspect_ai.log import write_eval_log
 
-from tessera.runner import execute
-from tessera.store import RunStore
+from evalogy.runner import execute
+from evalogy.store import RunStore
 
 
 def _spec(**overrides) -> dict:
@@ -50,11 +50,11 @@ def _writing_eval(**kwargs):
 
 
 def test_execute_completes_into_run_folder_and_restores_environment(tmp_path):
-    from tessera.report.serialize import report_to_dict
+    from evalogy.report.serialize import report_to_dict
 
     store = RunStore(tmp_path / "home", examples=tmp_path / "examples")
     record = store.create(_spec())
-    env = {"TESSERA_OUT": "before", "TESSERA_BLUEPRINT_DIR": "suites-before"}
+    env = {"EVALOGY_OUT": "before", "EVALOGY_BLUEPRINT_DIR": "suites-before"}
     captured = {}
 
     def runner(**kwargs):
@@ -69,7 +69,7 @@ def test_execute_completes_into_run_folder_and_restores_environment(tmp_path):
     run_dir = Path(record.dir)
     assert result["status"] == "completed" and result["ok"] is True, result["error"]
     assert result["report"] == report_to_dict(captured["log"])
-    assert env == {"TESSERA_OUT": "before", "TESSERA_BLUEPRINT_DIR": "suites-before"}
+    assert env == {"EVALOGY_OUT": "before", "EVALOGY_BLUEPRINT_DIR": "suites-before"}
     assert {"log.eval", "report.json", "receipt.json", "report.md", "run.json"} <= {
         path.name for path in run_dir.iterdir()
     }

@@ -1,6 +1,6 @@
-import tessera.evals.scoring as scoring_mod
-from tessera.evals.scoring import consulted_claims
-from tessera.silos.registry import SiloRegistry, SiloType
+import evalogy.evals.scoring as scoring_mod
+from evalogy.evals.scoring import consulted_claims
+from evalogy.silos.registry import SiloRegistry, SiloType
 
 
 def test_consulted_claims_dispatches_to_registered_silo_type(monkeypatch):
@@ -12,7 +12,7 @@ def test_consulted_claims_dispatches_to_registered_silo_type(monkeypatch):
 
     st = SiloType(
         name="wiki",
-        server_module="tessera.mcp.wiki_server",
+        server_module="evalogy.mcp.wiki_server",
         tool_names=("wiki_get",),
         prompt_blurb="a wiki",
         consulted=fake_consulted,

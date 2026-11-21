@@ -1167,6 +1167,17 @@
             "title": "Effective Models",
             "type": "array"
           },
+          "evalogy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evalogy Version"
+          },
           "git_dirty": {
             "anyOf": [
               {
@@ -1207,17 +1218,6 @@
           "requested_model": {
             "title": "Requested Model",
             "type": "string"
-          },
-          "tessera_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tessera Version"
           }
         },
         "required": [
@@ -1225,7 +1225,7 @@
           "reported_model",
           "effective_models",
           "inspect_ai_version",
-          "tessera_version",
+          "evalogy_version",
           "git_revision",
           "git_dirty"
         ],
@@ -2232,7 +2232,7 @@
     }
   },
   "info": {
-    "title": "Tessera Reliability Explorer",
+    "title": "Evalogy Reliability Explorer",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",

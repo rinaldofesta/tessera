@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tessera.examples import ORGS
+from evalogy.examples import ORGS
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = ROOT / "examples" / "suites"
@@ -21,7 +21,7 @@ def export_example_suites() -> None:
     for filename, org in BUILTINS.items():
         rendered = ORGS[org]().model_dump_json(indent=2, by_alias=True) + "\n"
         (SUITES / filename).write_text(rendered, encoding="utf-8")
-    template = ROOT / "src" / "tessera" / "data" / "templates" / "suite.json"
+    template = ROOT / "src" / "evalogy" / "data" / "templates" / "suite.json"
     (SUITES / "my-company.json").write_bytes(template.read_bytes())
 
 

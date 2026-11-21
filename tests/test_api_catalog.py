@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 
 def _client(tmp_path) -> TestClient:
@@ -46,7 +46,7 @@ def test_dry_run_returns_not_ready_plan(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["ready"] is False
-    assert response.json()["blockers"][0]["fix"] == "tessera connect anthropic"
+    assert response.json()["blockers"][0]["fix"] == "evalogy connect anthropic"
 
 
 def test_dry_run_surfaces_missing_grader_as_a_blocker(tmp_path, monkeypatch):

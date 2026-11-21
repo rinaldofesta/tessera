@@ -1,7 +1,7 @@
 """Key-free tests for report.serialize.report_to_dict. Fabricates EvalLogs in-memory
 (same helpers as test_report.py) — no model calls, no network."""
 
-from tessera.report.serialize import report_to_dict
+from evalogy.report.serialize import report_to_dict
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
@@ -12,7 +12,7 @@ def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
     if packages is None:
         packages = {"inspect_ai": "0.3.235"}
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
-    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
                     task_args={"judge": judge}, model_roles=roles, packages=packages)
     return EvalLog(eval=spec, samples=samples, location=location)
@@ -76,12 +76,12 @@ def test_header_carries_scaffold_and_seed():
 
 def test_header_carries_harness():
     # harness (ADR-0011) is how the run's model calls were dispatched: an ensemble shim
-    # records it in task_args; tessera_probes (the single-model harness) never does, so a
+    # records it in task_args; evalogy_probes (the single-model harness) never does, so a
     # normal log serializes as "single". The leaderboard reads this to label ensemble rows.
     log = _eval_log([_answer("q1", 1, "none", True)])
     log.eval.task_args.update({"harness": "ensemble"})
     assert report_to_dict(log)["header"]["harness"] == "ensemble"
-    # absent task_args -> the single-model default (what every tessera_probes run is)
+    # absent task_args -> the single-model default (what every evalogy_probes run is)
     d0 = report_to_dict(_eval_log([_answer("q1", 1, "none", True)]))
     assert d0["header"]["harness"] == "single"
 
@@ -163,7 +163,7 @@ def test_scorer_version_and_format_rate_null_on_old_logs():
 
 def test_header_org_present_when_recorded_else_none():
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
-    spec = EvalSpec(created="2026-06-08T00:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-08T00:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model="m", config=EvalConfig(epochs=3),
                     task_args={"judge": "deterministic", "org": "acme"}, model_roles={})
     log = EvalLog(eval=spec, samples=[_answer("q1", 1, "none", True)], location="x.eval")

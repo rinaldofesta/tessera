@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tessera.api.app import _mount_spa, create_app, lesson_path
+from evalogy.api.app import _mount_spa, create_app, lesson_path
 
 
 def _client(tmp_path) -> TestClient:
@@ -30,7 +30,7 @@ def test_mount_spa_serves_package_data(tmp_path, monkeypatch):
     packaged_index = package / "web" / "index.html"
     packaged_index.parent.mkdir(parents=True)
     packaged_index.write_text("packaged UI")
-    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
+    monkeypatch.setattr("evalogy.api.app.resources.files", lambda _package: package)
     app = FastAPI()
 
     _mount_spa(app)
@@ -43,7 +43,7 @@ def test_lesson_path_prefers_package_data(tmp_path, monkeypatch):
     packaged_lesson = package / "lesson.html"
     packaged_lesson.parent.mkdir(parents=True)
     packaged_lesson.write_text("packaged lesson")
-    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
+    monkeypatch.setattr("evalogy.api.app.resources.files", lambda _package: package)
 
     assert lesson_path() == packaged_lesson
 

@@ -10,15 +10,15 @@ from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSample, EvalSpe
 from inspect_ai.scorer import Score
 from typer.testing import CliRunner
 
-from tessera.api.providers import PROVIDERS
-from tessera.cli import api_alias, app, leaderboard_alias, report_alias
-from tessera.store import RunStore
+from evalogy.api.providers import PROVIDERS
+from evalogy.cli import api_alias, app, leaderboard_alias, report_alias
+from evalogy.store import RunStore
 
 RUNNER = CliRunner()
 BUNDLED_LOG = (
     Path(__file__).parents[1]
     / "src"
-    / "tessera"
+    / "evalogy"
     / "data"
     / "examples"
     / "first-contact"
@@ -32,8 +32,8 @@ FIRST_CONTACT_SENTENCE = (
 
 @pytest.fixture(autouse=True)
 def _isolated_cli_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_HOME", str(tmp_path / "home"))
-    monkeypatch.delenv("TESSERA_ENV_FILE", raising=False)
+    monkeypatch.setenv("EVALOGY_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("EVALOGY_ENV_FILE", raising=False)
     for spec in PROVIDERS.values():
         for field in spec.fields:
             monkeypatch.delenv(field.env_var, raising=False)
@@ -88,7 +88,7 @@ def _fake_log(location: str, *, passed: bool) -> EvalLog:
     )
     spec = EvalSpec(
         created="2026-09-02T10:00:00+00:00",
-        task="tessera_probes",
+        task="evalogy_probes",
         dataset=EvalDataset(),
         model="ollama/test",
         config=EvalConfig(epochs=1),
@@ -121,15 +121,15 @@ def test_no_args_shows_successful_help_and_version():
     assert result.exit_code == 0
     assert "run" in result.stdout and "report" in result.stdout
     version = RUNNER.invoke(app, ["--version"])
-    assert version.exit_code == 0 and version.stdout.startswith("tessera ")
+    assert version.exit_code == 0 and version.stdout.startswith("evalogy ")
 
 
 def test_ui_check_reports_packaged_bundle(tmp_path, monkeypatch):
     package = tmp_path / "package"
     bundle = package / "web" / "index.html"
     bundle.parent.mkdir(parents=True)
-    bundle.write_text("<main>Tessera</main>")
-    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: package)
+    bundle.write_text("<main>Evalogy</main>")
+    monkeypatch.setattr("evalogy.api.app.resources.files", lambda _package: package)
 
     result = RUNNER.invoke(app, ["ui", "--check"])
 
@@ -139,7 +139,7 @@ def test_ui_check_reports_packaged_bundle(tmp_path, monkeypatch):
 
 
 def test_ui_check_missing_bundle_is_runtime_error(tmp_path, monkeypatch):
-    monkeypatch.setattr("tessera.api.app.resources.files", lambda _package: tmp_path / "package")
+    monkeypatch.setattr("evalogy.api.app.resources.files", lambda _package: tmp_path / "package")
 
     human = RUNNER.invoke(app, ["ui", "--check"])
     result = RUNNER.invoke(app, ["ui", "--check", "--json"])
@@ -154,8 +154,8 @@ def test_ui_check_missing_bundle_is_runtime_error(tmp_path, monkeypatch):
         "ok": False,
         "api": "ok",
         "ui_bundle": None,
-        "home": os.environ["TESSERA_HOME"],
-        "env_file": str(Path(os.environ["TESSERA_HOME"]) / ".env"),
+        "home": os.environ["EVALOGY_HOME"],
+        "env_file": str(Path(os.environ["EVALOGY_HOME"]) / ".env"),
         "env_file_present": False,
     }
 
@@ -176,9 +176,9 @@ def test_ui_launch_uses_env_port_and_schedules_browser(monkeypatch):
         def start(self):
             self.started = True
 
-    monkeypatch.setenv("TESSERA_API_PORT", "8124")
+    monkeypatch.setenv("EVALOGY_API_PORT", "8124")
     monkeypatch.setattr("uvicorn.run", lambda *args, **kwargs: uvicorn_calls.append((args, kwargs)))
-    monkeypatch.setattr("tessera.cli.threading.Timer", FakeTimer)
+    monkeypatch.setattr("evalogy.cli.threading.Timer", FakeTimer)
 
     result = RUNNER.invoke(app, ["ui"])
 
@@ -194,7 +194,7 @@ def test_ui_launch_uses_env_port_and_schedules_browser(monkeypatch):
 
 
 def test_guide_every_topic_loads_and_agents_is_real():
-    from tessera.guide import text, topics
+    from evalogy.guide import text, topics
 
     assert [topic["name"] for topic in topics()] == [
         "start",
@@ -206,7 +206,7 @@ def test_guide_every_topic_loads_and_agents_is_real():
     ]
     assert all(text(topic["name"]).strip() for topic in topics())
     agents = RUNNER.invoke(app, ["guide", "agents"])
-    assert agents.exit_code == 0 and "tessera run" in agents.stdout
+    assert agents.exit_code == 0 and "evalogy run" in agents.stdout
 
 
 def test_guide_list_json_and_unknown_topic():
@@ -231,7 +231,7 @@ def test_guide_defaults_to_start_in_json():
 
     payload = _json(result)
     assert result.exit_code == 0 and payload["topic"] == "start"
-    assert "tessera report first-contact" in payload["text"]
+    assert "evalogy report first-contact" in payload["text"]
 
 
 def test_guide_human_list_has_exactly_six_topic_lines():
@@ -332,7 +332,7 @@ def test_validate_invalid_saved_suite_by_name_reports_its_issue():
 
 @pytest.mark.parametrize(("filename", "ref"), [("toy", "starter"), ("custom", "custom")])
 def test_invalid_saved_source_is_located_and_blocks_run(filename, ref, tmp_path):
-    from tessera.examples import ORGS
+    from evalogy.examples import ORGS
 
     suite = ORGS["toy"]().model_dump(by_alias=True)
     suite["claims"][0]["silo"] = "bad.name"
@@ -396,7 +396,7 @@ def test_leaderboard_extract_wraps_existing_log_machinery():
 
     (row,) = json.loads(result.stdout)
     assert result.exit_code == 0 and row["label"] == "first-contact"
-    assert row["log"]["path"] == "src/tessera/data/examples/first-contact/log.eval"
+    assert row["log"]["path"] == "src/evalogy/data/examples/first-contact/log.eval"
 
 
 def test_leaderboard_verify_missing_manifest_preserves_legacy_exit(tmp_path):
@@ -413,14 +413,14 @@ def test_report_alias_deprecates_and_delegates(tmp_path):
     result = RUNNER.invoke(report_alias, ["first-contact", "-o", str(out)])
 
     assert result.exit_code == 0 and "75%" in out.read_text()
-    assert result.stderr == "tessera-report is deprecated — use: tessera report …\n"
+    assert result.stderr == "evalogy-report is deprecated — use: evalogy report …\n"
 
 
 def test_report_alias_delegates_to_stdout_without_out():
     result = RUNNER.invoke(report_alias, ["first-contact"])
 
     assert result.exit_code == 0 and "75%" in result.stdout
-    assert result.stderr == "tessera-report is deprecated — use: tessera report …\n"
+    assert result.stderr == "evalogy-report is deprecated — use: evalogy report …\n"
 
 
 def test_leaderboard_alias_deprecates_and_delegates():
@@ -432,7 +432,7 @@ def test_leaderboard_alias_deprecates_and_delegates():
 
     assert result.exit_code == 0
     assert result.stdout == (repo / "docs" / "leaderboard.md").read_text()
-    assert result.stderr.startswith("tessera-leaderboard is deprecated — use:")
+    assert result.stderr.startswith("evalogy-leaderboard is deprecated — use:")
 
 
 def test_leaderboard_alias_translates_extract_and_forwards_options():
@@ -466,7 +466,7 @@ def test_api_alias_deprecates_and_delegates(monkeypatch):
 
     assert result.exit_code == 0 and called["port"] == 8123
     assert called["host"] == "127.0.0.1"
-    assert result.stderr == "tessera-api is deprecated — use: tessera ui --no-open\n"
+    assert result.stderr == "evalogy-api is deprecated — use: evalogy ui --no-open\n"
 
 
 def test_report_bundled_human_and_json():
@@ -480,7 +480,7 @@ def test_report_bundled_human_and_json():
 
 
 def test_report_raw_eval_does_not_import_it(monkeypatch):
-    home = Path(os.environ["TESSERA_HOME"])
+    home = Path(os.environ["EVALOGY_HOME"])
     result = RUNNER.invoke(app, ["report", str(BUNDLED_LOG)])
 
     assert result.exit_code == 0 and "75%" in result.stdout
@@ -495,7 +495,7 @@ def test_dry_run_json_is_advisory_with_a_fix():
 
     payload = _json(result)
     assert result.exit_code == 0 and payload["ready"] is False
-    assert payload["blockers"][0]["fix"] == "tessera connect anthropic"
+    assert payload["blockers"][0]["fix"] == "evalogy connect anthropic"
 
 
 def test_run_uses_stable_not_connected_and_spec_exit_codes():
@@ -514,7 +514,7 @@ def test_run_uses_stable_not_connected_and_spec_exit_codes():
 
 
 def test_run_and_history_are_fully_offline(monkeypatch):
-    monkeypatch.setattr("tessera.runner._default_eval", _writing_eval(True))
+    monkeypatch.setattr("evalogy.runner._default_eval", _writing_eval(True))
 
     result = RUNNER.invoke(app, ["run", "--model", "ollama/test", "--k", "1"])
     history = RUNNER.invoke(app, ["history", "--json"])
@@ -529,7 +529,7 @@ def test_run_and_history_are_fully_offline(monkeypatch):
 
 
 def test_failed_gate_prints_one_run_payload(monkeypatch):
-    monkeypatch.setattr("tessera.runner._default_eval", _writing_eval(False))
+    monkeypatch.setattr("evalogy.runner._default_eval", _writing_eval(False))
 
     result = RUNNER.invoke(
         app,
@@ -551,7 +551,7 @@ def test_failed_gate_prints_one_run_payload(monkeypatch):
 
 
 def test_archive_restore_and_bundled_rejection():
-    store = RunStore(Path(os.environ["TESSERA_HOME"]))
+    store = RunStore(Path(os.environ["EVALOGY_HOME"]))
     run_id = store.create(_spec()).id
 
     archived = RUNNER.invoke(app, ["archive", run_id])
@@ -589,7 +589,7 @@ def test_connect_stdin_saves_without_disclosing_key():
         ["connect", "anthropic", "--key-stdin"],
         input=secret + "\n",
     )
-    env_file = Path(os.environ["TESSERA_HOME"]) / ".env"
+    env_file = Path(os.environ["EVALOGY_HOME"]) / ".env"
     catalog_result = RUNNER.invoke(app, ["catalog", "providers"])
 
     assert result.exit_code == 0
@@ -606,7 +606,7 @@ def test_connect_ollama_base_url_json():
     )
 
     payload = _json(result)
-    env_file = Path(os.environ["TESSERA_HOME"]) / ".env"
+    env_file = Path(os.environ["EVALOGY_HOME"]) / ".env"
     assert result.exit_code == 0
     assert payload["ok"] is True and payload["probe"] is None
     assert payload["provider"]["id"] == "ollama"
@@ -626,7 +626,7 @@ def test_connect_rejects_control_characters():
 
 def test_connect_probe_success_is_non_secret_and_non_networked(monkeypatch):
     monkeypatch.setattr(
-        "tessera.providers.probe",
+        "evalogy.providers.probe",
         lambda model: {
             "model": model,
             "ok": True,

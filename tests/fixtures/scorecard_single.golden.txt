@@ -1,4 +1,4 @@
-# Tessera Reliability Report
+# Evalogy Reliability Report
 **Model:** anthropic/claude-sonnet-4-6 · **Engine:** deterministic
 **Run:** 2026-06-03T10:00:00+00:00 · **Probes:** 2 × 3 epochs
 

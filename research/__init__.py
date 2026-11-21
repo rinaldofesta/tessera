@@ -1,1 +1,1 @@
-"""Repository-only research tooling excluded from the Tessera wheel."""
+"""Repository-only research tooling excluded from the Evalogy wheel."""

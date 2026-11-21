@@ -3,13 +3,13 @@ import dataclasses
 
 import pytest
 
-from tessera.factory.schema import (
+from evalogy.factory.schema import (
     FACTORY_VERSION,
     VALUE_TYPES,
     AnswerableSlot,
     Assignment,
 )
-from tessera.models import ConflictType, ResolutionRule
+from evalogy.models import ConflictType, ResolutionRule
 
 
 def test_constants():

@@ -120,7 +120,7 @@ jobs:
           files: dist/*
 
   # The pypi environment must exist with required reviewers. PyPI's pending publisher
-  # for tessera-eval must name .github/workflows/release.yml and the pypi environment.
+  # for evalogy must name .github/workflows/release.yml and the pypi environment.
   pypi:
     needs: build
     if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi

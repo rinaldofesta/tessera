@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 
 def _app(tmp_path: Path, env_file: Path):
@@ -22,23 +22,23 @@ def test_the_resolved_env_file_is_absolute_and_exposed_on_app_state(tmp_path):
 
 
 def test_startup_loads_the_injected_file_into_the_process_environment(tmp_path, monkeypatch):
-    monkeypatch.delenv("TESSERA_EXAMPLE", raising=False)
+    monkeypatch.delenv("EVALOGY_EXAMPLE", raising=False)
     env = tmp_path / ".env"
-    env.write_text("TESSERA_EXAMPLE=from-injected-file\n")
+    env.write_text("EVALOGY_EXAMPLE=from-injected-file\n")
     with TestClient(_app(tmp_path, env)):        # context manager runs startup
         import os
-        assert os.environ["TESSERA_EXAMPLE"] == "from-injected-file"
+        assert os.environ["EVALOGY_EXAMPLE"] == "from-injected-file"
 
 
 def test_a_value_containing_a_shell_style_expansion_is_loaded_literally(tmp_path, monkeypatch):
     # python-dotenv interpolates ${VAR} in BOTH quoting styles unless disabled, which
     # would silently corrupt any credential containing "${".
-    monkeypatch.delenv("TESSERA_LITERAL", raising=False)
+    monkeypatch.delenv("EVALOGY_LITERAL", raising=False)
     env = tmp_path / ".env"
-    env.write_text('TESSERA_LITERAL="sk-${HOME}-tail"\n')
+    env.write_text('EVALOGY_LITERAL="sk-${HOME}-tail"\n')
     with TestClient(_app(tmp_path, env)):
         import os
-        assert os.environ["TESSERA_LITERAL"] == "sk-${HOME}-tail"
+        assert os.environ["EVALOGY_LITERAL"] == "sk-${HOME}-tail"
 
 
 def test_constructing_the_app_reads_no_file(tmp_path):

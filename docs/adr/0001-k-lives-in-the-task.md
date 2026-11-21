@@ -25,7 +25,7 @@ The task owns both halves through a single parameter:
 tessera_probes(judge=..., org=..., k=3)   # builds Epochs(k, [pass_k(k), "mean"])
 ```
 
-- CLI: `inspect eval tessera/evals -T k=5` (the value arrives as a string; the task
+- CLI: `inspect eval evalogy/evalogy_probes -T k=5` (the value arrives as a string; the task
   coerces and validates `k >= 1`).
 - API runner: passes `task_args={"k": request.epochs}` and **never** the eval-level
   `epochs` kwarg. `RunRequest.epochs` is validated to 1..10.

@@ -4,7 +4,7 @@
 import type { ProbeDef } from "./types";
 
 export const NAV_COPY = {
-  brand: "Tessera",
+  brand: "Evalogy",
   label: "primary navigation",
   run: "Run",
   reports: "Reports",

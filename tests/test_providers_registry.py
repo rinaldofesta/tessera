@@ -1,4 +1,4 @@
-from tessera.api.providers import (
+from evalogy.api.providers import (
     PROVIDERS,
     configured_fields,
     is_configured,

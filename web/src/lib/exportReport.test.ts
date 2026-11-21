@@ -34,6 +34,6 @@ describe("exportReportHtml", () => {
 
 describe("reportFilename", () => {
   it("keeps the safe suite-model-date shape", () => {
-    expect(reportFilename(reportFixture, "html")).toBe("tessera-starter-claude-sonnet-4-2026-09-02.html");
+    expect(reportFilename(reportFixture, "html")).toBe("evalogy-starter-claude-sonnet-4-2026-09-02.html");
   });
 });

@@ -7,7 +7,7 @@ Each test encodes an invariant from the design spec
 import pytest
 from pydantic import ValidationError
 
-from tessera.models import (
+from evalogy.models import (
     Blueprint,
     Claim,
     ConflictType,

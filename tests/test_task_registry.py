@@ -1,10 +1,10 @@
 import pytest
 
-from tessera.evals.task import _blueprint_silos, _mcp_servers, _system_prompt
-from tessera.examples.toy_org import build_toy_blueprint
-from tessera.silos.registry import UnknownSiloTypeError
+from evalogy.evals.task import _blueprint_silos, _mcp_servers, _system_prompt
+from evalogy.examples.toy_org import build_toy_blueprint
+from evalogy.silos.registry import UnknownSiloTypeError
 
-# Captured verbatim from src/tessera/evals/task.py's pre-refactor _SCAFFOLD_INTRO literal
+# Captured verbatim from src/evalogy/evals/task.py's pre-refactor _SCAFFOLD_INTRO literal
 # (the crm/docs system-prompt intro, before it was rewired to assemble from the silo
 # registry). Byte-for-byte identical to the old hardcoded string — see task-3-report.md.
 GOLDEN_PROMPT = (

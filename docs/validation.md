@@ -6,7 +6,7 @@ collapsed score per task and configuration for each suite.
 
 The complete seven-configuration worked example is
 [`examples/validation-study.example.json`](../examples/validation-study.example.json). Run it
-from a Tessera source checkout:
+from an Evalogy source checkout:
 
 ```bash
 python -m research.transfer.cli examples/validation-study.example.json -o result.md

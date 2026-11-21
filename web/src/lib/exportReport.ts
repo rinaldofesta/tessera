@@ -16,7 +16,7 @@ export function filenameSegment(value: string): string {
 
 export function reportFilename(report: Report, ext: "html" | "json"): string {
   const date = filenameSegment(report.header.created.slice(0, 10)) || "undated";
-  return `tessera-${filenameSegment(report.header.org ?? "run")}-${filenameSegment(shortModel(report.header.model))}-${date}.${ext}`;
+  return `evalogy-${filenameSegment(report.header.org ?? "run")}-${filenameSegment(shortModel(report.header.model))}-${date}.${ext}`;
 }
 
 export const exportReportJson = (report: Report): string => JSON.stringify(report, null, 2);
@@ -46,7 +46,7 @@ const receiptRows = (run: Run): [string, unknown][] => run.receipt ? [
   ["artifact path", run.receipt.artifact.path], ["artifact sha256", run.receipt.artifact.sha256], ["blueprint sha256", run.receipt.protocol.blueprint_sha256],
   ["engine", run.receipt.protocol.engine], ["grader", run.receipt.protocol.grader], ["harness", run.receipt.protocol.harness],
   ["suite org", run.receipt.protocol.org], ["requested model", run.receipt.runtime.requested_model], ["reported model", run.receipt.runtime.reported_model],
-  ["effective models", run.receipt.runtime.effective_models.join(", ")], ["Tessera version", run.receipt.runtime.tessera_version],
+  ["effective models", run.receipt.runtime.effective_models.join(", ")], ["Evalogy version", run.receipt.runtime.evalogy_version],
   ["Inspect version", run.receipt.runtime.inspect_ai_version], ["git revision", run.receipt.runtime.git_revision], ["git dirty", run.receipt.runtime.git_dirty],
   ["started", run.receipt.timing.started_at], ["completed", run.receipt.timing.completed_at], ["duration seconds", run.receipt.timing.duration_seconds],
   ["input tokens", run.receipt.usage.input_tokens], ["output tokens", run.receipt.usage.output_tokens], ["total tokens", run.receipt.usage.total_tokens],
@@ -66,7 +66,7 @@ export function exportReportHtml(run: Run): string {
   const failures = report.probes.flatMap((probe) => probe.failures.map((failure) => `<div class="card"><b>${e(probe.probe_id)} · ${e(conflictLabel(probe.conflict_type))} · ${e(whyFailed(probe.expected_behavior, failure))}</b><p>${e(failure.question)}</p><blockquote>${e(failure.answer)}</blockquote><p class="faint">${e(`repeat ${failure.epoch} · consulted: ${failure.consulted.join(", ") || "(none)"} · expected: ${failure.expected_sources.join(", ") || "(none)"} · missing: ${failure.missing.join(", ") || "(none)"}`)}</p></div>`)).join("") || `<p class="muted">${e(REPORT_COPY.noFailures(report.probes.length))}</p>`;
   const diagnostics = run.diagnostics.map((item) => `<li>${e(item.kind)} · ${e(item.signature)} · ${e(item.count)}</li>`).join("") || `<li>${e("none")}</li>`;
   const receipt = receiptRows(run).map(([label, value]) => `<tr><th>${e(label)}</th><td>${e(value)}</td></tr>`).join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tessera — ${e(run.request.model)} on ${e(run.request.suite)}</title><style>${CSS}</style></head><body>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Evalogy — ${e(run.request.model)} on ${e(run.request.suite)}</title><style>${CSS}</style></head><body>
 <p class="faint">${e(run.request.suite)} · ${e(run.request.model)} · ${e(run.request.k)} repeats · ${e(fmtTs(run.created_at))} · ${e(run.id)}</p><h1>${e(verdict.sentence)}</h1>
 <div class="mosaic" style="grid-template-columns:repeat(${e(Math.max(1, report.probes.length))},minmax(0,44px))">${tiles}</div><p class="faint">${e(`${report.probes.length} questions × ${run.request.k} repeats · one square per answer`)}</p>
 ${bar(verdict.pass_k_rate, verdict.mean_rate)}<div class="legend"><span><i class="every"></i>${e(GAP_COPY.rightEveryTime)} ${e(pct(verdict.pass_k_rate))}</span><span><i class="sometimes"></i>${e(GAP_COPY.onlySometimes)} +${e(gap)} pp</span><span><i class="never"></i>${e(GAP_COPY.never)}</span></div>

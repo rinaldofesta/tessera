@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: >
-        The bar is meridian (`src/tessera/examples/meridian_org.py`): ≥5 probes per
+        The bar is meridian (`src/evalogy/examples/meridian_org.py`): ≥5 probes per
         conflict type, both resolution rules, authority probes where the binding doc
         is OLDER than the CRM row, anti-prior values, no question that leaks its own
         answer. The offline gates in `tests/test_meridian_org.py` show what gets

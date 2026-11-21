@@ -4,8 +4,8 @@ import pytest
 from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
 from inspect_ai.tool import ToolCall
 
-from tessera.compiler import compile_blueprint
-from tessera.evals.scoring import (
+from evalogy.compiler import compile_blueprint
+from evalogy.evals.scoring import (
     consulted_claims,
     extract_final_answer,
     extract_tool_events,
@@ -13,7 +13,7 @@ from tessera.evals.scoring import (
     is_refusal,
     match_answer,
 )
-from tessera.examples.toy_org import build_toy_blueprint
+from evalogy.examples.toy_org import build_toy_blueprint
 
 
 def _manifest(tmp_path):
@@ -343,8 +343,8 @@ def test_refusal_phrase_with_hallucination_does_not_pass_void():
 
 from inspect_ai.scorer import CORRECT, INCORRECT
 
-from tessera.evals.dataset import ProbeMeta
-from tessera.evals.scoring import score_attempt
+from evalogy.evals.dataset import ProbeMeta
+from evalogy.evals.scoring import score_attempt
 
 
 def test_score_attempt_marks_clean_refusal_correct(tmp_path):
@@ -432,7 +432,7 @@ def test_grade_unresolvable_fails_if_agent_picks_a_value():
     assert g["passed"] is False
 
 
-from tessera.evals.scoring import llm_score_attempt
+from evalogy.evals.scoring import llm_score_attempt
 
 
 async def _stub_true(*args):
@@ -543,7 +543,7 @@ def test_llm_refuse_probe_fails_without_full_provenance(tmp_path):
     assert s.metadata["provenance_ok"] is False
 
 
-from tessera.evals.scoring import grade_from_signals
+from evalogy.evals.scoring import grade_from_signals
 
 
 def test_grade_from_signals_answer_passes_when_correct_and_committed_and_sourced():
@@ -576,7 +576,7 @@ def test_grade_from_signals_refuse_fails_if_not_refused():
     assert g["refusal_ok"] is False and g["passed"] is False
 
 
-from tessera.evals.scoring import assert_independent_grader
+from evalogy.evals.scoring import assert_independent_grader
 
 
 def test_guard_raises_when_grader_equals_model_under_test():
@@ -589,7 +589,7 @@ def test_guard_allows_distinct_models():
 
 
 def test_scorer_factories_exist():
-    from tessera.evals import scoring
+    from evalogy.evals import scoring
     # factories build a scorer without resolving any model (resolution happens in score())
     assert callable(scoring.deterministic_reliability_scorer({}))
     assert callable(scoring.llm_reliability_scorer({}))

@@ -1,4 +1,4 @@
-# Tessera leaderboard — meridian
+# Evalogy leaderboard — meridian
 
 Results as of 2026-07-06. Deterministic engine (`det-4`), k=3: the headline is **strict pass^3** — a probe counts only if it passed every one of its 3 repetitions; `mean` alongside is capability when the dice land well. Protocol: [ADR-0006](adr/0006-meridian-and-the-leaderboard-protocol.md).
 
@@ -21,16 +21,16 @@ Results as of 2026-07-06. Deterministic engine (`det-4`), k=3: the headline is *
 - Every row is one run of the `meridian` org: all probes, 3 epochs each, scored on accuracy, provenance (mechanical, per-field for the CRM — credited only for data that actually came back), and committed refusal.
 - The per-category columns are strict pass^k by conflict type. `unresolvable` is the column to watch: it measures whether a model fabricates a tie-break rather than refusing when two systems of record disagree with equal authority.
 - The `meridian` blueprint is public — it is the answer key. Honesty over purity: results are date-stamped, training-data contamination becomes more likely over time, and seeded variants are the planned mitigation (see ADR-0006).
-- Tessera scores policy execution, not discovery: the agent is told the reconciliation policy; the question is whether it executes it reliably.
+- Evalogy scores policy execution, not discovery: the agent is told the reconciliation policy; the question is whether it executes it reliably.
 - `ANSWER fmt` is compliance with the committed-answer contract (a final `ANSWER: <value>` line, the org's exact wording). Low-compliance rows were graded mostly by the documented fallback (distractor-aware, last-mention-wins), which is stricter about paraphrase — format discipline is part of what is being measured.
 
-This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — the committed source of truth (ADR-0010). Never edit the table by hand; CI regenerates it from the manifest and fails on drift, and `tessera leaderboard verify` re-derives every log-backed row from its committed log (ADR-0012). To add or update a row, produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it into the manifest, then regenerate and verify:
+This file is generated from [`leaderboard.rows.json`](leaderboard.rows.json) — the committed source of truth (ADR-0010). Never edit the table by hand; CI regenerates it from the manifest and fails on drift, and `evalogy leaderboard verify` re-derives every log-backed row from its committed log (ADR-0012). To add or update a row, produce a run, commit its log under `logs/leaderboard/`, extract the row, merge it into the manifest, then regenerate and verify:
 
 ```bash
-tessera run --suite meridian --model <provider/model> --k 3 --seed 0 \
+evalogy run --suite meridian --model <provider/model> --k 3 --seed 0 \
   --scaffold baseline   # deterministic grading is the default
-cp ~/.tessera/runs/<id>/log.eval logs/leaderboard/<run>.eval
-tessera leaderboard extract logs/leaderboard/<run>.eval  # -> a manifest row
-tessera leaderboard render --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
-tessera leaderboard verify --manifest docs/leaderboard.rows.json
+cp ~/.evalogy/runs/<id>/log.eval logs/leaderboard/<run>.eval
+evalogy leaderboard extract logs/leaderboard/<run>.eval  # -> a manifest row
+evalogy leaderboard render --manifest docs/leaderboard.rows.json -o docs/leaderboard.md
+evalogy leaderboard verify --manifest docs/leaderboard.rows.json
 ```

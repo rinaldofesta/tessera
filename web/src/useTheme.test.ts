@@ -48,17 +48,17 @@ describe("useTheme", () => {
     const { result } = renderHook(() => useTheme());
     act(() => result.current.setTheme("dark"));
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
-    expect(localStorage.getItem("tessera.theme")).toBe("dark");
+    expect(localStorage.getItem("evalogy.theme")).toBe("dark");
   });
 
   it("restores a persisted theme and cycles system → light → dark", async () => {
-    localStorage.setItem("tessera.theme", "system");
+    localStorage.setItem("evalogy.theme", "system");
     const { result } = renderHook(() => useTheme());
     act(() => result.current.cycleTheme());
     expect(result.current.theme).toBe("light");
     act(() => result.current.cycleTheme());
     expect(result.current.theme).toBe("dark");
-    await waitFor(() => expect(localStorage.getItem("tessera.theme")).toBe("dark"));
+    await waitFor(() => expect(localStorage.getItem("evalogy.theme")).toBe("dark"));
   });
 
   it("follows media-query changes in system mode", async () => {

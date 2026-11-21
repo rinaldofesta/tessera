@@ -2,7 +2,7 @@
 // handful of plain-language answers into an always-valid-by-construction claims+probe
 // fragment; the wizard's review step then runs the real `/api/blueprints/validate`
 // endpoint as the actual coherence gate (this file only has to be *plausible*, not
-// authoritative). Worked examples mirror `src/tessera/examples/toy_org.py`.
+// authoritative). Worked examples mirror `src/evalogy/examples/toy_org.py`.
 
 import { SUITE_COPY, type RecipeKey } from "@/copy";
 import type { Blueprint, Claim, ProbeDef } from "@/types";

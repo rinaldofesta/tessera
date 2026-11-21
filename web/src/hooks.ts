@@ -4,7 +4,7 @@ import type { Catalog, Run } from "./types";
 
 export type ThemeMode = "system" | "light" | "dark";
 
-const THEME_KEY = "tessera.theme";
+const THEME_KEY = "evalogy.theme";
 const THEME_ORDER: ThemeMode[] = ["system", "light", "dark"];
 
 function storedTheme(): ThemeMode {

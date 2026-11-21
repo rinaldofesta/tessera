@@ -4,9 +4,9 @@ import subprocess
 import sys
 from collections import Counter
 
-from tessera.examples.meridian_org import build_meridian_blueprint
-from tessera.factory.generate import generate_variant
-from tessera.factory.schema import CANONICAL_ANSWERS
+from evalogy.examples.meridian_org import build_meridian_blueprint
+from evalogy.factory.generate import generate_variant
+from evalogy.factory.schema import CANONICAL_ANSWERS
 
 
 def test_distinct_seeds_yield_distinct_blueprints():
@@ -71,7 +71,7 @@ def test_cross_machine_determinism_under_pythonhashseed():
     # leaking into the rng path would make the output depend on PYTHONHASHSEED. Checked over
     # several seeds, not just one.
     for seed in (1, 7, 42):
-        code = ("from tessera.factory.generate import generate_variant; "
+        code = ("from evalogy.factory.generate import generate_variant; "
                 f"print(generate_variant({seed}).model_dump_json())")
         outs = set()
         for hs in ("0", "12345"):

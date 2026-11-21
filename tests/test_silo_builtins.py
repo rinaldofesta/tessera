@@ -1,5 +1,5 @@
-from tessera.silos.builtin import CRM, DOCS
-from tessera.silos.registry import registry
+from evalogy.silos.builtin import CRM, DOCS
+from evalogy.silos.registry import registry
 
 MANIFEST = {
     "acme.tier.crm": {
@@ -49,8 +49,8 @@ def test_register_builtins_does_not_trigger_entry_point_loading(monkeypatch):
         calls.append(group)
         return []
 
-    monkeypatch.setattr("tessera.silos.registry.entry_points", recorder)
-    import tessera.silos.builtin as builtin_module
+    monkeypatch.setattr("evalogy.silos.registry.entry_points", recorder)
+    import evalogy.silos.builtin as builtin_module
 
     builtin_module.register_builtins()  # idempotent: builtins already registered
     assert calls == []

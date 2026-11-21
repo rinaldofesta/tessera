@@ -1,6 +1,6 @@
 # tests/test_factory_commit.py
-from tessera.factory.commit import commit, verify
-from tessera.factory.schema import FACTORY_VERSION
+from evalogy.factory.commit import commit, verify
+from evalogy.factory.schema import FACTORY_VERSION
 
 
 def test_commit_verify_round_trip():

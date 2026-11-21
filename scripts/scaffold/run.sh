@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Run a matrix of (seed, scaffold, model) tessera_probes evals, each in its own process,
-# its own log dir under logs/scaffold/, and its own compiled-org dir (TESSERA_OUT) so
+# Run a matrix of (seed, scaffold, model) evalogy_probes evals, each in its own process,
+# its own log dir under logs/scaffold/, and its own compiled-org dir (EVALOGY_OUT) so
 # parallel invocations never read each other's org. Reads API keys from the repo .env.
 # Usage:  scripts/scaffold/run.sh <seed> <scaffold> <provider/model> [<provider/model> ...]
 set -euo pipefail
@@ -31,10 +31,10 @@ for MODEL in "$@"; do
   SAFE="${MODEL//\//_}"   # keep the provider: openai/gpt-4o and azure/gpt-4o must not collide
   LOGDIR="logs/scaffold/s${SEED}_${SCAFFOLD}_${SAFE}"
   rm -rf "$LOGDIR"; mkdir -p "$LOGDIR"
-  OUT="/tmp/tessera/scaffold_s${SEED}_${SCAFFOLD}_${SAFE}"
+  OUT="/tmp/evalogy/scaffold_s${SEED}_${SCAFFOLD}_${SAFE}"
   echo ">>> $(date +%H:%M:%S) seed=$SEED scaffold=$SCAFFOLD model=$MODEL"
   RC=0
-  TESSERA_OUT="$OUT" "$INSPECT" eval src/tessera/evals/task.py@tessera_probes \
+  EVALOGY_OUT="$OUT" "$INSPECT" eval src/evalogy/evals/task.py@evalogy_probes \
     --model "$MODEL" -T org=meridian -T k=3 -T seed="$SEED" -T scaffold="$SCAFFOLD" \
     --log-dir "$LOGDIR" >/dev/null 2>"$LOGDIR/stderr.txt" || RC=$?
   EVAL="$(ls "$LOGDIR"/*.eval 2>/dev/null | head -1 || true)"

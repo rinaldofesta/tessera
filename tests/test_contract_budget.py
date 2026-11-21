@@ -1,4 +1,4 @@
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 
 def test_api_route_budget_and_deleted_surfaces(tmp_path):

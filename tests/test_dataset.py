@@ -1,5 +1,5 @@
-from tessera.evals.dataset import ProbeMeta, blueprint_to_dataset
-from tessera.examples.toy_org import build_toy_blueprint
+from evalogy.evals.dataset import ProbeMeta, blueprint_to_dataset
+from evalogy.examples.toy_org import build_toy_blueprint
 
 
 def test_dataset_has_one_sample_per_probe():

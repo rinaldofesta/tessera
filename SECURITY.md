@@ -4,17 +4,17 @@
 
 Please **do not open a public issue** for security problems.
 
-- Preferred: [GitHub private vulnerability reporting](https://github.com/rinaldofesta/tessera/security/advisories/new)
+- Preferred: [GitHub private vulnerability reporting](https://github.com/rinaldofesta/evalogy/security/advisories/new)
   ("Report a vulnerability" on the repo's Security tab).
-- Or email **festarinaldo@gmail.com** with `[tessera security]` in the subject.
+- Or email **festarinaldo@gmail.com** with `[evalogy security]` in the subject.
 
 You will get an acknowledgment within a few days. Please include reproduction
 steps; a failing test is the best report.
 
 ## Scope worth knowing about
 
-Tessera is a **local-first** tool: the FastAPI server (`tessera ui`) binds
-locally, serves the SPA from `src/tessera/data/web`, and is not hardened for public exposure —
+Evalogy is a **local-first** tool: the FastAPI server (`evalogy ui`) binds
+locally, serves the SPA from `src/evalogy/data/web`, and is not hardened for public exposure —
 do not put it on the open internet. Things we do treat as vulnerabilities:
 
 - path traversal or file access outside the repo through the API

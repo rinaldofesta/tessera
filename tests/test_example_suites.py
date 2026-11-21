@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from tessera.api import blueprint_store
-from tessera.examples import ORGS
+from evalogy.api import blueprint_store
+from evalogy.examples import ORGS
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples" / "suites"
-TEMPLATE = ROOT / "src" / "tessera" / "data" / "templates" / "suite.json"
+TEMPLATE = ROOT / "src" / "evalogy" / "data" / "templates" / "suite.json"
 
 
 @pytest.mark.parametrize("path", sorted(EXAMPLES.glob("*.json")), ids=lambda path: path.name)

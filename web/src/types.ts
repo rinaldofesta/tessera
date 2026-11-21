@@ -1,6 +1,6 @@
 // The API contract, aliased from the GENERATED types in api-types.gen.ts — which
 // openapi-typescript builds from openapi.json, which FastAPI builds from the Pydantic
-// response models in src/tessera/api/responses.py. One source of truth, end to end:
+// response models in src/evalogy/api/responses.py. One source of truth, end to end:
 // regenerate with `bash scripts/gen-types.sh`; CI fails if these files drift.
 //
 import type { components } from "./api-types.gen";

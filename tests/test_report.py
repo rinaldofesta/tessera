@@ -1,6 +1,6 @@
 import pytest
 
-from tessera.report.models import (
+from evalogy.report.models import (
     AxesSummary,
     CategoryReliability,
     ProbeEpoch,
@@ -24,7 +24,7 @@ def test_report_error_is_exception():
     assert issubclass(ReportError, Exception)
 
 
-from tessera.report.aggregate import reduce_by_probe
+from evalogy.report.aggregate import reduce_by_probe
 
 
 def _ep(probe_id, epoch, passed, *, ct="resolvable", beh="answer", accuracy_ok=None,
@@ -54,7 +54,7 @@ def test_reduce_by_probe_all_pass_has_no_failures():
     assert pr.pass_k is True and pr.failures == () and pr.mean_pass == 1.0
 
 
-from tessera.report.aggregate import aggregate_by, overall_mean_rate, overall_pass_k_rate
+from evalogy.report.aggregate import aggregate_by, overall_mean_rate, overall_pass_k_rate
 
 
 def _pr(probe_id, ct, pass_k, mean, *, beh="answer"):
@@ -79,7 +79,7 @@ def test_overall_rates_strict_and_mean():
     assert overall_pass_k_rate([]) == 0.0 and overall_mean_rate([]) == 0.0
 
 
-from tessera.report.aggregate import summarize_axes
+from evalogy.report.aggregate import summarize_axes
 
 
 def test_summarize_axes_uses_axis_specific_denominators():
@@ -101,7 +101,7 @@ def test_summarize_axes_none_when_an_axis_has_no_epochs():
     assert ax.accuracy_rate == 1.0
 
 
-from tessera.report.render import bar
+from evalogy.report.render import bar
 
 
 def test_bar_full_empty_and_rounded_partial():
@@ -110,7 +110,7 @@ def test_bar_full_empty_and_rounded_partial():
     assert bar(0.67) == "███████░░░"   # round(6.7) == 7 filled
 
 
-from tessera.report.render import render_scorecard
+from evalogy.report.render import render_scorecard
 
 
 def _hdr(k=3, engine="llm"):
@@ -137,7 +137,7 @@ def test_render_scorecard_no_flaky_when_consistent():
     assert "⚠ flaky" not in out
 
 
-from tessera.report.render import render_axes
+from evalogy.report.render import render_axes
 
 
 def test_render_axes_table_with_na_for_missing_axis():
@@ -149,7 +149,7 @@ def test_render_axes_table_with_na_for_missing_axis():
     assert "Refusal" in out and "n/a" in out and "refuse probe-epochs (0)" in out
 
 
-from tessera.report.render import render_appendix
+from evalogy.report.render import render_appendix
 
 
 def test_render_appendix_lists_only_failures_with_missing_and_locator():
@@ -173,7 +173,7 @@ def test_render_appendix_clean_run_confirmation_line():
     assert "All 1 probes passed pass^3 — no diagnostics." in out
 
 
-from tessera.report import render_report  # re-exported from the package root
+from evalogy.report import render_report  # re-exported from the package root
 
 
 def test_render_report_assembles_all_sections_and_footer():
@@ -182,7 +182,7 @@ def test_render_report_assembles_all_sections_and_footer():
     cats = [CategoryReliability("none", 1, 1.0, 1.0)]
     axes = AxesSummary(1.0, 1.0, None, 3, 0, 3)
     out = render_report(hdr, 1.0, 1.0, cats, axes, [probe])
-    assert out.startswith("# Tessera Reliability Report")
+    assert out.startswith("# Evalogy Reliability Report")
     assert "**Model:** anthropic/claude-sonnet-4-6 · **Engine:** llm (grader: openai/gpt-4o)" in out
     assert "**Run:** 2026-06-03 · **Probes:** 1 × 3 epochs" in out
     assert "## Reliability — pass^3 (strict)" in out
@@ -192,7 +192,7 @@ def test_render_report_assembles_all_sections_and_footer():
     assert 'read_eval_log_sample("./logs/x.eval", "<probe_id>", epoch=N)' in out
 
 
-from tessera.report.log_adapter import eval_log_to_records
+from evalogy.report.log_adapter import eval_log_to_records
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
@@ -201,7 +201,7 @@ def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
     from inspect_ai.model import ModelConfig
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
-    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
                     task_args=(task_args if task_args is not None else {"judge": judge}),
                     model_roles=roles)
@@ -293,7 +293,7 @@ def test_header_records_harness_when_an_ensemble_shim_sets_it():
 
 def test_header_harness_defaults_to_single():
     # RunHeader.harness is ALWAYS populated (unlike the nullable API field): a log with no
-    # harness arg is a single-model run — every tessera_probes run is exactly that.
+    # harness arg is a single-model run — every evalogy_probes run is exactly that.
     header, _ = eval_log_to_records(_eval_log([_answer_sample()]))
     assert header.harness == "single"
 
@@ -318,7 +318,7 @@ def test_inspect_only_imported_by_adapter_and_cli():
     # "inspect_ai" (e.g. "No inspect_ai") does not count as a leak.
     import ast
     import pathlib
-    pkg = pathlib.Path(__file__).resolve().parents[1] / "src" / "tessera" / "report"
+    pkg = pathlib.Path(__file__).resolve().parents[1] / "src" / "evalogy" / "report"
     offenders = []
     for f in sorted(pkg.glob("*.py")):
         if f.name == "log_adapter.py":
@@ -361,8 +361,8 @@ def test_scorecard_single_render_is_byte_identical_to_golden():
     # must not perturb a single-model scorecard (ADR-0011). Literal diff, fixed-location log.
     from pathlib import Path
 
-    from tessera.report.render import render_markdown
-    from tessera.report.serialize import report_to_dict
+    from evalogy.report.render import render_markdown
+    from evalogy.report.serialize import report_to_dict
     golden = (Path(__file__).resolve().parents[1]
               / "tests/fixtures/scorecard_single.golden.txt").read_text()
     assert render_markdown(report_to_dict(_scorecard_log())) == golden
@@ -371,7 +371,7 @@ def test_scorecard_single_render_is_byte_identical_to_golden():
 
 def test_scorecard_discloses_harness_when_not_single():
     # An ensemble scorecard must say so — the same disclosure rule as the leaderboard.
-    from tessera.report.render import render_markdown
-    from tessera.report.serialize import report_to_dict
+    from evalogy.report.render import render_markdown
+    from evalogy.report.serialize import report_to_dict
     log = _scorecard_log(task_args={"judge": "deterministic", "harness": "ensemble"})
     assert "**Harness:** ensemble" in render_markdown(report_to_dict(log))

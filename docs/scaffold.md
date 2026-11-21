@@ -114,7 +114,7 @@ replicates:
 local, like all logs); anyone can recompute the digest:
 
 ```bash
-.venv/bin/python -c "import json; from tessera.factory.commit import verify; \
+.venv/bin/python -c "import json; from evalogy.factory.commit import verify; \
 r = json.load(open('logs/scaffold/holdout/REVEAL.json')); \
 print(verify(r['commitment_sha256'], r['seed'], r['salt'], r['factory_version']))"
 ```
@@ -140,10 +140,10 @@ to be.
 
 ```bash
 # one arm, one seed, one model — give the run its OWN org dir and an s*/ log dir:
-# parallel runs sharing the default /tmp/tessera/run would read each other's org
+# parallel runs sharing the default /tmp/evalogy/run would read each other's org
 # mid-run, and analyze.py pools logs/scaffold/s*/ only.
-TESSERA_OUT=/tmp/tessera/scaffold_s0_refusal_aware_sonnet \
-.venv/bin/inspect eval src/tessera/evals/task.py@tessera_probes \
+EVALOGY_OUT=/tmp/evalogy/scaffold_s0_refusal_aware_sonnet \
+.venv/bin/inspect eval src/evalogy/evals/task.py@evalogy_probes \
   --model anthropic/claude-sonnet-4-6 -T org=meridian -T k=3 -T seed=0 \
   -T scaffold=refusal_aware --log-dir logs/scaffold/s0_refusal_aware_sonnet
 # the full matrix + paired analysis (per-type tables, overall + H1₂ subset McNemar).

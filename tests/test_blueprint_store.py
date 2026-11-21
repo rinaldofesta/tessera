@@ -2,8 +2,8 @@
 
 import pytest
 
-from tessera.api import blueprint_store as bs
-from tessera.orgs import get_blueprint
+from evalogy.api import blueprint_store as bs
+from evalogy.orgs import get_blueprint
 
 
 def test_round_trip_preserves_blueprint(tmp_path):

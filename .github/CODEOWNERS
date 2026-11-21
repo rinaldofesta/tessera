@@ -2,6 +2,6 @@
 * @rinaldofesta
 
 # The scorer and the benchmark protocol are the published numbers' foundation.
-/src/tessera/evals/ @rinaldofesta
-/src/tessera/examples/ @rinaldofesta
+/src/evalogy/evals/ @rinaldofesta
+/src/evalogy/examples/ @rinaldofesta
 /docs/adr/ @rinaldofesta

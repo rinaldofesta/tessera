@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 
 def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
@@ -13,7 +13,7 @@ def _eval_log(samples, *, judge="llm", epochs=3, grader="openai/gpt-4o",
     from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec
     from inspect_ai.model import ModelConfig
     roles = {"grader": ModelConfig(model=grader)} if grader else {}
-    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-03T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model=model, config=EvalConfig(epochs=epochs),
                     task_args={"judge": judge}, model_roles=roles)
     return EvalLog(eval=spec, samples=samples, location=location)
@@ -66,7 +66,7 @@ def _client(tmp_path, *, folder_eval_runner=None):
 
 
 def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
-    from tessera.store import RunStore as FolderRunStore
+    from evalogy.store import RunStore as FolderRunStore
 
     home = tmp_path / "home"
     store = FolderRunStore(home, examples=tmp_path / "examples")
@@ -91,9 +91,9 @@ def test_app_reconciles_interrupted_folder_runs_at_startup(tmp_path, caplog):
 
 
 def test_default_published_models_match_cloud_single_model_leaderboard(monkeypatch):
-    from tessera.catalog import published_models
+    from evalogy.catalog import published_models
 
-    monkeypatch.delenv("TESSERA_MODELS", raising=False)
+    monkeypatch.delenv("EVALOGY_MODELS", raising=False)
     rows_path = Path(__file__).parents[1] / "docs" / "leaderboard.rows.json"
     rows = json.loads(rows_path.read_text())["rows"]
     expected = {
@@ -110,7 +110,7 @@ def test_every_api_route_declares_a_response_model(tmp_path):
     # the hand-maintained-types drift this guard exists to close.
     from fastapi.routing import APIRoute
 
-    from tessera.api.app import create_app
+    from evalogy.api.app import create_app
     def api_routes(node):
         # Walk recursively via original_router: newer FastAPI keeps included routers as
         # lazy _IncludedRouter entries instead of flattening their routes into
@@ -246,7 +246,7 @@ def test_run_archive_round_trip_and_bundled_conflict(tmp_path):
 
 def test_run_import_returns_completed_payload(tmp_path):
     client = _client(tmp_path)
-    source = Path("src/tessera/data/examples/first-contact/log.eval")
+    source = Path("src/evalogy/data/examples/first-contact/log.eval")
     with source.open("rb") as handle:
         response = client.post(
             "/api/runs/import",
@@ -329,7 +329,7 @@ def test_blueprint_create_invalid_400(tmp_path):
 
 
 def test_blueprint_invalid_source_is_located_before_saving_or_seeding(tmp_path):
-    from tessera.examples import ORGS
+    from evalogy.examples import ORGS
 
     client = _client(tmp_path)
     suite = ORGS["toy"]().model_dump(by_alias=True)

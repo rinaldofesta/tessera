@@ -1,9 +1,9 @@
 # tests/test_factory_validate.py
 import pytest
 
-from tessera.examples.meridian_org import build_meridian_blueprint
-from tessera.factory.validate import VariantInvariantError, assert_variant_invariants
-from tessera.models import Blueprint
+from evalogy.examples.meridian_org import build_meridian_blueprint
+from evalogy.factory.validate import VariantInvariantError, assert_variant_invariants
+from evalogy.models import Blueprint
 
 
 def test_meridian_passes_all_gates():

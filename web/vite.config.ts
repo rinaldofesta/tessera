@@ -18,7 +18,7 @@ export default defineConfig({
       "/api": { target: DEV_API_TARGET, changeOrigin: true },
     },
   },
-  build: { outDir: "../src/tessera/data/web", emptyOutDir: true },
+  build: { outDir: "../src/evalogy/data/web", emptyOutDir: true },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],

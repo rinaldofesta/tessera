@@ -173,7 +173,7 @@ describe("SuiteSheet", () => {
 
   it("shows the user-owned suite path in the footer", async () => {
     renderSheet("/?edit=customer-care");
-    expect(await screen.findByText(/~\/\.tessera\/suites\/customer-care\.json/)).toHaveTextContent("edit it in any editor");
+    expect(await screen.findByText(/~\/\.evalogy\/suites\/customer-care\.json/)).toHaveTextContent("edit it in any editor");
   });
 
   it("asks before discarding an unsaved scenario when switching suites", async () => {

@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Questions & results discussion
-    url: https://github.com/rinaldofesta/tessera/discussions
+    url: https://github.com/rinaldofesta/evalogy/discussions
     about: Benchmark results, methodology questions, "should this refuse?" debates.
   - name: Security report (private)
-    url: https://github.com/rinaldofesta/tessera/security/advisories/new
+    url: https://github.com/rinaldofesta/evalogy/security/advisories/new
     about: Please report security issues privately, never as a public issue.

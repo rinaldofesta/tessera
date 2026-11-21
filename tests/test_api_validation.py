@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from tests.helpers.credential_scan import find_credential_like_values
 
-from tessera.api.app import create_app
+from evalogy.api.app import create_app
 
 SENTINEL = "sk-" + "S3NT1NEL" * 4
 
@@ -68,7 +68,7 @@ def test_deterministic_judge_rejects_a_grader(tmp_path):
 
 
 def test_a_model_only_request_uses_deterministic_defaults(tmp_path):
-    from tessera.contract import RunSpec
+    from evalogy.contract import RunSpec
 
     assert _client(tmp_path).post("/api/runs", json={"model": "ollama/test"}).status_code == 200
     request = RunSpec(model="ollama/test")
@@ -78,7 +78,7 @@ def test_a_model_only_request_uses_deterministic_defaults(tmp_path):
 
 
 def test_run_request_scaffolds_are_supported_by_the_task():
-    from tessera.contract import RunSpec
-    from tessera.evals.task import _SCAFFOLDS
+    from evalogy.contract import RunSpec
+    from evalogy.evals.task import _SCAFFOLDS
 
     assert RunSpec.model_fields["scaffold"].default in _SCAFFOLDS

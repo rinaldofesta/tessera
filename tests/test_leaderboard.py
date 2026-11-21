@@ -1,12 +1,12 @@
-"""Key-free tests for the leaderboard generator (report.leaderboard + tessera CLI).
+"""Key-free tests for the leaderboard generator (report.leaderboard + evalogy CLI).
 The pure module consumes report_to_dict-shaped dicts; only the CLI test
 fabricates an EvalLog on disk — no model calls, no network."""
 
 import pytest
 from typer.testing import CliRunner
 
-from tessera.cli import app
-from tessera.report.leaderboard import leaderboard_rows, render_leaderboard
+from evalogy.cli import app
+from evalogy.report.leaderboard import leaderboard_rows, render_leaderboard
 
 
 def _report(model="anthropic/claude-sonnet-4-6", org="meridian", k=3,
@@ -153,7 +153,7 @@ def _fabricated_eval_log():
                           "scorer_version": "det-4"})})
         for e in (1, 2, 3)
     ]
-    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="tessera_probes",
+    spec = EvalSpec(created="2026-06-12T10:00:00+00:00", task="evalogy_probes",
                     dataset=EvalDataset(), model="anthropic/claude-sonnet-4-6",
                     config=EvalConfig(epochs=3),
                     task_args={"judge": "deterministic", "org": "meridian", "k": 3})

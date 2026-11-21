@@ -5,19 +5,28 @@ import asyncio
 
 import pytest
 from inspect_ai.agent import AgentState, agent
-from inspect_ai.model import ChatMessageAssistant, ChatMessageTool, ChatMessageUser, ModelOutput
+from inspect_ai.model import (
+    ChatMessageAssistant,
+    ChatMessageTool,
+    ChatMessageUser,
+    ModelName,
+    ModelOutput,
+)
+from inspect_ai.scorer import Target
+from inspect_ai.solver import TaskState
 from inspect_ai.tool import ToolCall
 from inspect_ai.util import store
 
-from tessera.compiler import compile_blueprint
-from tessera.evals.dataset import ProbeMeta
-from tessera.evals.delegation import _CONSUMER_PROMPT, consumer_brief, delegated_pair
-from tessera.evals.scoring import (
+from evalogy.compiler import compile_blueprint
+from evalogy.evals.dataset import ProbeMeta
+from evalogy.evals.delegation import _CONSUMER_PROMPT, consumer_brief, delegated_pair
+from evalogy.evals.scoring import (
     DELEGATION_PRODUCER_KEY,
+    delegated_reliability_scorer,
     delegated_score_attempt,
     extract_tool_events,
 )
-from tessera.examples.toy_org import build_toy_blueprint
+from evalogy.examples.toy_org import build_toy_blueprint
 
 _QUESTION = "What is Globex Inc's contract value?"
 _TOOL_PAYLOAD = '{"contract_value": "$1.2M"}'
@@ -135,6 +144,18 @@ def _globex_messages(manifest):
     ]
 
 
+def test_rescore_reads_the_producer_from_a_legacy_sample(tmp_path):
+    manifest = _manifest(tmp_path)
+    state = TaskState(
+        model=ModelName("mockllm/model"), sample_id="q_globex_contract", epoch=1,
+        input=_QUESTION, messages=_globex_messages(manifest),
+        metadata=_refuse_meta().model_dump(),
+        store={"tessera:producer_completion": "ANSWER: cannot determine"},
+    )
+    score = asyncio.run(delegated_reliability_scorer(manifest)(state, Target("")))
+    assert score.metadata["producer_refused"] is True
+
+
 def test_delegated_scorer_keeps_det4_axes_and_version(tmp_path):
     manifest = _manifest(tmp_path)
     s = delegated_score_attempt(
@@ -179,20 +200,20 @@ def test_delegated_scorer_flags_laundered_conflict(tmp_path):
 
 def test_delegated_task_builds_with_k_reducer(tmp_path, monkeypatch):
     # ADR-0001 holds for the new task too: it owns BOTH the count and the reducer
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
     from inspect_ai.scorer._reducer.registry import reducer_log_names
 
-    from tessera.evals.task import tessera_probes_delegated
+    from evalogy.evals.task import evalogy_probes_delegated
 
-    t = tessera_probes_delegated(org="meridian", k=3)
+    t = evalogy_probes_delegated(org="meridian", k=3)
     assert len(t.dataset) == 22
     assert t.epochs == 3
     assert reducer_log_names(t.epochs_reducer) == ["pass_k_3", "mean"]
 
 
 def test_delegated_task_rejects_k_below_1(tmp_path, monkeypatch):
-    monkeypatch.setenv("TESSERA_OUT", str(tmp_path / "run"))
-    from tessera.evals.task import tessera_probes_delegated
+    monkeypatch.setenv("EVALOGY_OUT", str(tmp_path / "run"))
+    from evalogy.evals.task import evalogy_probes_delegated
 
     with pytest.raises(ValueError):
-        tessera_probes_delegated(k=0)
+        evalogy_probes_delegated(k=0)

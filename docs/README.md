@@ -1,4 +1,4 @@
-# Tessera documentation
+# Evalogy documentation
 
 Start with the field guide, then go as deep as the question needs.
 
@@ -11,9 +11,9 @@ Start with the field guide, then go as deep as the question needs.
 | [`delegation.md`](delegation.md) | Reliability under delegation (ADR-0007): producer researches, consumer commits. |
 | [`validation.md`](validation.md), [`validation-preregistration.md`](validation-preregistration.md) | The synthetic-to-real transfer question and the pre-registered study that will answer it. |
 | [`roadmap.md`](roadmap.md) | What shipped, in order, with evidence, and what is next. |
-| [`related-work.md`](related-work.md) | Where Tessera sits among the MCP benchmarks. |
+| [`related-work.md`](related-work.md) | Where Evalogy sits among the MCP benchmarks. |
 | [`extending-silos.md`](extending-silos.md) | Adding a silo type from your own package through the entry-point group. |
-| [`adr/`](adr/) | Fourteen decisions on record, one file each. |
-| [`tessera-lesson.html`](tessera-lesson.html) | The interactive lesson the app serves at `/learn`. |
+| [`adr/`](adr/) | The project decisions, one per file. |
+| [`evalogy-lesson.html`](evalogy-lesson.html) | The interactive lesson the app serves at `/learn`. |
 
-The same material, shorter, is inside the CLI: `tessera guide` lists six topics. Coding agents get the operating contract in [`../AGENTS.md`](../AGENTS.md) and the skills under [`../skills/`](../skills/).
+The same material, shorter, is inside the CLI: `evalogy guide` lists six topics. Coding agents get the operating contract in [`../AGENTS.md`](../AGENTS.md) and the skills under [`../skills/`](../skills/).

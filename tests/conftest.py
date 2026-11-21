@@ -8,16 +8,16 @@ import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _isolated_tessera_home(tmp_path_factory):
-    """No test may read or write the user's real ~/.tessera tree."""
-    test_home = tmp_path_factory.mktemp("tessera-home")
-    previous = os.environ.get("TESSERA_HOME")
-    os.environ["TESSERA_HOME"] = str(test_home)
+def _isolated_evalogy_home(tmp_path_factory):
+    """No test may read or write the user's real ~/.evalogy tree."""
+    test_home = tmp_path_factory.mktemp("evalogy-home")
+    previous = os.environ.get("EVALOGY_HOME")
+    os.environ["EVALOGY_HOME"] = str(test_home)
     yield test_home
     if previous is None:
-        os.environ.pop("TESSERA_HOME", None)
+        os.environ.pop("EVALOGY_HOME", None)
     else:
-        os.environ["TESSERA_HOME"] = previous
+        os.environ["EVALOGY_HOME"] = previous
 
 
 @pytest.fixture(autouse=True)
@@ -28,6 +28,6 @@ def _no_real_eval(monkeypatch):
     process-wide eval lock for ten minutes while inspect retried an absent Ollama)."""
     def refuse(**_kwargs):
         raise AssertionError(
-            "a test reached tessera.runner._default_eval — inject eval_fn or folder_eval_runner"
+            "a test reached evalogy.runner._default_eval — inject eval_fn or folder_eval_runner"
         )
-    monkeypatch.setattr("tessera.runner._default_eval", refuse)
+    monkeypatch.setattr("evalogy.runner._default_eval", refuse)
