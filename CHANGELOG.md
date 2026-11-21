@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- A suite whose source name is not a safe, registered identifier is rejected when it is
+  loaded. Before, a crafted name made the compiler write outside its output directory.
+- The compiler refuses a link that leaves the output directory before its first write, and
+  the CRM lookup and the document tools do not follow one.
+
+### Fixed
+
+- The README installs Tessera from its repository. It pointed to `tessera-eval` on PyPI,
+  which is an unrelated project.
+
 ## [0.3.0] - 2026-09-02
 
 ### Added
