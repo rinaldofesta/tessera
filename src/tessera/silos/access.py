@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from tessera.paths import contained_target
+
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
@@ -18,8 +20,9 @@ def crm_lookup_record(out_dir: str | Path, account_name: str,
     actually returned (det-4). A requested name that does not exist is reported under
     '_unknown_fields' together with the record's '_available_fields', so a wrong guess
     is recoverable and '{}' is never ambiguous with "field is empty"."""
-    db_path = Path(out_dir) / "crm" / "db.json"
-    if not db_path.exists():
+    out = Path(out_dir).resolve()
+    db_path = contained_target(out, out / "crm" / "db.json")
+    if db_path is None or not db_path.is_file():
         return None
     db = json.loads(db_path.read_text())
     record = db.get(account_name)
@@ -40,15 +43,18 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
     index titles/paths alongside body text and match on terms -- not on the whole query
     as one literal substring (which essentially never matches a natural-language query).
     """
-    docs_dir = Path(out_dir) / "docs"
-    if not docs_dir.exists():
+    docs_dir = Path(out_dir).resolve() / "docs"
+    if docs_dir.is_symlink():
         return []
     terms = {t for t in _TOKEN_RE.findall(query.lower()) if len(t) >= 3}
     if not terms:
         return []
     ranked: list[tuple[int, str, dict[str, str]]] = []
     for md in sorted(docs_dir.glob("*.md")):
-        body = md.read_text()
+        target = contained_target(docs_dir, md)
+        if target is None or not target.is_file():
+            continue
+        body = target.read_text()
         haystack = f"{md.name}\n{body}".lower()
         score = sum(1 for t in terms if t in haystack)
         if score:
@@ -67,14 +73,10 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
 
 def docs_get_file(out_dir: str | Path, path: str) -> str:
     """Return a Docs file's content. `path` is relative to out_dir (e.g. 'docs/x.md')."""
-    # Path-traversal guard: resolve() collapses any '..' segments, then we require the
-    # resolved target to live under docs_root. This blocks a malicious path like
-    # '../../etc/passwd' or a doc symlinking out of the org from being read.
     out = Path(out_dir).resolve()
-    target = (out / path).resolve()
-    docs_root = (out / "docs").resolve()
-    if docs_root not in target.parents and target != docs_root:
+    target = contained_target(out / "docs", out / path)
+    if target is None:
         raise ValueError(f"refusing to read outside docs/: {path!r}")
-    if not target.exists():
+    if not target.is_file():
         raise ValueError(f"no such doc: {path!r}")
     return target.read_text()

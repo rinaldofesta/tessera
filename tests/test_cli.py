@@ -330,6 +330,36 @@ def test_validate_invalid_saved_suite_by_name_reports_its_issue():
     assert result.exit_code == 3 and "probes.0.question:" in result.stdout
 
 
+@pytest.mark.parametrize(("filename", "ref"), [("toy", "starter"), ("custom", "custom")])
+def test_invalid_saved_source_is_located_and_blocks_run(filename, ref, tmp_path):
+    from tessera.examples import ORGS
+
+    suite = ORGS["toy"]().model_dump(by_alias=True)
+    suite["claims"][0]["silo"] = "bad.name"
+    store = tmp_path / "home" / "suites"
+    store.mkdir(parents=True)
+    path = store / f"{filename}.json"
+    path.write_text(json.dumps(suite))
+
+    for address in (str(path), ref):
+        result = RUNNER.invoke(app, ["validate", address, "--json"])
+        assert result.exit_code == 3
+        assert _json(result)["issues"][0]["location"] == "claims.0.silo"
+    plan = RUNNER.invoke(app, ["run", "--model", "ollama/test", "--suite", ref,
+                               "--dry-run", "--json"])
+    assert _json(plan)["ready"] is False
+    assert "claims.0.silo" in _json(plan)["blockers"][0]["message"]
+
+
+def test_seeded_meridian_plans_with_its_generated_blueprint(tmp_path):
+    store = tmp_path / "home" / "suites"
+    store.mkdir(parents=True)
+    (store / "meridian.json").write_text('{"claims": [{}]}')
+    result = RUNNER.invoke(app, ["run", "--model", "ollama/test", "--suite", "meridian",
+                                "--seed", "1", "--dry-run", "--json"])
+    assert _json(result)["ready"] is True
+
+
 def test_leaderboard_render_matches_committed_markdown_and_verify_passes():
     repo = Path(__file__).parents[1]
     manifest = repo / "docs" / "leaderboard.rows.json"

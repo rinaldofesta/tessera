@@ -36,6 +36,17 @@ def test_field_claim_constructs_and_exposes_render_as():
     assert claim.render.as_ == RenderAs.field
 
 
+@pytest.mark.parametrize("silo", ["", "-docs", "_docs", "docs.json", "docs\n", "café"])
+def test_silo_must_be_a_safe_identifier(silo):
+    with pytest.raises(ValidationError, match="ASCII letter or digit"):
+        _field_claim(silo=silo)
+
+
+def test_valid_identifier_requires_a_registered_silo():
+    with pytest.raises(ValidationError, match="no silo type '2nd_Source-A' registered"):
+        _field_claim(silo="2nd_Source-A")
+
+
 def test_prose_claim_requires_a_template():
     with pytest.raises(ValidationError):
         Claim(

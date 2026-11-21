@@ -7,6 +7,7 @@ users can build and inspect datasets with zero credentials.
 from __future__ import annotations
 
 from fastapi import APIRouter, Body, HTTPException, Request
+from pydantic import ValidationError
 
 from tessera.api import blueprint_store
 from tessera.api import responses as R
@@ -28,9 +29,14 @@ def list_blueprints(request: Request):
 
 @router.get("/api/blueprints/{blueprint_id}", response_model=Blueprint)
 def get_blueprint(blueprint_id: str, request: Request):
-    blueprint_store.seed_from_orgs(request.app.state.blueprint_dir)  # built-ins fetchable by id
+    store = request.app.state.blueprint_dir
     try:
-        bp = blueprint_store.get_blueprint(request.app.state.blueprint_dir, blueprint_id)
+        bp = blueprint_store.get_blueprint(store, blueprint_id)
+        if bp is None:
+            blueprint_store.seed_from_orgs(store)
+            bp = blueprint_store.get_blueprint(store, blueprint_id)
+    except ValidationError as exc:
+        raise HTTPException(400, detail=blueprint_store.validation_issues(exc)) from exc
     except blueprint_store.BlueprintStoreError as exc:
         raise HTTPException(400, str(exc)) from exc
     if bp is None:

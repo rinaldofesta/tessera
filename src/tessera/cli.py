@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 import threading
 import webbrowser
@@ -29,6 +28,7 @@ from tessera.errors import (
     SpecError,
     TesseraError,
 )
+from tessera.models import SAFE_NAME
 from tessera.report.compare import compare_reports
 from tessera.report.leaderboard import (
     _is_safe_repo_relative_path,
@@ -308,9 +308,6 @@ def guide(
         typer.echo(content, nl=False)
 
 
-_SUITE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
-
-
 @app.command("init")
 @_guard
 def init_suite(
@@ -325,7 +322,7 @@ def init_suite(
     from tessera.models import Blueprint
 
     reserved = {*BUILTIN_SUITES, *SUITE_ALIASES}
-    if not _SUITE_NAME.fullmatch(name):
+    if not SAFE_NAME.fullmatch(name):
         raise SpecError("NAME must start with a letter or digit and use only letters, digits, '-' and '_'")
     if name in reserved:
         raise SpecError(f"suite name '{name}' is reserved for a builtin suite or alias")
@@ -355,35 +352,30 @@ def init_suite(
 
 
 def _suite_data(ref: str, context: Context) -> tuple[str, object, list[dict[str, str]]]:
-    from tessera import orgs
+    from tessera.api import blueprint_store
+    from tessera.examples import ORGS
 
     path = Path(ref)
-    if path.suffix == ".json":
-        if not path.is_file():
-            raise SpecError(f"suite file not found: {path}")
+    name = path.stem
+    if path.suffix != ".json":
+        name = catalog_module.SUITE_ALIASES.get(ref, ref)
+        org = catalog_module.BUILTIN_SUITES.get(name, {}).get("org", name)
         try:
-            return path.stem, json.loads(path.read_text(encoding="utf-8")), []
-        except json.JSONDecodeError as exc:
-            return path.stem, None, [
-                {
-                    "location": f"line {exc.lineno} column {exc.colno}",
-                    "message": exc.msg,
-                }
-            ]
-        except OSError as exc:
-            raise SpecError(f"cannot read suite file: {path} ({exc})") from None
-
+            path = blueprint_store.blueprint_path(context.suites_dir, org)
+        except blueprint_store.BlueprintStoreError as exc:
+            raise SpecError(str(exc)) from None
+        if not path.exists():
+            if org in ORGS:
+                return name, ORGS[org]().model_dump(by_alias=True), []
+            raise SpecError(f"unknown suite '{ref}'")
+    if not path.is_file():
+        raise SpecError(f"suite file not found: {path}")
     try:
-        suite, _ = catalog_module.resolve_suite(ref, suites_dir=context.suites_dir)
-    except SpecError:
-        # An invalid saved suite is deliberately absent from the catalog; still surface
-        # its located validation issues when the user validates it by name.
-        saved = context.suites_dir / f"{ref}.json"
-        if saved.is_file():
-            return _suite_data(str(saved), context)
-        raise
-    blueprint = orgs.get_blueprint(suite["org"], store_dir=context.suites_dir)
-    return suite["name"], blueprint.model_dump(by_alias=True), []
+        return name, json.loads(path.read_text(encoding="utf-8")), []
+    except json.JSONDecodeError as exc:
+        return name, None, [{"location": f"line {exc.lineno} column {exc.colno}", "message": exc.msg}]
+    except OSError as exc:
+        raise SpecError(f"cannot read suite file: {path} ({exc})") from None
 
 
 @app.command()

@@ -31,6 +31,25 @@ def test_crm_lookup_missing_account_returns_none(out):
     assert crm_lookup_record(out, "Beta Corp") is None
 
 
+def test_crm_lookup_only_follows_links_inside_linked_output_root(tmp_path):
+    store = tmp_path / "store"
+    store.mkdir()
+    out = tmp_path / "org"
+    out.symlink_to(store, target_is_directory=True)
+    compile_blueprint(build_toy_blueprint(), out)
+    db = store / "crm" / "db.json"
+    backup = db.with_name("backup.json")
+    db.rename(backup)
+    db.symlink_to(backup)
+    assert crm_lookup_record(out, "Acme Corp")["tier"]["value"] == "Gold"
+
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"Acme Corp": {"tier": "external"}}')
+    db.unlink()
+    db.symlink_to(outside)
+    assert crm_lookup_record(out, "Acme Corp") is None
+
+
 def test_crm_lookup_filters_to_requested_fields(out):
     # det-4: the agent can fetch just the fields it needs; provenance follows the response
     rec = crm_lookup_record(out, "Acme Corp", fields=["tier"])
@@ -67,6 +86,33 @@ def test_docs_get_file_returns_body_text(out):
 def test_docs_get_file_rejects_path_outside_docs(out):
     with pytest.raises(ValueError):
         docs_get_file(out, "../crm/db.json")
+
+
+def test_docs_search_and_read_only_follow_links_inside_docs(tmp_path):
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (tmp_path / "other.md").touch()
+    (docs / "external.md").symlink_to(tmp_path / "other.md")
+    (docs / "note.md").write_text("meeting")
+    (docs / "internal.md").symlink_to("note.md")
+
+    assert docs_search(tmp_path, "external internal") == [
+        {"path": "docs/internal.md", "excerpt": "meeting"},
+    ]
+    with pytest.raises(ValueError, match="outside docs"):
+        docs_get_file(tmp_path, "docs/external.md")
+    assert docs_get_file(tmp_path, "docs/internal.md") == "meeting"
+
+
+def test_docs_root_cannot_redirect_reads(tmp_path):
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "note.md").touch()
+    (tmp_path / "docs").symlink_to(other, target_is_directory=True)
+
+    assert docs_search(tmp_path, "note") == []
+    with pytest.raises(ValueError, match="outside docs"):
+        docs_get_file(tmp_path, "docs/note.md")
 
 
 def test_docs_search_finds_note_with_natural_language_query(out):

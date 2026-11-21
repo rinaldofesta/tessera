@@ -8,17 +8,12 @@ imports flow one way: this module imports both; `factory` imports `examples`;
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 
 from tessera import paths
 from tessera.examples import ORGS
 from tessera.factory.generate import generate_variant
-from tessera.models import Blueprint
-
-# org/blueprint name must be a safe identifier — `name` is user-controlled (RunSpec.suite
-# flows here via the eval task), so this guards the JSON-store lookup against path traversal.
-_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+from tessera.models import SAFE_NAME, Blueprint
 
 
 def _store_dir() -> Path:
@@ -44,7 +39,7 @@ def get_blueprint(name: str, seed: int = 0, *, store_dir: Path | None = None) ->
         if name != "meridian":
             raise ValueError(f"seed addressing is only supported for 'meridian', not {name!r}")
         return generate_variant(seed)
-    if not _SAFE_NAME.match(name or ""):
+    if not SAFE_NAME.fullmatch(name or ""):
         raise ValueError(f"invalid org name {name!r}")
     base = (store_dir if store_dir is not None else _store_dir()).resolve()
     path = (base / f"{name}.json").resolve()

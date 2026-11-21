@@ -1,9 +1,11 @@
 import json
 
-import tessera.compiler as compiler_mod
-from tessera.compiler import build_artifacts, compile_blueprint
+import pytest
+
+from tessera.compiler import build_artifacts, compile_blueprint, write_artifacts
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.models import Claim
+from tessera.silos import registry as silo_types
 from tessera.silos.builtin import CRM, DOCS
 from tessera.silos.registry import SiloRegistry, SiloType
 
@@ -40,20 +42,20 @@ def _registry_with(*extra):
 
 
 def test_no_plugins_key_for_builtin_only_blueprints(monkeypatch):
-    monkeypatch.setattr(compiler_mod, "silo_registry", _registry_with())
+    monkeypatch.setattr(silo_types, "registry", _registry_with())
     art = build_artifacts(build_toy_blueprint())
     assert set(art) == {"manifest", "silos", "docs"}
 
 
 def test_manifest_order_preserved_for_builtin_only_blueprints(monkeypatch):
-    monkeypatch.setattr(compiler_mod, "silo_registry", _registry_with())
+    monkeypatch.setattr(silo_types, "registry", _registry_with())
     bp = build_toy_blueprint()
     art = build_artifacts(bp)
     assert list(art["manifest"]) == [c.claim_id for c in bp.claims]
 
 
 def test_custom_build_collects_payload_and_manifest(monkeypatch):
-    monkeypatch.setattr(compiler_mod, "silo_registry", _registry_with(_notes_silo_type()))
+    monkeypatch.setattr(silo_types, "registry", _registry_with(_notes_silo_type()))
     bp = build_toy_blueprint().model_copy(deep=True)
     bp.claims.append(
         Claim(claim_id="note.1", subject="Acme Corp", predicate="note",
@@ -65,7 +67,7 @@ def test_custom_build_collects_payload_and_manifest(monkeypatch):
 
 
 def test_custom_write_called_on_compile(monkeypatch, tmp_path):
-    monkeypatch.setattr(compiler_mod, "silo_registry", _registry_with(_notes_silo_type()))
+    monkeypatch.setattr(silo_types, "registry", _registry_with(_notes_silo_type()))
     bp = build_toy_blueprint().model_copy(deep=True)
     bp.claims.append(
         Claim(claim_id="note.1", subject="Acme Corp", predicate="note",
@@ -73,3 +75,32 @@ def test_custom_write_called_on_compile(monkeypatch, tmp_path):
     )
     compile_blueprint(bp, tmp_path)
     assert json.loads((tmp_path / "notes" / "notes.json").read_text()) == {"note.1": "check SLA"}
+
+
+def test_unknown_source_after_loading_writes_no_partial_org(tmp_path):
+    bp = build_toy_blueprint()
+    bp.claims[-1] = bp.claims[-1].model_copy(update={"silo": "missing-silo"})
+    with pytest.raises(silo_types.UnknownSiloTypeError, match="missing-silo"):
+        compile_blueprint(bp, tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("linked", ["notes", "notes/nested/file.json"])
+def test_plugin_tree_checked_before_any_writer_runs(monkeypatch, tmp_path, linked):
+    monkeypatch.setattr(silo_types, "registry", _registry_with(_notes_silo_type()))
+    artifacts = build_artifacts(build_toy_blueprint())
+    artifacts["plugins"] = {"notes": {"note.1": "check SLA"}}
+    out = tmp_path / "org"
+    link = out / linked
+    link.parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError) as error:
+        write_artifacts(artifacts, out)
+
+    assert linked in str(error.value)
+    assert list(out.iterdir()) == [out / "notes"]
+    assert not (out / "notes" / "notes.json").exists()
+    assert list(outside.iterdir()) == []

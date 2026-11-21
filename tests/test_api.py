@@ -326,3 +326,24 @@ def test_blueprint_create_invalid_400(tmp_path):
            "conflict_type": "void", "expected_behavior": "answer"}]}  # void must refuse
     r = c.post("/api/blueprints", json={"id": "bad", "blueprint": bad})
     assert r.status_code == 400
+
+
+def test_blueprint_invalid_source_is_located_before_saving_or_seeding(tmp_path):
+    from tessera.examples import ORGS
+
+    client = _client(tmp_path)
+    suite = ORGS["toy"]().model_dump(by_alias=True)
+    suite["claims"][0]["silo"] = "bad.name"
+    response = client.post("/api/blueprints", json={"id": "mine", "blueprint": suite})
+    assert response.status_code == 400
+    assert response.json()["detail"][0]["location"] == "claims.0.silo"
+    store = tmp_path / "blueprints"
+    assert not store.exists()
+
+    store.mkdir()
+    saved = store / "mine.json"
+    saved.write_text(json.dumps(suite))
+    response = client.get("/api/blueprints/mine")
+    assert response.status_code == 400
+    assert response.json()["detail"][0]["location"] == "claims.0.silo"
+    assert list(store.iterdir()) == [saved]

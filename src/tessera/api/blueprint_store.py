@@ -9,21 +9,20 @@ in on first read so they show up immediately and editably.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
-from tessera.models import Blueprint
+from pydantic import ValidationError
 
-_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+from tessera.models import SAFE_NAME, Blueprint
 
 
 class BlueprintStoreError(Exception):
     """Expected, user-facing store failure (bad id, missing, conflict)."""
 
 
-def _safe_path(store_dir: str | Path, blueprint_id: str) -> Path:
+def blueprint_path(store_dir: str | Path, blueprint_id: str) -> Path:
     """Resolve an id to a path inside store_dir; reject anything path-traversal-y."""
-    if not _ID.match(blueprint_id or ""):
+    if not SAFE_NAME.fullmatch(blueprint_id or ""):
         raise BlueprintStoreError(
             f"invalid blueprint id {blueprint_id!r} (use letters, digits, '-' and '_')")
     base = Path(store_dir)
@@ -59,21 +58,21 @@ def list_blueprints(store_dir: str | Path, *, seed: bool = True) -> list[dict]:
 
 
 def get_blueprint(store_dir: str | Path, blueprint_id: str) -> Blueprint | None:
-    path = _safe_path(store_dir, blueprint_id)
+    path = blueprint_path(store_dir, blueprint_id)
     if not path.exists():
         return None
     return Blueprint.model_validate_json(path.read_text())
 
 
 def save_blueprint(store_dir: str | Path, blueprint_id: str, blueprint: Blueprint) -> None:
-    path = _safe_path(store_dir, blueprint_id)
+    path = blueprint_path(store_dir, blueprint_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     # by_alias so Render.as_ serializes as "as" and round-trips cleanly.
     path.write_text(json.dumps(blueprint.model_dump(by_alias=True), indent=2) + "\n")
 
 
 def delete_blueprint(store_dir: str | Path, blueprint_id: str) -> bool:
-    path = _safe_path(store_dir, blueprint_id)
+    path = blueprint_path(store_dir, blueprint_id)
     if not path.exists():
         return False
     path.unlink()
@@ -81,27 +80,26 @@ def delete_blueprint(store_dir: str | Path, blueprint_id: str) -> bool:
 
 
 def exists(store_dir: str | Path, blueprint_id: str) -> bool:
-    return _safe_path(store_dir, blueprint_id).exists()
+    return blueprint_path(store_dir, blueprint_id).exists()
+
+
+def validation_issues(exc: ValidationError) -> list[dict[str, str]]:
+    return [
+        {"location": ".".join(map(str, error["loc"])), "message": error["msg"]}
+        for error in exc.errors()
+    ]
 
 
 def validate_and_build(data: dict) -> tuple[Blueprint | None, list[dict[str, str]]]:
     """(blueprint, errors): validate the Pydantic shape and compile it without writing
     artifacts, keeping the built model for callers that need it — so a caller that wants
     both the validated model and the errors doesn't have to re-parse the same payload."""
-    from pydantic import ValidationError
-
     from tessera.compiler import build_artifacts
 
     try:
         blueprint = Blueprint.model_validate(data)
     except ValidationError as exc:
-        return None, [
-            {
-                "location": ".".join(str(part) for part in error["loc"]),
-                "message": error["msg"],
-            }
-            for error in exc.errors()
-        ]
+        return None, validation_issues(exc)
     try:
         build_artifacts(blueprint)
     except ValueError as exc:

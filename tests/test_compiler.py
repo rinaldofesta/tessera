@@ -7,8 +7,10 @@ bridge that lets the scorer resolve a ToolEvent to a specific claim.
 """
 
 import json
+from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from tessera.compiler import compile_blueprint
 from tessera.models import Blueprint, Claim
@@ -54,6 +56,18 @@ def _toy_blueprint() -> Blueprint:
             ),
         ]
     )
+
+
+def test_unsafe_source_is_rejected_before_any_write(tmp_path):
+    suite = _toy_blueprint().model_dump(by_alias=True)
+    suite["claims"][-1]["silo"] = "../escaped"
+
+    with patch("tessera.compiler.write_artifacts") as writer:
+        with pytest.raises(ValidationError) as error:
+            compile_blueprint(Blueprint.model_validate(suite), tmp_path / "org")
+        writer.assert_not_called()
+    assert error.value.errors()[0]["loc"] == ("claims", 3, "silo")
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_structured_silo_groups_by_subject_with_per_field_timestamps(tmp_path):
@@ -155,6 +169,34 @@ def test_write_artifacts_materializes_build_output(tmp_path):
     assert manifest == art["manifest"]
     assert (tmp_path / "manifest.json").exists()
     assert (tmp_path / "crm" / "db.json").exists()
+
+
+@pytest.mark.parametrize("linked", ["crm", "crm/db.json", "document", "manifest.json"])
+def test_compile_refuses_external_link_before_any_write(tmp_path, linked):
+    bp = _toy_blueprint()
+    if linked == "document":
+        linked = build_artifacts(bp)["docs"][-1]["path"]
+    out = tmp_path / "org"
+    link = out / linked
+    link.parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    if linked == "crm":
+        outside.mkdir()
+    else:
+        outside.write_text("original")
+    link.symlink_to(outside, target_is_directory=linked == "crm")
+    before = set(out.rglob("*"))
+
+    with pytest.raises(ValueError) as error:
+        compile_blueprint(bp, out)
+
+    assert linked in str(error.value)
+    assert link.is_symlink()
+    assert set(out.rglob("*")) == before
+    if linked == "crm":
+        assert list(outside.iterdir()) == []
+    else:
+        assert outside.read_text() == "original"
 
 
 def test_compiler_is_deterministic(tmp_path):
