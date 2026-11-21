@@ -31,6 +31,7 @@ Old logs and stored runs remain readable. New receipts use `evalogy_version`.
 The command reads `EVALOGY_*` settings and uses `~/.evalogy`. It leaves
 `~/.tessera` in place and performs no migration.
 
-Screenshots in `docs/assets` still show the old name. The thesis and earlier
+The screenshots in `docs/assets` were retaken from the 0.3.0 wheel after the release.
+The thesis and earlier
 publications cite Tessera. Their results and provenance remain attributable
 under that name.
