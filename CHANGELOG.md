@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The README installs `evalogy` from PyPI, where 0.3.0 was published on 2026-11-21.
+
 ## [0.3.0] - 2026-11-21
 
 ### Added
