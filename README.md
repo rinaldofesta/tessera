@@ -6,7 +6,6 @@
 
 [![ci](https://github.com/rinaldofesta/tessera/actions/workflows/ci.yml/badge.svg)](https://github.com/rinaldofesta/tessera/actions/workflows/ci.yml)
 [![release](https://img.shields.io/badge/release-v0.3.0-brightgreen)](CHANGELOG.md)
-[![pypi](https://img.shields.io/badge/pypi-tessera--eval-blue)](https://pypi.org/project/tessera-eval/)
 [![license](https://img.shields.io/badge/code-Apache--2.0-blue)](LICENSE)
 [![data](https://img.shields.io/badge/data-CC--BY--4.0-blue)](LICENSE-DATA.md)
 
@@ -17,7 +16,7 @@ It plants known conflicts across a CRM and a document store, serves them to the 
 ## Sixty seconds, no key
 
 ```bash
-uvx --from tessera-eval tessera report first-contact
+uvx --from git+https://github.com/rinaldofesta/tessera tessera report first-contact
 ```
 
 That renders a committed run: Claude Sonnet 4.6 on the 4-question starter suite, 3 repeats, LLM grading with GPT-4o as the independent grader. `pass^3 75%`, mean 75%. The missing question is the one where two systems of record disagree with the same timestamp and the same authority. The only right move is to stop. The model committed a value in 3 runs of 3, each time with a rule that does not exist in the data:
@@ -42,11 +41,13 @@ Limits of that run: toy suite, n=4, and three bugs in my own harness had to go b
 ## Your first run
 
 ```bash
-uv tool install tessera-eval          # or: pipx install tessera-eval
+uv tool install git+https://github.com/rinaldofesta/tessera
 tessera connect anthropic             # "API key:" is a hidden prompt; --key-stdin for scripts
 tessera run --model anthropic/claude-sonnet-4-6
 tessera ui                            # the same thing in the browser
 ```
+
+Tessera is not on PyPI: the project named `tessera-eval` there is unrelated. Installed from the repository, the CLI is complete and `tessera ui` has no bundle to serve; the browser app ships in the wheel attached to a GitHub release.
 
 There is no `--key` flag. The key goes to `~/.tessera/.env` (mode 0600, home 0700) and is never printed. `tessera run` exits 0 when the run completed, whether or not the verdict is "reliable"; exit 1 is reserved for a threshold you asked for (`--min-pass-k 0.9`).
 
