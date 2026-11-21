@@ -171,6 +171,34 @@ def test_write_artifacts_materializes_build_output(tmp_path):
     assert (tmp_path / "crm" / "db.json").exists()
 
 
+@pytest.mark.parametrize("linked", ["crm", "crm/db.json", "document", "manifest.json"])
+def test_compile_refuses_external_link_before_any_write(tmp_path, linked):
+    bp = _toy_blueprint()
+    if linked == "document":
+        linked = build_artifacts(bp)["docs"][-1]["path"]
+    out = tmp_path / "org"
+    link = out / linked
+    link.parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    if linked == "crm":
+        outside.mkdir()
+    else:
+        outside.write_text("original")
+    link.symlink_to(outside, target_is_directory=linked == "crm")
+    before = set(out.rglob("*"))
+
+    with pytest.raises(ValueError) as error:
+        compile_blueprint(bp, out)
+
+    assert linked in str(error.value)
+    assert link.is_symlink()
+    assert set(out.rglob("*")) == before
+    if linked == "crm":
+        assert list(outside.iterdir()) == []
+    else:
+        assert outside.read_text() == "original"
+
+
 def test_compiler_is_deterministic(tmp_path):
     out_a = tmp_path / "a"
     out_b = tmp_path / "b"

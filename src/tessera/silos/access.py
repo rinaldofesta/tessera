@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from tessera.paths import contained_target
+
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
@@ -18,8 +20,9 @@ def crm_lookup_record(out_dir: str | Path, account_name: str,
     actually returned (det-4). A requested name that does not exist is reported under
     '_unknown_fields' together with the record's '_available_fields', so a wrong guess
     is recoverable and '{}' is never ambiguous with "field is empty"."""
-    db_path = Path(out_dir) / "crm" / "db.json"
-    if not db_path.exists():
+    out = Path(out_dir).resolve()
+    db_path = contained_target(out, out / "crm" / "db.json")
+    if db_path is None or not db_path.is_file():
         return None
     db = json.loads(db_path.read_text())
     record = db.get(account_name)
@@ -30,11 +33,6 @@ def crm_lookup_record(out_dir: str | Path, account_name: str,
     if unknown:
         return {**known, "_unknown_fields": unknown, "_available_fields": sorted(record)}
     return known
-
-
-def _doc_target(docs_dir: Path, path: Path) -> Path | None:
-    target = path.resolve()
-    return target if docs_dir in target.parents else None
 
 
 def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
@@ -53,7 +51,7 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
         return []
     ranked: list[tuple[int, str, dict[str, str]]] = []
     for md in sorted(docs_dir.glob("*.md")):
-        target = _doc_target(docs_dir, md)
+        target = contained_target(docs_dir, md)
         if target is None or not target.is_file():
             continue
         body = target.read_text()
@@ -76,7 +74,7 @@ def docs_search(out_dir: str | Path, query: str) -> list[dict[str, str]]:
 def docs_get_file(out_dir: str | Path, path: str) -> str:
     """Return a Docs file's content. `path` is relative to out_dir (e.g. 'docs/x.md')."""
     out = Path(out_dir).resolve()
-    target = _doc_target(out / "docs", out / path)
+    target = contained_target(out / "docs", out / path)
     if target is None:
         raise ValueError(f"refusing to read outside docs/: {path!r}")
     if not target.is_file():

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import Blueprint, Claim, RenderAs
+from .paths import contained_target
 from .silos import registry as silo_types
 
 
@@ -107,17 +108,43 @@ def build_artifacts(blueprint: Blueprint) -> dict:
     return artifacts
 
 
+def _write_target(out: Path, path: Path) -> Path:
+    target = contained_target(out, path)
+    if target is None:
+        raise ValueError(f"refusing to write outside {out}: {path}")
+    return target
+
+
+def _check_plugin_tree(out: Path, root: Path) -> None:
+    # Each hook chooses its own filenames, so check its existing subtree before handing it control.
+    pending = [root]
+    visited = set()
+    while pending:
+        target = _write_target(out, pending.pop())
+        if target not in visited and target.is_dir():
+            visited.add(target)
+            pending.extend(target.iterdir())
+
+
 def write_artifacts(artifacts: dict, out_dir: str | Path) -> dict[str, dict]:
     """Materialize the artifacts from ``build_artifacts`` to disk; return the manifest."""
-    out = Path(out_dir)
-    for silo, subjects in artifacts["silos"].items():
-        _write_json(out / silo / "db.json", subjects)
-    for doc in artifacts["docs"]:
-        path = out / doc["path"]
+    out = Path(out_dir).resolve()
+    databases = [(_write_target(out, out / silo / "db.json"), subjects)
+                 for silo, subjects in artifacts["silos"].items()]
+    documents = [(_write_target(out, out / doc["path"]), doc["content"])
+                 for doc in artifacts["docs"]]
+    manifest_path = _write_target(out, out / "manifest.json")
+    plugins = artifacts.get("plugins", {})
+    for silo_name in plugins:
+        _check_plugin_tree(out, out / silo_name)
+
+    for path, subjects in databases:
+        _write_json(path, subjects)
+    for path, content in documents:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(doc["content"])
-    _write_json(out / "manifest.json", artifacts["manifest"])
-    for silo_name, payload in artifacts.get("plugins", {}).items():
+        path.write_text(content)
+    _write_json(manifest_path, artifacts["manifest"])
+    for silo_name, payload in plugins.items():
         silo_types.registry.get(silo_name).write(payload, out)
     return artifacts["manifest"]
 

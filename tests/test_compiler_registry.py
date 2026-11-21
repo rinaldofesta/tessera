@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tessera.compiler import build_artifacts, compile_blueprint
+from tessera.compiler import build_artifacts, compile_blueprint, write_artifacts
 from tessera.examples.toy_org import build_toy_blueprint
 from tessera.models import Claim
 from tessera.silos import registry as silo_types
@@ -83,3 +83,24 @@ def test_unknown_source_after_loading_writes_no_partial_org(tmp_path):
     with pytest.raises(silo_types.UnknownSiloTypeError, match="missing-silo"):
         compile_blueprint(bp, tmp_path)
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("linked", ["notes", "notes/nested/file.json"])
+def test_plugin_tree_checked_before_any_writer_runs(monkeypatch, tmp_path, linked):
+    monkeypatch.setattr(silo_types, "registry", _registry_with(_notes_silo_type()))
+    artifacts = build_artifacts(build_toy_blueprint())
+    artifacts["plugins"] = {"notes": {"note.1": "check SLA"}}
+    out = tmp_path / "org"
+    link = out / linked
+    link.parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError) as error:
+        write_artifacts(artifacts, out)
+
+    assert linked in str(error.value)
+    assert list(out.iterdir()) == [out / "notes"]
+    assert not (out / "notes" / "notes.json").exists()
+    assert list(outside.iterdir()) == []

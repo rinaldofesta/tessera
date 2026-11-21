@@ -31,6 +31,25 @@ def test_crm_lookup_missing_account_returns_none(out):
     assert crm_lookup_record(out, "Beta Corp") is None
 
 
+def test_crm_lookup_only_follows_links_inside_linked_output_root(tmp_path):
+    store = tmp_path / "store"
+    store.mkdir()
+    out = tmp_path / "org"
+    out.symlink_to(store, target_is_directory=True)
+    compile_blueprint(build_toy_blueprint(), out)
+    db = store / "crm" / "db.json"
+    backup = db.with_name("backup.json")
+    db.rename(backup)
+    db.symlink_to(backup)
+    assert crm_lookup_record(out, "Acme Corp")["tier"]["value"] == "Gold"
+
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"Acme Corp": {"tier": "external"}}')
+    db.unlink()
+    db.symlink_to(outside)
+    assert crm_lookup_record(out, "Acme Corp") is None
+
+
 def test_crm_lookup_filters_to_requested_fields(out):
     # det-4: the agent can fetch just the fields it needs; provenance follows the response
     rec = crm_lookup_record(out, "Acme Corp", fields=["tier"])

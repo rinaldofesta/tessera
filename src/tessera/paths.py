@@ -4,6 +4,11 @@ import os
 from pathlib import Path
 
 
+def contained_target(root: Path, path: Path) -> Path | None:
+    target = path.resolve()
+    return target if root in target.parents else None
+
+
 def home() -> Path:
     configured = os.environ.get("TESSERA_HOME")
     path = Path(configured) if configured else Path.home() / ".tessera"
