@@ -7,8 +7,10 @@ bridge that lets the scorer resolve a ToolEvent to a specific claim.
 """
 
 import json
+from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from tessera.compiler import compile_blueprint
 from tessera.models import Blueprint, Claim
@@ -54,6 +56,18 @@ def _toy_blueprint() -> Blueprint:
             ),
         ]
     )
+
+
+def test_unsafe_source_is_rejected_before_any_write(tmp_path):
+    suite = _toy_blueprint().model_dump(by_alias=True)
+    suite["claims"][-1]["silo"] = "../escaped"
+
+    with patch("tessera.compiler.write_artifacts") as writer:
+        with pytest.raises(ValidationError) as error:
+            compile_blueprint(Blueprint.model_validate(suite), tmp_path / "org")
+        writer.assert_not_called()
+    assert error.value.errors()[0]["loc"] == ("claims", 3, "silo")
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_structured_silo_groups_by_subject_with_per_field_timestamps(tmp_path):

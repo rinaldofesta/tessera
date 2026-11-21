@@ -9,10 +9,15 @@ Inspect dataset.
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from tessera.silos import registry as silo_types
+
+SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
 class RenderAs(str, Enum):
@@ -75,6 +80,17 @@ class Claim(BaseModel):
     asserted_at: str | None = None  # ISO-8601; required when a recency rule applies
     authority: int | None = None
     render: Render
+
+    @field_validator("silo")
+    @classmethod
+    def _registered_source(cls, name: str) -> str:
+        if not SAFE_NAME.fullmatch(name):
+            raise ValueError("silo must start with an ASCII letter or digit and use only letters, digits, '-' and '_'")
+        try:
+            silo_types.registry.get(name)
+        except silo_types.UnknownSiloTypeError as exc:
+            raise ValueError(exc.args[0]) from exc
+        return name
 
     @model_validator(mode="after")
     def _prose_template_renders(self) -> Claim:

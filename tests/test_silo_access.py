@@ -69,6 +69,33 @@ def test_docs_get_file_rejects_path_outside_docs(out):
         docs_get_file(out, "../crm/db.json")
 
 
+def test_docs_search_and_read_only_follow_links_inside_docs(tmp_path):
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (tmp_path / "other.md").touch()
+    (docs / "external.md").symlink_to(tmp_path / "other.md")
+    (docs / "note.md").write_text("meeting")
+    (docs / "internal.md").symlink_to("note.md")
+
+    assert docs_search(tmp_path, "external internal") == [
+        {"path": "docs/internal.md", "excerpt": "meeting"},
+    ]
+    with pytest.raises(ValueError, match="outside docs"):
+        docs_get_file(tmp_path, "docs/external.md")
+    assert docs_get_file(tmp_path, "docs/internal.md") == "meeting"
+
+
+def test_docs_root_cannot_redirect_reads(tmp_path):
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "note.md").touch()
+    (tmp_path / "docs").symlink_to(other, target_is_directory=True)
+
+    assert docs_search(tmp_path, "note") == []
+    with pytest.raises(ValueError, match="outside docs"):
+        docs_get_file(tmp_path, "docs/note.md")
+
+
 def test_docs_search_finds_note_with_natural_language_query(out):
     # The First Contact bug: an agent searches with a full phrase, not one keyword.
     # The old whole-phrase substring match returned [] because the note BODY never

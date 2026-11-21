@@ -210,7 +210,7 @@ def plan(
     diagnostics: list[str] = []
 
     try:
-        suite, suite_diagnostics = resolve_suite(request.suite, suites_dir=suites_dir)
+        suite, suite_diagnostics = resolve_suite(request.suite, suites_dir=suites_dir, seed=request.seed)
         diagnostics.extend(suite_diagnostics)
     except SpecError as exc:
         suite = None

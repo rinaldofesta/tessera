@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import Blueprint, Claim, RenderAs
-from .silos.registry import registry as silo_registry
+from .silos import registry as silo_types
 
 
 def _slug(text: str) -> str:
@@ -68,8 +68,8 @@ def build_artifacts(blueprint: Blueprint) -> dict:
     custom_claims: dict[str, list[Claim]] = {}
 
     for claim in blueprint.claims:
-        st = silo_registry.get_optional(claim.silo)
-        if st is not None and st.build is not None:
+        st = silo_types.registry.get(claim.silo)
+        if st.build is not None:
             custom_claims.setdefault(claim.silo, []).append(claim)
             continue
         if claim.render.as_ is RenderAs.field:
@@ -97,7 +97,7 @@ def build_artifacts(blueprint: Blueprint) -> dict:
 
     plugins: dict[str, Any] = {}
     for silo_name, claims in custom_claims.items():
-        payload, entries = silo_registry.get(silo_name).build(claims)
+        payload, entries = silo_types.registry.get(silo_name).build(claims)
         plugins[silo_name] = payload
         manifest.update(entries)
 
@@ -118,7 +118,7 @@ def write_artifacts(artifacts: dict, out_dir: str | Path) -> dict[str, dict]:
         path.write_text(doc["content"])
     _write_json(out / "manifest.json", artifacts["manifest"])
     for silo_name, payload in artifacts.get("plugins", {}).items():
-        silo_registry.get(silo_name).write(payload, out)
+        silo_types.registry.get(silo_name).write(payload, out)
     return artifacts["manifest"]
 
 

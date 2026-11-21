@@ -7,6 +7,8 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from tessera import paths
 from tessera.api.providers import is_configured, provider_for_model
 from tessera.contract import Catalog, CatalogSuite, Defaults
@@ -43,6 +45,18 @@ def published_models() -> list[str]:
 
 
 
+def _suite_row(name: str, blueprint: Blueprint, builtin: dict | None = None) -> dict:
+    return {
+        "name": name,
+        "label": builtin["label"] if builtin else name,
+        "org": builtin["org"] if builtin else name,
+        "kind": "builtin" if builtin else "user",
+        "questions": len(blueprint.probes),
+        "claims": len(blueprint.claims),
+        "editable": not builtin,
+    }
+
+
 def _builtin_suites(suites_dir: Path) -> list[dict]:
     # store_dir=suites_dir: get_blueprint() otherwise resolves its OWN store via
     # TESSERA_BLUEPRINT_DIR/TESSERA_HOME, ignoring whatever directory the caller (e.g.
@@ -59,15 +73,7 @@ def _builtin_suites(suites_dir: Path) -> list[dict]:
             _LOG.warning(
                 "store override for org '%s' is unparseable; using the packaged blueprint", org)
             blueprint = ORGS[org]()
-        suites.append({
-            "name": name,
-            "label": metadata["label"],
-            "org": org,
-            "kind": "builtin",
-            "questions": len(blueprint.probes),
-            "claims": len(blueprint.claims),
-            "editable": False,
-        })
+        suites.append(_suite_row(name, blueprint, metadata))
     return suites
 
 
@@ -91,15 +97,7 @@ def _user_suites(directory: Path) -> list[dict]:
         except Exception:  # noqa: BLE001 — one bad user file must not hide the catalog
             _LOG.warning("skipping unparseable user suite '%s'", suite_path.stem)
             continue
-        suites.append({
-            "name": suite_path.stem,
-            "label": suite_path.stem,
-            "org": suite_path.stem,
-            "kind": "user",
-            "questions": len(blueprint.probes),
-            "claims": len(blueprint.claims),
-            "editable": True,
-        })
+        suites.append(_suite_row(suite_path.stem, blueprint))
     return suites
 
 
@@ -151,16 +149,26 @@ def suite_name_for_org(org: str | None) -> str:
     return org
 
 
-def resolve_suite(ref: str, *, suites_dir: Path | None = None) -> tuple[dict, list[str]]:
+def resolve_suite(ref: str, *, suites_dir: Path | None = None, seed: int = 0) -> tuple[dict, list[str]]:
+    from tessera.api.blueprint_store import validation_issues
+    from tessera.orgs import get_blueprint
+
     diagnostics = []
     resolved = SUITE_ALIASES.get(ref, ref)
     if resolved != ref:
         diagnostics.append(f"suite '{ref}' is now called '{resolved}'")
 
-    suites = _suite_rows(suites_dir)
-    for suite in suites:
-        if suite["name"] == resolved:
-            return CatalogSuite.model_validate(suite).model_dump(), diagnostics
-
-    available = ", ".join(suite["name"] for suite in suites)
-    raise SpecError(f"unknown suite '{ref}'; available: {available}")
+    builtin = BUILTIN_SUITES.get(resolved)
+    org = builtin["org"] if builtin else resolved
+    try:
+        blueprint = get_blueprint(org, store_dir=suites_dir or paths.suites_dir(),
+                                  seed=seed if org == "meridian" else 0)
+    except ValidationError as exc:
+        issues = validation_issues(exc)
+        message = "; ".join(f"{issue['location']}: {issue['message']}" for issue in issues)
+        raise SpecError(f"invalid suite '{ref}': {message}") from None
+    except (ValueError, OSError):
+        available = ", ".join(suite["name"] for suite in _suite_rows(suites_dir))
+        raise SpecError(f"unknown suite '{ref}'; available: {available}") from None
+    row = _suite_row(resolved, blueprint, builtin)
+    return CatalogSuite.model_validate(row).model_dump(), diagnostics
